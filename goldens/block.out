@@ -1,0 +1,139 @@
+widgets := []widget{
+  // keep-sorted-test start block=yes
+  {
+    Name: "bar",
+  },
+  {
+    Name: "foo",
+  },
+  // keep-sorted-test end
+}
+
+withStickComments := []widget{
+  // keep-sorted-test start block=yes sticky_comments=yes
+  // Comment about bar.
+  {
+    Name: "bar",
+    SomeOtherField: 456,
+  },
+  {
+    Name: "foo",
+    SomeOtherField: 123,
+  },
+  // keep-sorted-test end
+}
+
+strings := []string{
+  // Note: since we're sorting based on the entire line, a new line comes before the
+  // closing quote and thus a-b-c is sorted before a-b.
+  // keep-sorted-test start block=yes
+  `a
+  b
+  c`,
+  `a
+  b`,
+  `a
+  c`,
+  // keep-sorted-test end
+}
+
+noIncreasedIndentation := []widget{
+  // keep-sorted-test start block=yes
+  {
+  Name: "bar",
+  },
+  {
+  Name: "baz",
+  },
+  {
+  Name: "foo",
+  },
+  // keep-sorted-test end
+}
+
+unbalancedCommentsDoNotMatter := []widget{
+  // keep-sorted-test start block=yes sticky_comments=yes
+  // Unbalanced comment: {
+  {
+    Name: "bar",
+  },
+  // Also unbalanced: ]
+  {
+    Name: "baz",
+  },
+  {
+    Name: "foo",
+  },
+  // keep-sorted-test end
+}
+
+withOneLiners := []widget{
+  // keep-sorted-test start block=yes
+  {Name: "bar"},
+  {
+    Name: "baz",
+  },
+  {
+    Name: "foo",
+  },
+  // keep-sorted-test end
+}
+
+// gcl style code:
+// keep-sorted-test start block=yes
+Group abc = external_groups.acl_group {
+  group_expansion = "It's the members"
+}
+Group ijk = external_groups.acl_group {
+  group_expansion = """'''
+     Nested triple quotes aren\'t uncommon
+  '''"""
+}
+Group lmn = external_groups.acl_group {
+  group_expansion = """
+     Including another " shouldn't break groups
+  """
+}
+Group xyz = external_groups.acl_group {
+  group_expansion = 'self'
+}
+// keep-sorted-test end
+
+// gcl style code with trailing comments:
+// keep-sorted-test start block=yes
+Experiment abc = templates.LAUNCHED {
+  name = "ABC"
+  description = "Simple block"
+}
+Experiment ikj =
+    templates.ExperimentBaseWithTestAccounts {
+  name = "IJK"
+  description = "A single quote in a trailing comment"
+  test_accounts = [
+    123,  // Bobby's test account
+  ]
+}
+Experiment xyz = templates.ExperimentBase {
+  name = "XYZ" // Should be the last one :(
+  description = "A bunch of opening brackets [{[ here"
+  percent = 10
+}
+// keep-sorted-test end
+
+// BUILD rule style
+// keep-sorted-test start block=yes newline_separated=yes
+some_build_rule(
+    name = "abc",
+    src = "one-more-source",
+)
+
+some_build_rule(
+    name = "def",
+    src = "some-source",
+)
+
+some_build_rule(
+    name = "xyz",
+    src = "another-source",
+)
+// keep-sorted-test end

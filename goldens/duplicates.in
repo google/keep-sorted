@@ -1,0 +1,23 @@
+Remove duplicates:
+// keep-sorted-test start remove_duplicates=yes
+foo
+bar
+foo
+// keep-sorted-test end
+
+Remove duplicates with comments:
+// keep-sorted-test start remove_duplicates=yes sticky_comments=yes
+foo
+bar
+// Foo again
+foo
+// Foo again
+foo
+// keep-sorted-test end
+
+Preserve duplicates:
+// keep-sorted-test start remove_duplicates=no
+foo
+bar
+foo
+// keep-sorted-test end

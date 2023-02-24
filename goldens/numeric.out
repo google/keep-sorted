@@ -1,0 +1,44 @@
+Numeric sorting:
+// keep-sorted-test start numeric=yes
+BAR_1
+BAR_2
+BAR_10
+FOO_2
+FOO_3
+FOO_100
+// keep-sorted-test end
+
+
+Mixed numeric and preference sorting with sticky comments:
+deployment_state = [
+  // keep-sorted-test start numeric=yes prefix_order=INIT,ROLLOUT,COMPLETE
+  // Start initialisation
+  INIT_1,
+  INIT_5,
+  INIT_10,
+  // Only deploy to 0.1%
+  ROLLOUT_0_1,
+  // just one percent.
+  ROLLOUT_1,
+  ROLLOUT_5,
+  ROLLOUT_10,
+  ROLLOUT_50,
+  // Nearly done...
+  ROLLOUT_100,
+  // All done.
+  COMPLETE,
+  // keep-sorted-test end
+]
+
+Prefix containing a number with numeric sorting:
+droid_components = [
+  // keep-sorted-test start numeric=yes prefix_order=R2,C3
+  R2D2_BOLTS_5_MM,
+  R2D2_BOLTS_10_MM,
+  R2D2_PROJECTOR,
+  C3PO_ARM_L,
+  C3PO_ARM_R,
+  C3PO_HEAD,
+  R4_MOTIVATOR,
+  // keep-sorted-test end
+]

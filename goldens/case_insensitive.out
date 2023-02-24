@@ -1,0 +1,27 @@
+Case-insensitive sorting:
+// keep-sorted-test start case=no
+'/bar',
+'/Baz',
+'/foo',
+'/quux',
+'/Quux/etc',
+// keep-sorted-test end
+
+Case-insensitive sorting with mixed-case duplicates:
+// keep-sorted-test start case=no
+Bar
+bar
+bAz
+baZ
+baz
+foo
+spam
+// keep-sorted-test end
+
+Case-insensitive sorting with numeric sorting:
+// keep-sorted-test start case=no numeric=yes
+bar_1
+bAR_5
+bar_5
+BAR_100
+// keep-sorted-test end

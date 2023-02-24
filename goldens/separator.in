@@ -1,0 +1,17 @@
+Comma separator:
+static class Foo {
+  // keep-sorted-test start
+  "Foo",
+  "Bar",
+  "Baz"
+  // keep-sorted-test end
+}
+
+Comma separator with comments:
+// keep-sorted-test start sticky_comments=yes
+"Foo",
+// Sticky comment
+"Bar",
+"Baz"
+// Trailing comments
+// keep-sorted-test end

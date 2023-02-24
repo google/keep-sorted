@@ -1,0 +1,44 @@
+Sticky comments:
+// keep-sorted-test start sticky_comments=yes
+// comment
+bar
+// multi line
+// comment
+baz
+foo
+// keep-sorted-test end
+
+Sticky comments with different comment sequence:
+# keep-sorted-test start sticky_comments=yes
+# comment
+bar
+foo
+# keep-sorted-test end
+
+Sticky comments with wrong comment sequence:
+# keep-sorted-test start sticky_comments=yes
+// comment with wrong comment sequence
+bar
+foo
+# keep-sorted-test end
+
+Trailing comments:
+// keep-sorted-test start sticky_comments=yes
+// comment
+bar
+foo
+// trailing
+// comment
+// keep-sorted-test end
+
+Only sticky comments:
+// keep-sorted-test start sticky_comments=yes
+// only
+// comments
+// keep-sorted-test end
+
+Only non-sticky comments:
+// keep-sorted-test start sticky_comments=no
+// comments
+// only
+// keep-sorted-test end

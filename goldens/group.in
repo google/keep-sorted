@@ -1,0 +1,103 @@
+Group indented lines:
+public class Foo {
+  // keep-sorted-test start group=yes
+  private final Foo foo;
+  private final Bar bar;
+  private final Baz baz =
+      new Baz();
+  private final Qux qux;
+  // keep-sorted-test end
+}
+
+Same thing but it's tabs:
+public class Foo {
+	// keep-sorted-test start group=yes
+	private final Foo foo;
+	private final Bar bar;
+	private final Baz baz =
+			new Baz();
+	private final Qux qux;
+	// keep-sorted-test end
+}
+
+Do not count indent from empty lines:
+  // keep-sorted-test start
+
+  a
+  c
+  b
+  // keep-sorted-test end
+
+Multiple indentions:
+public class Foo {
+  // keep-sorted-test start group=yes
+  private final Foo foo;
+  private final Bar bar;
+  private final Baz baz =
+      new
+          Baz();
+  private final Qux qux;
+  // keep-sorted-test end
+}
+
+With sticky comments:
+public class Foo {
+  // keep-sorted-test start group=yes sticky_comments=yes
+  private final Foo foo;
+  private final Bar bar;
+  // What a long line!
+  private final Baz baz =
+      new Baz();
+  private final Qux qux;
+  // keep-sorted-test end
+}
+
+Sorting doesn't take newline into account
+// keep-sorted-test start group=yes
+line 4
+line
+  3
+line
+  1
+line 2
+// keep-sorted-test end
+
+With list separator
+// keep-sorted-test start group=yes
+Foo foo,
+Bar bar,
+Baz
+    baz
+// keep-sorted-test end
+
+Without whitespace on unbroken lines
+// keep-sorted-test start group=yes
+SomeLongEnumTypeNameWithLongValueNames.D_SHORT_VALUE
+SomeLongEnumTypeNameWithLongValueNames
+    .C_SOME_LONG_ENUM_VALUE_THAT_REQUIRES_A_LINE_BREAK
+SomeLongEnumTypeNameWithLongValueNames.B_SHORT_VALUE
+SomeLongEnumTypeNameWithLongValueNames
+    .A_SOME_LONG_ENUM_VALUE_THAT_REQUIRES_A_LINE_BREAK
+// keep-sorted-test end
+
+Without grouping:
+public class Foo {
+  // keep-sorted-test start group=no
+  private final Foo foo;
+  private final Bar bar;
+  private final Baz baz =
+      new Baz();
+  private final Qux qux;
+  // keep-sorted-test end
+}
+
+Indented markdown lists:
+<!-- keep-sorted-test start group=yes -->
+
+ * Foo
+     * Wise insight
+ * Bar
+ * Baz
+     * Philosophical conjecture
+
+<!-- keep-sorted-test end -->

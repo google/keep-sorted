@@ -1,0 +1,102 @@
+Nothing to sort:
+// keep-sorted-test start
+// keep-sorted-test end
+
+Weird edge case with blank lines, but whatever:
+// keep-sorted-test start
+
+
+// keep-sorted-test end
+
+Already sorted:
+// keep-sorted-test start
+Bar
+Baz
+Foo
+// keep-sorted-test end
+
+Needs sorting:
+// keep-sorted-test start
+Foo
+Bar
+Baz
+// keep-sorted-test end
+
+Maintains indent:
+static class Foo {
+  // keep-sorted-test start
+  "Foo",
+  "Bar",
+  "Baz",
+  // keep-sorted-test end
+}
+
+Empty line at end:
+// keep-sorted-test start
+Foo
+Bar
+Baz
+
+// keep-sorted-test end
+
+Multiple empty lines at end:
+// keep-sorted-test start
+Foo
+Bar
+Baz
+
+
+// keep-sorted-test end
+
+Empty lines at start (duplicate lines discarded):
+// keep-sorted-test start
+
+
+Foo
+Bar
+Baz
+// keep-sorted-test end
+
+Empty lines at both:
+// keep-sorted-test start
+
+Foo
+Bar
+Baz
+
+// keep-sorted-test end
+
+"Empty" lines that are trailing indentation:
+  // keep-sorted-test start
+  
+  Foo
+  Bar
+  Baz
+  
+  // keep-sorted-test end
+
+Same thing, but it's tabs.
+	// keep-sorted-test start
+	
+	Foo
+	Bar
+	Baz
+	
+	// keep-sorted-test end
+
+b/153572902 mdformat around lists:
+<!-- keep-sorted-test start -->
+
+ * Foo
+ * Bar
+ * Baz
+
+<!-- keep-sorted-test end -->
+
+// keep-sorted-test start newline_separated=yes
+C
+
+A
+
+B
+// keep-sorted-test end

@@ -1,0 +1,56 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// keep-sorted is a tool that sorts lines between two markers in a larger file.
+package main
+
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/google/keep-sorted/cmd"
+	"github.com/mattn/go-isatty"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	flag "github.com/spf13/pflag"
+)
+
+func main() {
+	c := &cmd.Config{}
+	c.FromFlags(nil)
+	logLevel := flag.CountP("verbose", "v", "Log more verbosely")
+	colorMode := flag.String("color", "auto", "Whether to color debug output. One of \"always\", \"never\", or \"auto\"")
+	flag.Parse()
+
+	out := os.Stderr
+	var shouldColor bool
+	switch *colorMode {
+	case "always":
+		shouldColor = true
+	case "never":
+		shouldColor = false
+	case "auto":
+		shouldColor = isatty.IsTerminal(out.Fd())
+	default:
+		log.Err(fmt.Errorf("invalid --color %q", *colorMode)).Msg("")
+	}
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: out, TimeFormat: time.RFC3339, NoColor: !shouldColor})
+	zerolog.SetGlobalLevel(zerolog.Level(int(zerolog.WarnLevel) - *logLevel))
+	if ok, err := cmd.Run(c, flag.Args()); err != nil {
+		log.Fatal().AnErr("error", err).Msg("")
+	} else if !ok {
+		os.Exit(1)
+	}
+}

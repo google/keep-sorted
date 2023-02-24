@@ -1,0 +1,56 @@
+Already sorted:
+// keep-sorted-test start ignore_prefixes=A,B
+Bar
+Baz
+Aoo
+zebra
+// keep-sorted-test end
+
+Needs sorting:
+// keep-sorted-test start ignore_prefixes=A,B
+zebra
+Aoo
+Bar
+Baz
+// keep-sorted-test end
+
+Indented already sorted:
+  // keep-sorted-test start ignore_prefixes=A,B
+  Bar
+  Baz
+  Aoo
+  zebra
+  // keep-sorted-test end
+
+Indented needs sorting:
+  // keep-sorted-test start ignore_prefixes=A,B
+  zebra
+  Aoo
+  Bar
+  Baz
+  // keep-sorted-test end
+
+More practical already sorted:
+  // keep-sorted-test start ignore_prefixes=fs.setBoolFlag,fs.setIntFlag
+	fs.setBoolFlag("nvme_paws_with_cute_toebeans", true)
+	fs.setIntFlag("nvme_pretty_whiskered_kitten", 6)
+	fs.setBoolFlag("nvme_whiskered_adorable_dog", true)
+  // keep-sorted-test end
+
+More practical needs sorting:
+  // keep-sorted-test start ignore_prefixes=fs.setBoolFlag,fs.setIntFlag
+	fs.setBoolFlag("nvme_paws_with_cute_toebeans", true)
+	fs.setBoolFlag("nvme_whiskered_adorable_dog", true)
+	fs.setIntFlag("nvme_pretty_whiskered_kitten", 6)
+  // keep-sorted-test end
+
+Combine with numerical:
+  # keep-sorted-test start numeric=yes ignore_prefixes=R2D2,C3PO,R4
+  R2D2_BOLTS_5_MM,
+  R2D2_BOLTS_10_MM,
+  R2D2_PROJECTOR,
+  C3PO_ARM_L,
+  C3PO_ARM_R,
+  C3PO_HEAD,
+  R4_MOTIVATOR,
+  # keep-sorted-test end

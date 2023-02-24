@@ -1,0 +1,56 @@
+Sort these lines with various comments:
+Flags(
+  // keep-sorted-test start sticky_prefixes=/**,@
+  ALPHABETICALLY_FIRST_FLAG,
+  @Deprecated
+  DEPRECATED_FLAG,
+  /** Flag to do important things */
+  FLAG_OF_IMPORTANCE,
+  // keep-sorted-test end
+)
+
+Multiple sticky prefixes per item:
+// keep-sorted-test start sticky_prefixes=@1,@2
+@1 alpha
+@2 alpha
+Alpha
+@1 whiskey
+Whiskey
+@1 zulu
+@2 zulu
+Zulu
+// keep-sorted-test end
+
+With grouping:
+public class Foo {
+  // keep-sorted-test start group=yes sticky_prefixes=@1,@2
+  private final Bar bar;
+  @2 baz
+  private final Baz baz =
+      @1 new baz
+      new Baz();
+  private final Foo foo;
+  private final Qux qux;
+  // keep-sorted-test end
+}
+
+Without sticky comment:
+// keep-sorted-test start sticky_comments=no sticky_prefixes=@1,@2
+// Always goes first
+// Will go second.
+@1 bravo
+@2 bravo
+Bravo
+Charlie
+@1 delta
+Delta
+// keep-sorted-test end
+
+Dangling sticky items:
+// keep-sorted-test start sticky_prefixes=Sticky
+Sticky Zulu
+Zulu
+Sticky Charlie
+Sticky Bravo
+Sticky Alpha
+// keep-sorted-test end
