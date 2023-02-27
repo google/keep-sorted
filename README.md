@@ -1,5 +1,8 @@
 # keep-sorted
 
+![go workflow status](https://github.com/google/keep-sorted/actions/workflows/go.yml/badge.svg)
+![pre-commit workflow status](https://github.com/google/keep-sorted/actions/workflows/pre-commit.yml/badge.svg)
+
 keep-sorted is a language-agnostic formatter that sorts lines between two
 markers in a larger file.
 
@@ -60,6 +63,19 @@ $ keep-sorted [file1] [file2] ...
 ```
 
 If the file is `-`, the tool will read from stdin and write to stdout.
+
+#### pre-commit
+
+You can automatically run keep-sorted by adding this repository to your
+[pre-commit](https://pre-commit.com/).
+
+```yaml
+- repo: https://github.com/google/keep-sorted
+  rev: v0.1.0
+  hooks:
+    -id: keep-sorted
+```
+
 
 ## Options
 

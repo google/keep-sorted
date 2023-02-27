@@ -1,0 +1,6 @@
+# https://pre-commit.com/
+
+- id: keep-sorted
+  name: keep-sorted
+  language: golang
+  entry: keep-sorted
