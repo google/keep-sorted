@@ -1,0 +1,10 @@
+# https://pre-commit.com/
+
+repos:
+  - repo: local
+    hooks:
+      - id: keep-sorted
+        name: keep-sorted
+        language: system
+        entry: go
+        args: [run, .]
