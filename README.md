@@ -1,5 +1,8 @@
 # keep-sorted
 
+![go workflow status](https://github.com/google/keep-sorted/actions/workflows/go.yml/badge.svg)
+![pre-commit workflow status](https://github.com/google/keep-sorted/actions/workflows/pre-commit.yml/badge.svg)
+
 keep-sorted is a language-agnostic formatter that sorts lines between two
 markers in a larger file.
 
