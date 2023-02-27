@@ -39,8 +39,8 @@ interface FrontendComponent {
 +     // keep-sorted start
       AuthModule.class,
       GetRequestModule.class,
-      LoggingModule.class,
       MonitoringModule.class,
+      LoggingModule.class,
       PostRequestModule.class,
       UtilsModule.class,
 +     // keep-sorted end
