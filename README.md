@@ -71,7 +71,7 @@ You can automatically run keep-sorted by adding this repository to your
 
 ```yaml
 - repo: https://github.com/google/keep-sorted
-  rev: 0.1.0
+  rev: v0.1.0
   hooks:
     -id: keep-sorted
 ```
