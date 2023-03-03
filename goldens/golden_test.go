@@ -45,6 +45,10 @@ func TestGoldens(t *testing.T) {
 		}
 	}
 
+	if len(tcs) == 0 {
+		t.Fatalf("Did not find any golden files.")
+	}
+
 	needsRegen := make(chan string, len(tcs))
 	t.Run("group", func(t *testing.T) {
 		for _, tc := range tcs {
