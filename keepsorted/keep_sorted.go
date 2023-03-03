@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang-collections/go-datastructures/augmentedtree"
+	"github.com/Workiva/go-datastructures/augmentedtree"
 	"golang.org/x/exp/slices"
 )
 
