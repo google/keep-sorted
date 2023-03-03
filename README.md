@@ -73,7 +73,7 @@ You can automatically run keep-sorted by adding this repository to your
 - repo: https://github.com/google/keep-sorted
   rev: v0.1.0
   hooks:
-    -id: keep-sorted
+    - id: keep-sorted
 ```
 
 
