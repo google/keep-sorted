@@ -42,3 +42,51 @@ Only non-sticky comments:
 // comments
 // only
 // keep-sorted-test end
+
+Slash-star-style comments:
+/* keep-sorted-test start */
+1
+2
+/* comment on 3 */
+3
+/* keep-sorted-test end */
+
+Dash-dash-style comments:
+-- keep-sorted-test start
+1
+2
+-- comment on 3
+3
+-- keep-sorted-test end
+
+Semicolon-style comments:
+; keep-sorted-test start
+1
+2
+; comment on 3
+3
+; keep-sorted-test end
+
+HTML-style comments:
+<!-- keep-sorted-test start -->
+1
+2
+<!-- comment on 3 -->
+3
+<!-- keep-sorted-test end -->
+
+Additional prefixes aren't counted as part of the comment:
+// some prefix (normally this is go/) keep-sorted-test start
+1
+2
+// comment on 3
+3
+// keep-sorted-test end
+
+Non-comment prefixes are still sorted:
+* keep-sorted-test start
+* not a comment on 3
+1
+2
+3
+* keep-sorted-test end
