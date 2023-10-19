@@ -180,8 +180,21 @@ func parseValueWithDefault(f reflect.StructField, key, val string, defaultFn fun
 }
 
 func (f *Fixer) guessCommentMarker(startLine string) string {
-	sp := strings.SplitN(startLine, f.ID, 2)
-	return strings.TrimSpace(sp[0])
+	startLine = strings.TrimSpace(startLine)
+	if strings.HasPrefix(startLine, "//") {
+		return "//"
+	} else if strings.HasPrefix(startLine, "#") {
+		return "#"
+	} else if strings.HasPrefix(startLine, "/*") {
+		return "/*"
+	} else if strings.HasPrefix(startLine, "--") {
+		return "--"
+	} else if strings.HasPrefix(startLine, ";") {
+		return ";"
+	} else if strings.HasPrefix(startLine, "<!--") {
+		return "<!--"
+	}
+	return ""
 }
 
 // hasStickyPrefix determines if s has one of the StickyPrefixes.

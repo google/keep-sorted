@@ -179,8 +179,10 @@ allows for sorting data such as Go structs and JSON objects.
 #### Comments
 
 Comments embedded within the sorted block are made to stick with their
-successor. The comment lines must start with the same token as the
-keep-sorted instruction itself (e.g. `#` in the case below).
+successor. The comment lines must start with the same comment marker as the
+keep-sorted instruction itself (e.g. `#` in the case below). keep-sorted
+will recognize `//`, `/*`, `#`, `--`, `;`, and `<!--` as comment markers, for
+any other kinds of comments, use `sticky_prefixes`.
 
 This special handling can be disabled by specifying the parameter
 `sticky_comments=no`:
