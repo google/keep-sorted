@@ -101,3 +101,19 @@ Indented markdown lists:
      * Wise insight
 
 <!-- keep-sorted-test end -->
+
+Nested keep-sorted
+private static final List<String> b = [
+  // keep-sorted-test start
+  "x",
+  "y",
+  "z"
+  // keep-sorted-test end
+  ];
+private static final List<String> a = [
+  // keep-sorted-test start
+  "1",
+  "2",
+  "3"
+  // keep-sorted-test end
+  ];
