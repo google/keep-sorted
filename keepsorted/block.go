@@ -28,6 +28,8 @@ type block struct {
 
 	start, end int
 	lines      []string
+
+	nestedBlocks []block
 }
 
 type incompleteBlock struct {
@@ -53,22 +55,27 @@ const (
 // include is a function that lets the caller determine if a particular block
 // should be included in the result. Mostly useful for filtering keep-sorted
 // blocks to just the ones that were modified by the currently CL.
-func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end int) bool) (blocks []block, incompleteBlocks []incompleteBlock) {
-	startIndex := -1
-	startLine := ""
+func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end int) bool) ([]block, []incompleteBlock) {
+	var blocks []block
+	var incompleteBlocks []incompleteBlock
+
+	type startLine struct {
+		index int
+		line  string
+	}
+	// Stacks of startLines and nested blocks.
+	var starts []startLine
+	var nestedBlocks [][]block
 	for i, l := range lines {
 		if strings.Contains(l, f.startDirective) {
-			if startIndex >= 0 {
-				// Reject the earlier one.
-				incompleteBlocks = append(incompleteBlocks, incompleteBlock{startIndex + offset, startDirective})
-			}
-			startIndex = i
-			startLine = l
+			starts = append(starts, startLine{i, l})
 		} else if strings.Contains(l, f.endDirective) {
-			if startIndex < 0 {
+			if len(starts) == 0 {
 				incompleteBlocks = append(incompleteBlocks, incompleteBlock{i + offset, endDirective})
 				continue
 			}
+			start := starts[len(starts)-1]
+			starts = starts[0 : len(starts)-1]
 			endIndex := i
 
 			// Keep any blank lines leading up to the end tag by simply excluding
@@ -79,34 +86,48 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 			// about the newlines anymore.
 			// It's nice to keep this around so that users can add a little extra
 			// formatting to their keep-sorted blocks.
-			for endIndex > startIndex && strings.TrimSpace(lines[endIndex-1]) == "" {
+			for endIndex > start.index && strings.TrimSpace(lines[endIndex-1]) == "" {
 				endIndex--
 			}
 
-			if !include(startIndex+offset, endIndex+offset) {
-				startIndex = -1
-				startLine = ""
+			if !include(start.index+offset, endIndex+offset) {
 				continue
 			}
 
-			opts, err := f.parseBlockOptions(startLine)
+			opts, err := f.parseBlockOptions(start.line)
 			if err != nil {
 				// TODO(b/250608236): Is there a better way to surface this error?
-				log.Err(fmt.Errorf("keep-sorted block at index %d had bad start directive: %w", startIndex+offset, err)).Msg("")
+				log.Err(fmt.Errorf("keep-sorted block at index %d had bad start directive: %w", start.index+offset, err)).Msg("")
 			}
-			blocks = append(blocks, block{
-				opts:  opts,
-				start: startIndex + offset,
-				end:   endIndex + offset,
-				lines: lines[startIndex+1 : endIndex],
-			})
 
-			startIndex = -1
-			startLine = ""
+			depth := len(starts)
+			block := block{
+				opts:  opts,
+				start: start.index + offset,
+				end:   endIndex + offset,
+				lines: lines[start.index+1 : endIndex],
+			}
+			if len(nestedBlocks) == depth+1 {
+				block.nestedBlocks = nestedBlocks[depth]
+				nestedBlocks = nestedBlocks[0:depth]
+			}
+			if depth == 0 {
+				blocks = append(blocks, block)
+			} else {
+				for len(nestedBlocks) < depth {
+					nestedBlocks = append(nestedBlocks, nil)
+				}
+				nestedBlocks[depth-1] = append(nestedBlocks[depth-1], block)
+			}
 		}
 	}
-	if startIndex >= 0 {
-		incompleteBlocks = append(incompleteBlocks, incompleteBlock{startIndex + offset, startDirective})
+	if len(starts) > 0 {
+		for _, st := range starts {
+			incompleteBlocks = append(incompleteBlocks, incompleteBlock{st.index + offset, startDirective})
+		}
+		for _, nested := range nestedBlocks {
+			blocks = append(blocks, nested...)
+		}
 	}
 
 	return blocks, incompleteBlocks

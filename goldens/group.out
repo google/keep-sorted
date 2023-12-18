@@ -103,17 +103,19 @@ Indented markdown lists:
 <!-- keep-sorted-test end -->
 
 Nested keep-sorted
+// keep-sorted-test start group=yes
+private static final List<String> a = [
+  // keep-sorted-test start
+  "3",
+  "2",
+  "1"
+  // keep-sorted-test end
+  ];
 private static final List<String> b = [
   // keep-sorted-test start
   "x",
-  "y",
-  "z"
+  "z",
+  "y"
   // keep-sorted-test end
   ];
-private static final List<String> a = [
-  // keep-sorted-test start
-  "1",
-  "2",
-  "3"
-  // keep-sorted-test end
-  ];
+// keep-sorted-test end
