@@ -16,9 +16,9 @@ package keepsorted
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"unicode"
 
@@ -83,7 +83,7 @@ type blockOptions struct {
 
 	// LINT.ThenChange(//depot/google3/devtools/keep_sorted/README.md)
 
-	// Syntax used to start a comment for go/keep-sorted annotation, e.g. "//".
+	// Syntax used to start a comment for keep-sorted annotation, e.g. "//".
 	commentMarker string
 }
 
@@ -242,8 +242,8 @@ func (opts blockOptions) maybeParseNumeric(s string) numericTokens {
 				// See the comment on numericTokens for more details.
 				t.s = append(t.s, "")
 			}
-			i, err := strconv.ParseInt(sm[1], 10, 64)
-			if err != nil {
+			i := new(big.Int)
+			if err := i.UnmarshalText([]byte(sm[1])); err != nil {
 				panic(fmt.Errorf("mixedNumberPattern yielded an unparseable int: %w", err))
 			}
 			t.i = append(t.i, i)
@@ -269,7 +269,7 @@ func (opts blockOptions) maybeParseNumeric(s string) numericTokens {
 //	i: []int64{123},
 type numericTokens struct {
 	s []string
-	i []int64
+	i []*big.Int
 }
 
 func (t numericTokens) len() int {
@@ -287,10 +287,8 @@ func (t numericTokens) compare(o numericTokens) int {
 				return c
 			}
 		} else { // Alternate by comparing with numbers.
-			if c := t.i[i/2] - o.i[i/2]; c < 0 {
-				return -1
-			} else if c > 0 {
-				return 1
+			if c := t.i[i/2].Cmp(o.i[i/2]); c != 0 {
+				return c
 			}
 		}
 	}

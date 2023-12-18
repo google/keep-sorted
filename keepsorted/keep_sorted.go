@@ -52,7 +52,7 @@ func (f *Fixer) errorMissingEnd() string {
 	return fmt.Sprintf("This instruction doesn't have matching '%s' line", f.endDirective)
 }
 
-// Fix all of the findings on contents to make go/keep-sorted happy.
+// Fix all of the findings on contents to make keep-sorted happy.
 func (f *Fixer) Fix(contents string, modifiedLines []LineRange) (fixed string, alreadyCorrect bool) {
 	lines := strings.Split(contents, "\n")
 	fs := f.findings("unused-filename", lines, modifiedLines, false)
@@ -78,7 +78,7 @@ func (f *Fixer) Fix(contents string, modifiedLines []LineRange) (fixed string, a
 }
 
 // Findings returns a slice of things that need to be addressed in the file to
-// make go/keep-sorted happy.
+// make keep-sorted happy.
 //
 // If modifiedLines is non-nil, we only report findings for issues within the
 // modified lines. Otherwise, we report all findings.
