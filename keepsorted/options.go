@@ -243,8 +243,8 @@ func (opts blockOptions) maybeParseNumeric(s string) numericTokens {
 				t.s = append(t.s, "")
 			}
 			i := new(big.Int)
-			if err := i.UnmarshalText([]byte(sm[1])); err != nil {
-				panic(fmt.Errorf("mixedNumberPattern yielded an unparseable int: %w", err))
+			if _, ok := i.SetString(sm[1], 10); !ok {
+				panic(fmt.Errorf("mixedNumberPattern yielded an unparseable int: %q", sm[1]))
 			}
 			t.i = append(t.i, i)
 		} else /* sm[2] != "" */ { // String token
