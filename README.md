@@ -14,7 +14,7 @@ Surround the lines to keep sorted with `keep-sorted start` and
 <table border="0">
 <tr>
 <td>
-<h5>Before</h5>
+<b>Before</b>
 
 ```java
 @Component(
@@ -34,7 +34,7 @@ interface FrontendComponent {
 ```
 </td>
 <td>
-<h5>After</h5>
+<b>After</b>
 
 ```diff
 @Component(
@@ -51,6 +51,57 @@ interface FrontendComponent {
 interface FrontendComponent {
   FrontendRequestHandler requestHandler();
 }
+```
+</td>
+</tr>
+</table>
+
+You can also nest keep-sorted blocks:
+
+<table border="0">
+<tr>
+<td>
+
+<!-- Including a long blank line here so that the code block width is more
+consistent -->
+```python
+                              
+foo = [
+
+  'y',
+  'x',
+  'z',
+
+]
+bar = [
+
+  '1',
+  '3',
+  '2',
+
+]
+
+```
+</td>
+<td>
+
+```diff
++# keep-sorted start block=yes
+ bar = [
++  # keep-sorted start
+   '1',
+   '2',
+   '3',
++  # keep-sorted end
+ ]
+ foo = [
++  # keep-sorted start
+   'x',
+   'y',
+   'z',
++  # keep-sorted end
+ ]
++# keep-sorted end
 ```
 </td>
 </tr>
