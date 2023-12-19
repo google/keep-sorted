@@ -463,6 +463,177 @@ cat`,
 				},
 			},
 		},
+		{
+			name: "NestedBlocks",
+
+			in: `
+// keep-sorted-test start
+foo
+bar
+// keep-sorted-test start
+baz
+// keep-sorted-test end
+dog
+// keep-sorted-test end
+`,
+
+			wantBlocks: []block{
+				{
+					opts:  defaultOptions,
+					start: 1,
+					end:   8,
+					lines: []string{
+						"foo",
+						"bar",
+						"// keep-sorted-test start",
+						"baz",
+						"// keep-sorted-test end",
+						"dog",
+					},
+					nestedBlocks: []block{
+						{
+							opts:  defaultOptions,
+							start: 4,
+							end:   6,
+							lines: []string{
+								"baz",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "NestedBlocks_DeeplyNested",
+
+			in: `
+// keep-sorted-test start
+0.1
+// keep-sorted-test start
+1
+// keep-sorted-test start
+2.1
+// keep-sorted-test start
+3
+// keep-sorted-test end // 3
+// keep-sorted-test end // 2.1
+// keep-sorted-test start
+2.2
+// keep-sorted-test end // 2.2
+// keep-sorted-test end // 1
+// keep-sorted-test end // 0.1
+// keep-sorted-test start
+0.2
+// keep-sorted-test end // 0.2
+`,
+
+			wantBlocks: []block{
+				{
+					opts:  defaultOptions,
+					start: 1,
+					end:   15,
+					lines: []string{
+						"0.1",
+						"// keep-sorted-test start",
+						"1",
+						"// keep-sorted-test start",
+						"2.1",
+						"// keep-sorted-test start",
+						"3",
+						"// keep-sorted-test end // 3",
+						"// keep-sorted-test end // 2.1",
+						"// keep-sorted-test start",
+						"2.2",
+						"// keep-sorted-test end // 2.2",
+						"// keep-sorted-test end // 1",
+					},
+					nestedBlocks: []block{
+						{
+							opts:  defaultOptions,
+							start: 3,
+							end:   14,
+							lines: []string{
+								"1",
+								"// keep-sorted-test start",
+								"2.1",
+								"// keep-sorted-test start",
+								"3",
+								"// keep-sorted-test end // 3",
+								"// keep-sorted-test end // 2.1",
+								"// keep-sorted-test start",
+								"2.2",
+								"// keep-sorted-test end // 2.2",
+							},
+							nestedBlocks: []block{
+								{
+									opts:  defaultOptions,
+									start: 5,
+									end:   10,
+									lines: []string{
+										"2.1",
+										"// keep-sorted-test start",
+										"3",
+										"// keep-sorted-test end // 3",
+									},
+									nestedBlocks: []block{
+										{
+											opts:  defaultOptions,
+											start: 7,
+											end:   9,
+											lines: []string{
+												"3",
+											},
+										},
+									},
+								},
+								{
+									opts:  defaultOptions,
+									start: 11,
+									end:   13,
+									lines: []string{
+										"2.2",
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					opts:  defaultOptions,
+					start: 16,
+					end:   18,
+					lines: []string{
+						"0.2",
+					},
+				},
+			},
+		},
+		{
+			name: "NestedBlocks_MissingEnds",
+
+			in: `
+// keep-sorted-test start
+0
+// keep-sorted-test start
+1
+// keep-sorted-test start
+2
+// keep-sorted-test end
+`,
+
+			wantBlocks: []block{
+				{
+					opts:  defaultOptions,
+					start: 5,
+					end:   7,
+					lines: []string{"2"},
+				},
+			},
+			wantIncompleteBlocks: []incompleteBlock{
+				{1, startDirective},
+				{3, startDirective},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			defer initZerolog(t)() // Note the extra parens.

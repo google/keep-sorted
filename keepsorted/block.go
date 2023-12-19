@@ -27,7 +27,15 @@ type block struct {
 	opts blockOptions
 
 	start, end int
-	lines      []string
+	// lines are the content of this block from the original file.
+	//
+	// Do not modify this slice:
+	// This slice shares the same backing array as every other keep-sorted block
+	// in this file.  That same backing array is also used by Fixer.Fix to
+	// generate the fixed file content. Modifying the backing array might have
+	// unintended effects on other (nested) blocks. Modifying the backing array
+	// will have unintended effects on Fixer.Fix.
+	lines []string
 
 	nestedBlocks []block
 }
@@ -63,8 +71,10 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 		index int
 		line  string
 	}
-	// Stacks of startLines and nested blocks.
+	// starts is a stack of startLines.
 	var starts []startLine
+	// nestedBlocks by nesting level. nestedBlocks[0] is the slice of blocks that
+	// are nested under the current top-level block.
 	var nestedBlocks [][]block
 	for i, l := range lines {
 		if strings.Contains(l, f.startDirective) {
@@ -100,6 +110,8 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 				log.Err(fmt.Errorf("keep-sorted block at index %d had bad start directive: %w", start.index+offset, err)).Msg("")
 			}
 
+			// Top-level keep-sorted directives have depth 0. Nested keep-sorted
+			// directives will have depth >= 1 based on how deep it is.
 			depth := len(starts)
 			block := block{
 				opts:  opts,
@@ -107,24 +119,39 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 				end:   endIndex + offset,
 				lines: lines[start.index+1 : endIndex],
 			}
+			// For example, consider depth=0:
+			// If we just finished a top-level block and there are first-level nested
+			// blocks present, we need to remove those from nestedBlocks and include
+			// them on this block.
+			// It isn't possible for len(nestedBlocks) to be > depth+1:
+			// At depth n, n != 0, we increase the length of nestedBlocks to be n.
+			// At depth m=n-1, the length of nestedBlocks will initially be n=m+1 (the assertion from above)
+			// and then we trim that down to be length m when we add the nested blocks
+			// to the current block.
 			if len(nestedBlocks) == depth+1 {
 				block.nestedBlocks = nestedBlocks[depth]
 				nestedBlocks = nestedBlocks[0:depth]
 			}
 			if depth == 0 {
+				// Top-level blocks get returned.
+				// Nested blocks are returned via their top-level block.
 				blocks = append(blocks, block)
 			} else {
+				// Otherwise, the current block appears to be nested. Add it to nestedBlocks.
 				for len(nestedBlocks) < depth {
 					nestedBlocks = append(nestedBlocks, nil)
 				}
 				nestedBlocks[depth-1] = append(nestedBlocks[depth-1], block)
 			}
+			// Invariant: len(nestedBlocks) == depth
 		}
 	}
 	if len(starts) > 0 {
 		for _, st := range starts {
 			incompleteBlocks = append(incompleteBlocks, incompleteBlock{st.index + offset, startDirective})
 		}
+		// There were some unfinished start directives. They might've caused some
+		// blocks to be incorrectly considered nested.
 		for _, nested := range nestedBlocks {
 			blocks = append(blocks, nested...)
 		}
@@ -133,8 +160,70 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 	return blocks, incompleteBlocks
 }
 
+// sorted returns a slice which represents the correct sorting of b.lines.
+// If b.lines is already correctly sorted, we will return b.lines, true.
 func (b block) sorted() (sorted []string, alreadySorted bool) {
-	groups := groupLines(b.lines, b.opts)
+	alreadySorted = true
+
+	// Sort the nested blocks first so that their changes are visible to the
+	// outer block.
+	type nestedResult struct {
+		lines         []string
+		alreadySorted bool
+	}
+	var nestedResults []nestedResult
+	for _, n := range b.nestedBlocks {
+		lines, already := n.sorted()
+		if !already {
+			alreadySorted = false
+		}
+		nestedResults = append(nestedResults, nestedResult{lines, already})
+	}
+
+	lines := b.lines
+	if !alreadySorted {
+		var lineChunks [][]string
+		// The total number of lines in lineChunks.
+		var numLines int
+		// Our current position within lines.
+		var cursor int
+		for i, nested := range b.nestedBlocks {
+			res := nestedResults[i]
+			if res.alreadySorted {
+				// This nested block was already sorted. Its content in lines is already
+				// correct. We will add this block to lineChunks either as an unchanged
+				// prefix to a changed nested block, or as the remainder of lines if there
+				// are no more changed nested blocks.
+				continue
+			}
+
+			offset := nested.start - b.start
+			// Unchanged prefix of lines.
+			lineChunks = append(lineChunks, lines[cursor:offset])
+			numLines += offset - cursor
+			// The piece of the nested block that changed.
+			lineChunks = append(lineChunks, res.lines)
+			numLines += len(res.lines)
+
+			// Advance cursor to the end of the nested block within lines.
+			cursor = offset + len(nested.lines)
+		}
+
+		if rem := lines[cursor:]; len(rem) > 0 {
+			// Are there any lines remaining in lines after handing all the nested
+			// blocks?
+			lineChunks = append(lineChunks, rem)
+			numLines += len(rem)
+		}
+
+		// See above for the scary comment telling us not to modify b.lines directly.
+		lines = make([]string, 0, numLines)
+		for _, chunk := range lineChunks {
+			lines = append(lines, chunk...)
+		}
+	}
+
+	groups := groupLines(lines, b.opts)
 	log.Printf("%d groups for block at index %d are (options %#v)", len(groups), b.start, b.opts)
 	for _, lg := range groups {
 		log.Printf("%#v", lg)
@@ -172,9 +261,9 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 
 	less := b.lessFn()
 
-	if wasNewlineSeparated && !removedDuplicate && slices.IsSortedFunc(groups, less) {
+	if alreadySorted && wasNewlineSeparated && !removedDuplicate && slices.IsSortedFunc(groups, less) {
 		trimTrailingComma(groups)
-		return b.lines, true
+		return lines, true
 	}
 
 	slices.SortStableFunc(groups, less)
@@ -193,7 +282,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 		groups = separated
 	}
 
-	l := make([]string, 0, len(b.lines))
+	l := make([]string, 0, len(lines))
 	for _, g := range groups {
 		l = append(l, g.allLines()...)
 	}
