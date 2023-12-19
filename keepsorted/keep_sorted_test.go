@@ -974,6 +974,29 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
+			name: "Group_UnindentedNewlines",
+			opts: defaultOptionsWith(func(opts *blockOptions) {
+				opts.Group = true
+			}),
+
+			want: []lineGroup{
+				{nil, []string{
+					"  foo",
+					"", // Since the next non-empty line has the correct indent.
+					"    bar",
+				}},
+				{nil, []string{
+					"", // Next non-empty line has the wrong indent.
+				}},
+				{nil, []string{
+					"  baz",
+				}},
+				{nil, []string{
+					"", // There is no next non-empty line.
+				}},
+			},
+		},
+		{
 			name: "block -- brackets",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Block = true
