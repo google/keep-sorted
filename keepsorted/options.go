@@ -16,6 +16,7 @@ package keepsorted
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -23,8 +24,6 @@ import (
 	"slices"
 	"strings"
 	"unicode"
-
-	"go.uber.org/multierr"
 )
 
 var (
@@ -100,7 +99,7 @@ func (f *Fixer) parseBlockOptions(startLine string) (blockOptions, error) {
 
 		val, err := parseBlockOption(field, startLine)
 		if err != nil {
-			errs = multierr.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 
 		opts.Elem().Field(i).Set(val)

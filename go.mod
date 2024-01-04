@@ -8,7 +8,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/pflag v1.0.5
-	go.uber.org/multierr v1.11.0
 	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc
 	google.golang.org/protobuf v1.28.1
 )
