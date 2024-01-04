@@ -157,7 +157,7 @@ func (f *lineRangeFlag) parse(vals []string) ([]keepsorted.LineRange, error) {
 			}
 		}
 
-		lrs = append(lrs, keepsorted.LineRange{start, end})
+		lrs = append(lrs, keepsorted.LineRange{Start: start, End: end})
 	}
 	return lrs, nil
 }
