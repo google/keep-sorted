@@ -15,11 +15,12 @@
 package keepsorted
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/Workiva/go-datastructures/augmentedtree"
-	"golang.org/x/exp/slices"
 )
 
 const (
@@ -147,8 +148,8 @@ func (f *Fixer) findings(filename string, contents []string, modifiedLines []Lin
 		fs = append(fs, finding(filename, ib.line, ib.line, msg, ""))
 	}
 
-	slices.SortFunc(fs, func(a, b *Finding) bool {
-		return startLine(a) < startLine(b)
+	slices.SortFunc(fs, func(a, b *Finding) int {
+		return cmp.Compare(startLine(a), startLine(b))
 	})
 	return fs
 }

@@ -15,12 +15,12 @@
 package keepsorted
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/rs/zerolog/log"
-	"golang.org/x/exp/constraints"
-	"golang.org/x/exp/slices"
 )
 
 type block struct {
@@ -248,7 +248,7 @@ func allHaveSuffix(lgs []lineGroup, s string) bool {
 	return true
 }
 
-func (b block) lessFn() func(a, b lineGroup) bool {
+func (b block) lessFn() func(a, b lineGroup) int {
 	// Always put groups that are only comments last.
 	commentOnlyBlock := comparingProperty(func(lg lineGroup) int {
 		if len(lg.lines) > 0 {
@@ -268,8 +268,8 @@ func (b block) lessFn() func(a, b lineGroup) bool {
 	for i, p := range b.opts.PrefixOrder {
 		prefixWeights = append(prefixWeights, prefixWeight{p, i - len(b.opts.PrefixOrder)})
 	}
-	slices.SortStableFunc(prefixWeights, func(a, b prefixWeight) bool {
-		return len(a.prefix) > len(b.prefix)
+	slices.SortStableFunc(prefixWeights, func(a, b prefixWeight) int {
+		return cmp.Compare(b.prefix, a.prefix)
 	})
 
 	prefixOrder := comparingProperty(func(lg lineGroup) int {
@@ -310,21 +310,21 @@ func (b block) lessFn() func(a, b lineGroup) bool {
 		return b.opts.maybeParseNumeric(l)
 	}, numericTokens.compare)
 
-	return func(a, b lineGroup) bool {
+	return func(a, b lineGroup) int {
 		for _, cmp := range []func(a, b lineGroup) int{
 			commentOnlyBlock,
 			prefixOrder,
 			transformOrder,
 		} {
 			if c := cmp(a, b); c != 0 {
-				return c < 0
+				return c
 			}
 		}
 		return a.less(b)
 	}
 }
 
-func comparingProperty[T any, E constraints.Ordered](f func(T) E) func(a, b T) int {
+func comparingProperty[T any, E cmp.Ordered](f func(T) E) func(a, b T) int {
 	return comparingPropertyWith(f, func(a, b E) int {
 		if a < b {
 			return -1

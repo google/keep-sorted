@@ -15,6 +15,7 @@
 package keepsorted
 
 import (
+	"cmp"
 	"fmt"
 	"regexp"
 	"strings"
@@ -265,11 +266,11 @@ func (lg lineGroup) joinedLines() string {
 	return s.String()
 }
 
-func (lg lineGroup) less(other lineGroup) bool {
+func (lg lineGroup) less(other lineGroup) int {
 	if c := strings.Compare(lg.joinedLines(), other.joinedLines()); c != 0 {
-		return c < 0
+		return c
 	}
-	return strings.Join(lg.comment, "\n") < strings.Join(other.comment, "\n")
+	return cmp.Compare(strings.Join(lg.comment, "\n"), strings.Join(other.comment, "\n"))
 }
 
 func (lg lineGroup) GoString() string {

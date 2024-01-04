@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/google/keep-sorted/keepsorted"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 )
 
 type Config struct {
