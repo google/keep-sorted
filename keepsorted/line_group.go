@@ -33,8 +33,13 @@ func groupLines(lines []string, opts blockOptions) []lineGroup {
 	var groups []lineGroup
 	var commentRange indexRange
 	var lineRange indexRange
-	indent := -1
+	var indents []int
+	var initialIndent *int
 	var block codeBlock
+
+	if opts.Group {
+		indents = calculateIndents(lines)
+	}
 
 	// append a line to both lineRange, and block, if necessary.
 	appendLine := func(i int, l string) {
@@ -53,7 +58,7 @@ func groupLines(lines []string, opts blockOptions) []lineGroup {
 	for i, l := range lines {
 		if opts.Block && !lineRange.empty() && block.expectsContinuation() {
 			appendLine(i, l)
-		} else if opts.Group && !lineRange.empty() && indent >= 0 && countIndent(l) > indent {
+		} else if opts.Group && !lineRange.empty() && initialIndent != nil && indents[i] > *initialIndent {
 			appendLine(i, l)
 		} else if opts.hasStickyPrefix(l) {
 			if !lineRange.empty() {
@@ -65,8 +70,8 @@ func groupLines(lines []string, opts blockOptions) []lineGroup {
 			if !lineRange.empty() {
 				finishGroup()
 			}
-			if opts.Group && indent < 0 {
-				indent = countIndent(l)
+			if opts.Group && initialIndent == nil {
+				initialIndent = &indents[i]
 			}
 			appendLine(i, l)
 		}
@@ -77,8 +82,38 @@ func groupLines(lines []string, opts blockOptions) []lineGroup {
 	return groups
 }
 
+// calculateIndents precalculates the indentation for each line.
+// We do this precalculation so that we don't get bad worst-case behavior if
+// someone had a bunch of newlines in a group=yes block.
+func calculateIndents(lines []string) []int {
+	ret := make([]int, len(lines))
+	for i, l := range lines {
+		indent, ok := countIndent(l)
+		if !ok {
+			indent = -1
+		}
+		ret[i] = indent
+	}
+
+	// Allow for newlines to have an indent if the next non-empty line has hanging
+	// indent.
+	// Go backwards through the indent list so that it's harder to accidentally
+	// get O(n^2) behavior for a long section of newlines.
+	indent := -1
+	for i := len(ret) - 1; i >= 0; i-- {
+		if ret[i] == -1 {
+			ret[i] = indent
+			continue
+		}
+
+		indent = ret[i]
+	}
+
+	return ret
+}
+
 // countIndent counts how many space characters occur at the beginning of s.
-func countIndent(s string) int {
+func countIndent(s string) (indent int, hasNonSpaceCharacter bool) {
 	c := 0
 	for _, ch := range s {
 		if unicode.IsSpace(ch) {
@@ -87,11 +122,10 @@ func countIndent(s string) int {
 		}
 		break
 	}
-	// The entire line is whitespace, it's a newline not an indent.
 	if c == len(s) {
-		return -1
+		return 0, false
 	}
-	return c
+	return c, true
 }
 
 // indexRange is a helper struct that let us gradually figure out how big a
