@@ -15,15 +15,15 @@
 package keepsorted
 
 import (
+	"cmp"
+	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
-
-	"go.uber.org/multierr"
-	"golang.org/x/exp/slices"
 )
 
 var (
@@ -99,7 +99,7 @@ func (f *Fixer) parseBlockOptions(startLine string) (blockOptions, error) {
 
 		val, err := parseBlockOption(field, startLine)
 		if err != nil {
-			errs = multierr.Append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 
 		opts.Elem().Field(i).Set(val)
@@ -116,7 +116,7 @@ func (f *Fixer) parseBlockOptions(startLine string) (blockOptions, error) {
 	}
 	if len(ret.IgnorePrefixes) > 1 {
 		// Look at longer prefixes first, in case one of these prefixes is a prefix of another.
-		slices.SortFunc(ret.IgnorePrefixes, func(a string, b string) bool { return len(a) > len(b) })
+		slices.SortFunc(ret.IgnorePrefixes, func(a string, b string) int { return cmp.Compare(len(b), len(a)) })
 	}
 
 	return ret, errs

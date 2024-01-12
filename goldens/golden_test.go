@@ -15,7 +15,7 @@
 package golden_test
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -65,7 +65,7 @@ func TestGoldens(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Could not open .out file: %v", err)
 				}
-				want, err := ioutil.ReadAll(out)
+				want, err := io.ReadAll(out)
 				if err != nil {
 					t.Fatalf("Could not read .out file: %v", err)
 				}
@@ -84,13 +84,13 @@ func TestGoldens(t *testing.T) {
 					t.Errorf("could not start keep-sorted: %v", err)
 				}
 
-				if stderr, err := ioutil.ReadAll(stderr); err != nil {
+				if stderr, err := io.ReadAll(stderr); err != nil {
 					t.Errorf("could not read keep-sorted stderr: %v", err)
 				} else if len(stderr) != 0 {
 					t.Errorf("keep-sorted stderr: %s", string(stderr))
 				}
 
-				if got, err := ioutil.ReadAll(stdout); err != nil {
+				if got, err := io.ReadAll(stdout); err != nil {
 					t.Errorf("could not read keep-sorted stdout: %v", err)
 				} else if diff := cmp.Diff(strings.Split(string(want), "\n"), strings.Split(string(got), "\n")); diff != "" {
 					t.Errorf("keep-sorted stdout diff (-want +got):\n%s", diff)

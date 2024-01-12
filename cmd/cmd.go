@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/google/keep-sorted/keepsorted"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 )
 
 type Config struct {
@@ -41,7 +41,9 @@ func (c *Config) FromFlags(fs *flag.FlagSet) {
 	}
 
 	fs.StringVar(&c.id, "id", "keep-sorted", "The identifier used to enable this tool in files.")
-	fs.MarkHidden("id")
+	if err := fs.MarkHidden("id"); err != nil {
+		panic(err)
+	}
 
 	of := &operationFlag{op: &c.operation}
 	if err := of.Set("fix"); err != nil {
@@ -147,7 +149,7 @@ func (f *lineRangeFlag) parse(vals []string) ([]keepsorted.LineRange, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid line range %q: %w", val, err)
 		}
-		end := -1
+		var end int
 		if len(sp) == 1 {
 			end = start
 		} else {
@@ -157,7 +159,7 @@ func (f *lineRangeFlag) parse(vals []string) ([]keepsorted.LineRange, error) {
 			}
 		}
 
-		lrs = append(lrs, keepsorted.LineRange{start, end})
+		lrs = append(lrs, keepsorted.LineRange{Start: start, End: end})
 	}
 	return lrs, nil
 }
