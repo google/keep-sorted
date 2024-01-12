@@ -1,6 +1,6 @@
 module github.com/google/keep-sorted
 
-go 1.20
+go 1.21
 
 require (
 	github.com/Workiva/go-datastructures v1.0.53
