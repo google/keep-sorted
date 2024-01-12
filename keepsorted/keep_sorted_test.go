@@ -468,12 +468,17 @@ cat`,
 
 			in: `
 // keep-sorted-test start
-foo
-bar
+a
+b
+c
 // keep-sorted-test start
-baz
+d
+e
+f
 // keep-sorted-test end
-dog
+g
+h
+i
 // keep-sorted-test end
 `,
 
@@ -481,22 +486,29 @@ dog
 				{
 					opts:  defaultOptions,
 					start: 1,
-					end:   8,
+					end:   13,
 					lines: []string{
-						"foo",
-						"bar",
+						"a",
+						"b",
+						"c",
 						"// keep-sorted-test start",
-						"baz",
+						"d",
+						"e",
+						"f",
 						"// keep-sorted-test end",
-						"dog",
+						"g",
+						"h",
+						"i",
 					},
 					nestedBlocks: []block{
 						{
 							opts:  defaultOptions,
-							start: 4,
-							end:   6,
+							start: 5,
+							end:   9,
 							lines: []string{
-								"baz",
+								"d",
+								"e",
+								"f",
 							},
 						},
 					},
@@ -509,89 +521,154 @@ dog
 			in: `
 // keep-sorted-test start
 0.1
+0.2
+0.3
 // keep-sorted-test start
-1
+1.1
+1.2
+1.3
 // keep-sorted-test start
 2.1
-// keep-sorted-test start
-3
-// keep-sorted-test end // 3
-// keep-sorted-test end // 2.1
-// keep-sorted-test start
 2.2
-// keep-sorted-test end // 2.2
-// keep-sorted-test end // 1
-// keep-sorted-test end // 0.1
+2.3
 // keep-sorted-test start
-0.2
-// keep-sorted-test end // 0.2
+3.1
+3.2
+3.3
+// keep-sorted-test end // 0:1:2:3
+2.4
+2.5
+2.6
+// keep-sorted-test end // 0:1:2
+// keep-sorted-test start
+4.1
+4.2
+4.3
+// keep-sorted-test end // 0:1:4
+1.4
+1.5
+1.6
+// keep-sorted-test end // 0:1
+0.4
+0.5
+0.6
+// keep-sorted-test end // 0
+// keep-sorted-test start
+5.1
+5.2
+5.3
+// keep-sorted-test end // 5
 `,
 
 			wantBlocks: []block{
 				{
 					opts:  defaultOptions,
 					start: 1,
-					end:   15,
+					end:   34,
 					lines: []string{
 						"0.1",
+						"0.2",
+						"0.3",
 						"// keep-sorted-test start",
-						"1",
+						"1.1",
+						"1.2",
+						"1.3",
 						"// keep-sorted-test start",
 						"2.1",
-						"// keep-sorted-test start",
-						"3",
-						"// keep-sorted-test end // 3",
-						"// keep-sorted-test end // 2.1",
-						"// keep-sorted-test start",
 						"2.2",
-						"// keep-sorted-test end // 2.2",
-						"// keep-sorted-test end // 1",
+						"2.3",
+						"// keep-sorted-test start",
+						"3.1",
+						"3.2",
+						"3.3",
+						"// keep-sorted-test end // 0:1:2:3",
+						"2.4",
+						"2.5",
+						"2.6",
+						"// keep-sorted-test end // 0:1:2",
+						"// keep-sorted-test start",
+						"4.1",
+						"4.2",
+						"4.3",
+						"// keep-sorted-test end // 0:1:4",
+						"1.4",
+						"1.5",
+						"1.6",
+						"// keep-sorted-test end // 0:1",
+						"0.4",
+						"0.5",
+						"0.6",
 					},
 					nestedBlocks: []block{
 						{
 							opts:  defaultOptions,
-							start: 3,
-							end:   14,
+							start: 5,
+							end:   30,
 							lines: []string{
-								"1",
+								"1.1",
+								"1.2",
+								"1.3",
 								"// keep-sorted-test start",
 								"2.1",
-								"// keep-sorted-test start",
-								"3",
-								"// keep-sorted-test end // 3",
-								"// keep-sorted-test end // 2.1",
-								"// keep-sorted-test start",
 								"2.2",
-								"// keep-sorted-test end // 2.2",
+								"2.3",
+								"// keep-sorted-test start",
+								"3.1",
+								"3.2",
+								"3.3",
+								"// keep-sorted-test end // 0:1:2:3",
+								"2.4",
+								"2.5",
+								"2.6",
+								"// keep-sorted-test end // 0:1:2",
+								"// keep-sorted-test start",
+								"4.1",
+								"4.2",
+								"4.3",
+								"// keep-sorted-test end // 0:1:4",
+								"1.4",
+								"1.5",
+								"1.6",
 							},
 							nestedBlocks: []block{
 								{
 									opts:  defaultOptions,
-									start: 5,
-									end:   10,
+									start: 9,
+									end:   21,
 									lines: []string{
 										"2.1",
+										"2.2",
+										"2.3",
 										"// keep-sorted-test start",
-										"3",
-										"// keep-sorted-test end // 3",
+										"3.1",
+										"3.2",
+										"3.3",
+										"// keep-sorted-test end // 0:1:2:3",
+										"2.4",
+										"2.5",
+										"2.6",
 									},
 									nestedBlocks: []block{
 										{
 											opts:  defaultOptions,
-											start: 7,
-											end:   9,
+											start: 13,
+											end:   17,
 											lines: []string{
-												"3",
+												"3.1",
+												"3.2",
+												"3.3",
 											},
 										},
 									},
 								},
 								{
 									opts:  defaultOptions,
-									start: 11,
-									end:   13,
+									start: 22,
+									end:   26,
 									lines: []string{
-										"2.2",
+										"4.1",
+										"4.2",
+										"4.3",
 									},
 								},
 							},
@@ -600,10 +677,12 @@ dog
 				},
 				{
 					opts:  defaultOptions,
-					start: 16,
-					end:   18,
+					start: 35,
+					end:   39,
 					lines: []string{
-						"0.2",
+						"5.1",
+						"5.2",
+						"5.3",
 					},
 				},
 			},
