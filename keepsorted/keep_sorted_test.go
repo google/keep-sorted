@@ -43,10 +43,10 @@ var (
 
 // initZerolog initializes zerolog to log as part of the test.
 // It returns a function that restores zerolog to its state before this function was called.
-func initZerolog(t testing.TB) func() {
+func initZerolog(t testing.TB) {
 	oldLogger := log.Logger
 	log.Logger = log.Output(zerolog.NewTestWriter(t))
-	return func() { log.Logger = oldLogger }
+	t.Cleanup(func() { log.Logger = oldLogger })
 }
 
 func defaultOptionsWith(f func(*blockOptions)) blockOptions {
@@ -180,7 +180,7 @@ foo
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			defer initZerolog(t)() // Note the extra parens.
+			initZerolog(t)
 			got, gotAlreadyFixed := New("keep-sorted-test").Fix(tc.in, nil)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("Fix diff (-want +got):\n%s", diff)
@@ -301,7 +301,7 @@ baz
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			defer initZerolog(t)() // Note the extra parens.
+			initZerolog(t)
 			var mod []LineRange
 			if tc.modifiedLines != nil {
 				for _, l := range tc.modifiedLines {
@@ -636,7 +636,7 @@ dog
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			defer initZerolog(t)() // Note the extra parens.
+			initZerolog(t)
 			if tc.include == nil {
 				tc.include = func(start, end int) bool { return true }
 			}
@@ -1064,7 +1064,7 @@ func TestLineSorting(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			defer initZerolog(t)() // Note the extra parens.
+			initZerolog(t)
 			got, gotAlreadySorted := block{lines: tc.in, opts: tc.opts}.sorted()
 			if gotAlreadySorted != tc.wantAlreadySorted {
 				t.Errorf("alreadySorted mismatch: got %t want %t", gotAlreadySorted, tc.wantAlreadySorted)
@@ -1354,7 +1354,7 @@ func TestLineGrouping(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			defer initZerolog(t)() // Note the extra parens.
+			initZerolog(t)
 			var in []string
 			for _, lg := range tc.want {
 				in = append(in, lg.comment...)
@@ -1445,7 +1445,7 @@ func TestBlockOptions(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			defer initZerolog(t)() // Note the extra parens.
+			initZerolog(t)
 			got, err := New("keep-sorted-test").parseBlockOptions(tc.in)
 			if err != nil {
 				if tc.wantErr == "" {
