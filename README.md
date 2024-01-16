@@ -122,7 +122,7 @@ You can automatically run keep-sorted by adding this repository to your
 
 ```yaml
 - repo: https://github.com/google/keep-sorted
-  rev: v0.2.0
+  rev: v0.3.0
   hooks:
     - id: keep-sorted
 ```
