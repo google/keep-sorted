@@ -24,7 +24,7 @@ import (
 )
 
 type block struct {
-	opts blockOptions
+	metadata blockMetadata
 
 	start, end int
 	// lines are the content of this block from the original file.
@@ -38,6 +38,11 @@ type block struct {
 	lines []string
 
 	nestedBlocks []block
+}
+
+type blockMetadata struct {
+	startDirective, endDirective string
+	opts                         blockOptions
 }
 
 type incompleteBlock struct {
@@ -114,7 +119,11 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 			// directives will have depth >= 1 based on how deep it is.
 			depth := len(starts)
 			block := block{
-				opts:  opts,
+				metadata: blockMetadata{
+					startDirective: f.startDirective,
+					endDirective:   f.endDirective,
+					opts:           opts,
+				},
 				start: start.index + offset,
 				end:   endIndex + offset,
 				lines: lines[start.index+1 : endIndex],
@@ -223,8 +232,8 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 		}
 	}
 
-	groups := groupLines(lines, b.opts)
-	log.Printf("%d groups for block at index %d are (options %#v)", len(groups), b.start, b.opts)
+	groups := groupLines(lines, b.metadata)
+	log.Printf("%d groups for block at index %d are (options %#v)", len(groups), b.start, b.metadata.opts)
 	for _, lg := range groups {
 		log.Printf("%#v", lg)
 	}
@@ -232,7 +241,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	trimTrailingComma := handleTrailingComma(groups)
 
 	wasNewlineSeparated := true
-	if b.opts.NewlineSeparated {
+	if b.metadata.opts.NewlineSeparated {
 		wasNewlineSeparated = isNewlineSeparated(groups)
 		var withoutNewlines []lineGroup
 		for _, lg := range groups {
@@ -245,7 +254,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	}
 
 	removedDuplicate := false
-	if b.opts.RemoveDuplicates {
+	if b.metadata.opts.RemoveDuplicates {
 		seen := map[string]bool{}
 		var deduped []lineGroup
 		for _, lg := range groups {
@@ -270,7 +279,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 
 	trimTrailingComma(groups)
 
-	if b.opts.NewlineSeparated {
+	if b.metadata.opts.NewlineSeparated {
 		var separated []lineGroup
 		newline := lineGroup{lines: []string{""}}
 		for _, lg := range groups {
@@ -375,8 +384,8 @@ func (b block) lessFn() func(a, b lineGroup) int {
 	// An empty prefix can be used to move all remaining entries to a position
 	// between other prefixes.
 	var prefixWeights []prefixWeight
-	for i, p := range b.opts.PrefixOrder {
-		prefixWeights = append(prefixWeights, prefixWeight{p, i - len(b.opts.PrefixOrder)})
+	for i, p := range b.metadata.opts.PrefixOrder {
+		prefixWeights = append(prefixWeights, prefixWeight{p, i - len(b.metadata.opts.PrefixOrder)})
 	}
 	slices.SortStableFunc(prefixWeights, func(a, b prefixWeight) int {
 		return cmp.Compare(b.prefix, a.prefix)
@@ -411,13 +420,13 @@ func (b block) lessFn() func(a, b lineGroup) int {
 	//   foo_123
 	transformOrder := comparingPropertyWith(func(lg lineGroup) numericTokens {
 		l := lg.joinedLines()
-		if s, ok := b.opts.removeIgnorePrefix(l); ok {
+		if s, ok := b.metadata.opts.removeIgnorePrefix(l); ok {
 			l = s
 		}
-		if !b.opts.CaseSensitive {
+		if !b.metadata.opts.CaseSensitive {
 			l = strings.ToLower(l)
 		}
-		return b.opts.maybeParseNumeric(l)
+		return b.metadata.opts.maybeParseNumeric(l)
 	}, numericTokens.compare)
 
 	return func(a, b lineGroup) int {

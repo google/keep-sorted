@@ -128,7 +128,7 @@ func (f *Fixer) findings(filename string, contents []string, modifiedLines []Lin
 
 	var fs []*Finding
 	for _, b := range blocks {
-		if considerLintOption && !b.opts.Lint {
+		if considerLintOption && !b.metadata.opts.Lint {
 			continue
 		}
 		if s, alreadySorted := b.sorted(); !alreadySorted {
