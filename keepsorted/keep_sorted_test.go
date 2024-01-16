@@ -19,6 +19,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/testing/protocmp"
 )
 
@@ -39,6 +41,14 @@ var (
 	}
 )
 
+// initZerolog initializes zerolog to log as part of the test.
+// It returns a function that restores zerolog to its state before this function was called.
+func initZerolog(t testing.TB) {
+	oldLogger := log.Logger
+	log.Logger = log.Output(zerolog.NewTestWriter(t))
+	t.Cleanup(func() { log.Logger = oldLogger })
+}
+
 func defaultOptionsWith(f func(*blockOptions)) blockOptions {
 	opts := defaultOptions
 	f(&opts)
@@ -55,7 +65,7 @@ func TestFix(t *testing.T) {
 		wantAlreadyFixed bool
 	}{
 		{
-			name: "empty",
+			name: "Empty",
 
 			in: `
 // keep-sorted-test start
@@ -67,7 +77,7 @@ func TestFix(t *testing.T) {
 			wantAlreadyFixed: true,
 		},
 		{
-			name: "already sorted",
+			name: "AlreadySorted",
 
 			in: `
 // keep-sorted-test start
@@ -85,7 +95,7 @@ func TestFix(t *testing.T) {
 			wantAlreadyFixed: true,
 		},
 		{
-			name: "unordered block",
+			name: "UnorderedBlock",
 
 			in: `
 // keep-sorted-test start
@@ -102,7 +112,7 @@ func TestFix(t *testing.T) {
 // keep-sorted-test end`,
 		},
 		{
-			name: "unmatched start",
+			name: "UnmatchedStart",
 
 			in: `
 // keep-sorted-test start
@@ -120,7 +130,7 @@ func TestFix(t *testing.T) {
 // keep-sorted-test end`,
 		},
 		{
-			name: "unmatched end",
+			name: "UnmatchedEnd",
 
 			in: `
 // keep-sorted-test start
@@ -139,7 +149,7 @@ func TestFix(t *testing.T) {
 `,
 		},
 		{
-			name: "multiple fixes",
+			name: "MultipleFixes",
 
 			in: `
 // keep-sorted-test end
@@ -170,6 +180,7 @@ foo
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			initZerolog(t)
 			got, gotAlreadyFixed := New("keep-sorted-test").Fix(tc.in, nil)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("Fix diff (-want +got):\n%s", diff)
@@ -193,7 +204,7 @@ func TestFindings(t *testing.T) {
 		want []*Finding
 	}{
 		{
-			name: "already sorted",
+			name: "AlreadySorted",
 
 			in: `
 // keep-sorted-test start
@@ -205,7 +216,7 @@ func TestFindings(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "not sorted",
+			name: "NotSorted",
 
 			in: `
 // keep-sorted-test start
@@ -217,7 +228,7 @@ func TestFindings(t *testing.T) {
 			want: []*Finding{finding(filename, 3, 5, errorUnordered, "1\n2\n3\n")},
 		},
 		{
-			name: "mismatched start",
+			name: "MismatchedStart",
 
 			in: `
 // keep-sorted-test start`,
@@ -225,7 +236,7 @@ func TestFindings(t *testing.T) {
 			want: []*Finding{finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test end' line", "")},
 		},
 		{
-			name: "mismatched end",
+			name: "MismatchedEnd",
 
 			in: `
 // keep-sorted-test end`,
@@ -233,7 +244,7 @@ func TestFindings(t *testing.T) {
 			want: []*Finding{finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test start' line", "")},
 		},
 		{
-			name: "multiple findings",
+			name: "MultipleFindings",
 
 			in: `
 // keep-sorted-test end
@@ -258,7 +269,7 @@ baz
 			},
 		},
 		{
-			name: "modified lines",
+			name: "ModifiedLines",
 
 			in: `
 // keep-sorted-test start
@@ -290,6 +301,7 @@ baz
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			initZerolog(t)
 			var mod []LineRange
 			if tc.modifiedLines != nil {
 				for _, l := range tc.modifiedLines {
@@ -315,7 +327,7 @@ func TestCreatingBlocks(t *testing.T) {
 		wantIncompleteBlocks []incompleteBlock
 	}{
 		{
-			name: "multiple blocks",
+			name: "MultipleBlocks",
 
 			in: `
 foo
@@ -358,9 +370,10 @@ cat`,
 			},
 		},
 		{
-			name: "incomplete blocks",
+			name: "IncompleteBlocks",
 
 			in: `
+// keep-sorted-test end
 // keep-sorted-test start
 foo
 bar
@@ -368,26 +381,25 @@ bar
 baz
 // keep-sorted-test end
 dog
-// keep-sorted-test end
 `,
 
 			wantBlocks: []block{
 				{
 					opts:  defaultOptions,
-					start: 4,
-					end:   6,
+					start: 5,
+					end:   7,
 					lines: []string{
 						"baz",
 					},
 				},
 			},
 			wantIncompleteBlocks: []incompleteBlock{
-				{1, startDirective},
-				{8, endDirective},
+				{1, endDirective},
+				{2, startDirective},
 			},
 		},
 		{
-			name: "filtered blocks",
+			name: "FilteredBlocks",
 
 			in: `
 foo
@@ -423,7 +435,7 @@ cat`,
 			},
 		},
 		{
-			name: "trailing newlines",
+			name: "TrailingNewlines",
 
 			in: `
 // keep-sorted-test start
@@ -451,8 +463,259 @@ cat`,
 				},
 			},
 		},
+		{
+			name: "NestedBlocks",
+
+			in: `
+// keep-sorted-test start
+a
+b
+c
+// keep-sorted-test start
+d
+e
+f
+// keep-sorted-test end
+g
+h
+i
+// keep-sorted-test end
+`,
+
+			wantBlocks: []block{
+				{
+					opts:  defaultOptions,
+					start: 1,
+					end:   13,
+					lines: []string{
+						"a",
+						"b",
+						"c",
+						"// keep-sorted-test start",
+						"d",
+						"e",
+						"f",
+						"// keep-sorted-test end",
+						"g",
+						"h",
+						"i",
+					},
+					nestedBlocks: []block{
+						{
+							opts:  defaultOptions,
+							start: 5,
+							end:   9,
+							lines: []string{
+								"d",
+								"e",
+								"f",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "NestedBlocks_DeeplyNested",
+
+			in: `
+// keep-sorted-test start
+0.1
+0.2
+0.3
+// keep-sorted-test start
+1.1
+1.2
+1.3
+// keep-sorted-test start
+2.1
+2.2
+2.3
+// keep-sorted-test start
+3.1
+3.2
+3.3
+// keep-sorted-test end // 0:1:2:3
+2.4
+2.5
+2.6
+// keep-sorted-test end // 0:1:2
+// keep-sorted-test start
+4.1
+4.2
+4.3
+// keep-sorted-test end // 0:1:4
+1.4
+1.5
+1.6
+// keep-sorted-test end // 0:1
+0.4
+0.5
+0.6
+// keep-sorted-test end // 0
+// keep-sorted-test start
+5.1
+5.2
+5.3
+// keep-sorted-test end // 5
+`,
+
+			wantBlocks: []block{
+				{
+					opts:  defaultOptions,
+					start: 1,
+					end:   34,
+					lines: []string{
+						"0.1",
+						"0.2",
+						"0.3",
+						"// keep-sorted-test start",
+						"1.1",
+						"1.2",
+						"1.3",
+						"// keep-sorted-test start",
+						"2.1",
+						"2.2",
+						"2.3",
+						"// keep-sorted-test start",
+						"3.1",
+						"3.2",
+						"3.3",
+						"// keep-sorted-test end // 0:1:2:3",
+						"2.4",
+						"2.5",
+						"2.6",
+						"// keep-sorted-test end // 0:1:2",
+						"// keep-sorted-test start",
+						"4.1",
+						"4.2",
+						"4.3",
+						"// keep-sorted-test end // 0:1:4",
+						"1.4",
+						"1.5",
+						"1.6",
+						"// keep-sorted-test end // 0:1",
+						"0.4",
+						"0.5",
+						"0.6",
+					},
+					nestedBlocks: []block{
+						{
+							opts:  defaultOptions,
+							start: 5,
+							end:   30,
+							lines: []string{
+								"1.1",
+								"1.2",
+								"1.3",
+								"// keep-sorted-test start",
+								"2.1",
+								"2.2",
+								"2.3",
+								"// keep-sorted-test start",
+								"3.1",
+								"3.2",
+								"3.3",
+								"// keep-sorted-test end // 0:1:2:3",
+								"2.4",
+								"2.5",
+								"2.6",
+								"// keep-sorted-test end // 0:1:2",
+								"// keep-sorted-test start",
+								"4.1",
+								"4.2",
+								"4.3",
+								"// keep-sorted-test end // 0:1:4",
+								"1.4",
+								"1.5",
+								"1.6",
+							},
+							nestedBlocks: []block{
+								{
+									opts:  defaultOptions,
+									start: 9,
+									end:   21,
+									lines: []string{
+										"2.1",
+										"2.2",
+										"2.3",
+										"// keep-sorted-test start",
+										"3.1",
+										"3.2",
+										"3.3",
+										"// keep-sorted-test end // 0:1:2:3",
+										"2.4",
+										"2.5",
+										"2.6",
+									},
+									nestedBlocks: []block{
+										{
+											opts:  defaultOptions,
+											start: 13,
+											end:   17,
+											lines: []string{
+												"3.1",
+												"3.2",
+												"3.3",
+											},
+										},
+									},
+								},
+								{
+									opts:  defaultOptions,
+									start: 22,
+									end:   26,
+									lines: []string{
+										"4.1",
+										"4.2",
+										"4.3",
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					opts:  defaultOptions,
+					start: 35,
+					end:   39,
+					lines: []string{
+						"5.1",
+						"5.2",
+						"5.3",
+					},
+				},
+			},
+		},
+		{
+			name: "NestedBlocks_MissingEnds",
+
+			in: `
+// keep-sorted-test start
+0
+// keep-sorted-test start
+1
+// keep-sorted-test start
+2
+// keep-sorted-test end
+`,
+
+			wantBlocks: []block{
+				{
+					opts:  defaultOptions,
+					start: 5,
+					end:   7,
+					lines: []string{"2"},
+				},
+			},
+			wantIncompleteBlocks: []incompleteBlock{
+				{1, startDirective},
+				{3, startDirective},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			initZerolog(t)
 			if tc.include == nil {
 				tc.include = func(start, end int) bool { return true }
 			}
@@ -479,7 +742,7 @@ func TestLineSorting(t *testing.T) {
 		wantAlreadySorted bool
 	}{
 		{
-			name: "nothing to sort",
+			name: "NothingToSort",
 
 			opts: defaultOptions,
 			in:   []string{},
@@ -488,7 +751,7 @@ func TestLineSorting(t *testing.T) {
 			wantAlreadySorted: true,
 		},
 		{
-			name: "already sorted",
+			name: "AlreadySorted",
 
 			opts: defaultOptions,
 			in: []string{
@@ -507,7 +770,7 @@ func TestLineSorting(t *testing.T) {
 			wantAlreadySorted: true,
 		},
 		{
-			name: "already sorted -- except for duplicate",
+			name: "AlreadySorted_ExceptForDuplicate",
 
 			opts: defaultOptions,
 			in: []string{
@@ -523,7 +786,7 @@ func TestLineSorting(t *testing.T) {
 			wantAlreadySorted: false,
 		},
 		{
-			name: "already sorted -- newline separated",
+			name: "AlreadySorted_NewlineSeparated",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.NewlineSeparated = true
@@ -546,7 +809,7 @@ func TestLineSorting(t *testing.T) {
 			wantAlreadySorted: true,
 		},
 		{
-			name: "already sorted -- except for newline separated",
+			name: "AlreadySorted_ExceptForNewlineSorted",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.NewlineSeparated = true
@@ -567,7 +830,7 @@ func TestLineSorting(t *testing.T) {
 			wantAlreadySorted: false,
 		},
 		{
-			name: "simple sorting",
+			name: "SimpleSorting",
 
 			opts: defaultOptions,
 			in: []string{
@@ -585,7 +848,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "comment only block",
+			name: "CommentOnlyBlock",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.StickyComments = true
@@ -604,7 +867,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "prefix",
+			name: "Prefix",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.PrefixOrder = []string{"INIT_", "", "FINAL_"}
@@ -630,7 +893,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "remove duplicates -- by default",
+			name: "RemoveDuplicates_ByDefault",
 
 			opts: defaultOptions,
 			in: []string{
@@ -645,7 +908,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "remove duplicates -- considers comments",
+			name: "RemoveDuplicates_ConsidersComments",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.RemoveDuplicates = true
@@ -671,7 +934,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "remove duplicates -- ignores trailing commas",
+			name: "RemoveDuplicates_IgnoresTraliningCommas",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.RemoveDuplicates = true
@@ -688,7 +951,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "remove duplicates -- ignores trailing commas -- removes comma if last element",
+			name: "RemoveDuplicates_IgnoresTrailingCommas_RemovesCommaIfLastElement",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.RemoveDuplicates = true
@@ -705,7 +968,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "remove duplicates -- ignores trailing commas -- removes comma if only element",
+			name: "RemoveDuplicates_IgnoresTrailingCommas_RemovesCommaIfOnlyElement",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.RemoveDuplicates = true
@@ -720,7 +983,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "remove duplicates -- keep",
+			name: "RemoveDuplicates_Keep",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.RemoveDuplicates = false
@@ -738,7 +1001,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "trailing commas",
+			name: "TrailingCommas",
 
 			opts: defaultOptions,
 			in: []string{
@@ -754,7 +1017,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "ignore prefixes",
+			name: "IgnorePrefixes",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.IgnorePrefixes = []string{"fs.setBoolFlag", "fs.setIntFlag"}
@@ -774,7 +1037,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "case insensitive",
+			name: "CaseInsensitive",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.CaseSensitive = false
@@ -794,7 +1057,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "numeric",
+			name: "Numeric",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Numeric = true
@@ -818,7 +1081,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple transforms",
+			name: "MultipleTransforms",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.IgnorePrefixes = []string{"R2D2", "C3PO", "R4"}
@@ -847,7 +1110,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "newline separated",
+			name: "NewlineSeparated",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.NewlineSeparated = true
@@ -868,7 +1131,7 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
-			name: "newline separated -- empty",
+			name: "NewlineSeparated_Empty",
 
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.NewlineSeparated = true
@@ -880,6 +1143,7 @@ func TestLineSorting(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			initZerolog(t)
 			got, gotAlreadySorted := block{lines: tc.in, opts: tc.opts}.sorted()
 			if gotAlreadySorted != tc.wantAlreadySorted {
 				t.Errorf("alreadySorted mismatch: got %t want %t", gotAlreadySorted, tc.wantAlreadySorted)
@@ -896,10 +1160,11 @@ func TestLineGrouping(t *testing.T) {
 		name string
 		opts blockOptions
 
+		// We set the input to be the concatenation of all the lineGroups.
 		want []lineGroup
 	}{
 		{
-			name: "simple",
+			name: "Simple",
 			opts: defaultOptions,
 
 			want: []lineGroup{
@@ -908,7 +1173,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "sticky comments",
+			name: "StickyComments",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.StickyComments = true
 				opts.StickyPrefixes = map[string]bool{"//": true}
@@ -934,7 +1199,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "comment only group",
+			name: "CommentOnlyGroup",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.StickyComments = true
 				opts.StickyPrefixes = map[string]bool{"//": true}
@@ -958,7 +1223,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "group",
+			name: "Group",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Group = true
 			}),
@@ -997,7 +1262,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "block -- brackets",
+			name: "Block_Brackets",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Block = true
 			}),
@@ -1018,7 +1283,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "block -- quotes",
+			name: "Block_Quotes",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Block = true
 			}),
@@ -1039,7 +1304,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "block -- escaped quote",
+			name: "Block_EscapedQuote",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Block = true
 			}),
@@ -1060,7 +1325,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "block -- ignores quotes within quotes",
+			name: "Block_IgnoresQuotesWithinQuotes",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Block = true
 			}),
@@ -1081,7 +1346,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "block -- ignores braces within quotes",
+			name: "Block_IgnoresBracesWithinQuotes",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Block = true
 			}),
@@ -1102,7 +1367,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "block -- ignores special characters within full-line comments",
+			name: "Block_IgnoresSpecialCharactersWithinFullLineComments",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Block = true
 				opts.StickyPrefixes["//"] = true
@@ -1126,7 +1391,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "block -- ignores special characters within trailing comments",
+			name: "Block_IgnoresSpecialCharactersWithinTrailingComments",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Block = true
 				opts.StickyPrefixes["//"] = true
@@ -1152,7 +1417,7 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
-			name: "block -- triple quotes",
+			name: "Block_TripleQuotes",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Block = true
 			}),
@@ -1168,6 +1433,7 @@ func TestLineGrouping(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			initZerolog(t)
 			var in []string
 			for _, lg := range tc.want {
 				in = append(in, lg.comment...)
@@ -1191,13 +1457,13 @@ func TestBlockOptions(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "default options",
+			name: "DefaultOptions",
 			in:   "// keep-sorted-test",
 
 			want: defaultOptions,
 		},
 		{
-			name: "simple switch",
+			name: "SimpleSwitch",
 			in:   "// keep-sorted-test lint=no",
 
 			want: defaultOptionsWith(func(opts *blockOptions) {
@@ -1205,7 +1471,7 @@ func TestBlockOptions(t *testing.T) {
 			}),
 		},
 		{
-			name: "item list",
+			name: "ItemList",
 			in:   "// keep-sorted-test prefix_order=a,b,c,d",
 
 			want: defaultOptionsWith(func(opts *blockOptions) {
@@ -1213,7 +1479,7 @@ func TestBlockOptions(t *testing.T) {
 			}),
 		},
 		{
-			name: "item set",
+			name: "ItemSet",
 			in:   "keep-sorted-test sticky_prefixes=a,b,c,d",
 
 			want: defaultOptionsWith(func(opts *blockOptions) {
@@ -1230,7 +1496,7 @@ func TestBlockOptions(t *testing.T) {
 			}),
 		},
 		{
-			name: "ignore_prefixes checks longest prefixes first",
+			name: "ignore_prefixes_ChecksLognestPrefixesFirst",
 			in:   "// keep-sorted-test ignore_prefixes=DoSomething(,DoSomething({",
 
 			want: defaultOptionsWith(func(opts *blockOptions) {
@@ -1238,7 +1504,7 @@ func TestBlockOptions(t *testing.T) {
 			}),
 		},
 		{
-			name: "option in a trailing comment",
+			name: "OptionInTrailingComment",
 			in:   "// keep-sorted-test block=yes  # lint=no",
 
 			want: defaultOptionsWith(func(opts *blockOptions) {
@@ -1247,7 +1513,7 @@ func TestBlockOptions(t *testing.T) {
 			}),
 		},
 		{
-			name: "error doesn't stop parsing",
+			name: "ErrorDoesNotStopParsing",
 			in:   "// keep-sorted-test lint=yep case=no",
 
 			want: defaultOptionsWith(func(opts *blockOptions) {
@@ -1258,6 +1524,7 @@ func TestBlockOptions(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			initZerolog(t)
 			got, err := New("keep-sorted-test").parseBlockOptions(tc.in)
 			if err != nil {
 				if tc.wantErr == "" {

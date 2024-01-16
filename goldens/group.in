@@ -101,3 +101,39 @@ Indented markdown lists:
      * Philosophical conjecture
 
 <!-- keep-sorted-test end -->
+
+Nested keep-sorted
+// keep-sorted-test start group=yes
+private static final List<String> b = [
+  // keep-sorted-test start
+  "x",
+  "z",
+  "y"
+  // keep-sorted-test end
+  ];
+private static final List<String> a = [
+  // keep-sorted-test start
+  "3",
+  "2",
+  "1"
+  // keep-sorted-test end
+  ];
+// keep-sorted-test end
+
+Nested keep-sorted, nested blocks change their number of lines.
+// keep-sorted-test start group=yes
+private static final List<String> b = [
+  // keep-sorted-test start
+  "x",
+  "x",
+  "y"
+  // keep-sorted-test end
+  ];
+private static final List<String> a = [
+  // keep-sorted-test start newline_separated=yes
+  "3",
+  "2",
+  "1"
+  // keep-sorted-test end
+  ];
+// keep-sorted-test end
