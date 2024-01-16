@@ -138,3 +138,21 @@ private static final List<String> b = [
   // keep-sorted-test end
   ];
 // keep-sorted-test end
+
+Nested keep-sorted without indentation
+// keep-sorted-test start group=yes newline_separated=yes
+// def
+// keep-sorted-test start
+1
+2
+3
+// keep-sorted-test end
+
+// abc
+// keep-sorted-test start
+a
+b
+c
+// keep-sorted-test end
+
+// keep-sorted-test end

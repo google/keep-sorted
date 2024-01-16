@@ -30,23 +30,44 @@ type lineGroup struct {
 }
 
 // groupLines splits lines into one or more lineGroups based on the provided options.
-func groupLines(lines []string, opts blockOptions) []lineGroup {
+func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 	var groups []lineGroup
+	// Tracks which subsection of lines contains the comments for the current lineGroup.
 	var commentRange indexRange
+	// Tracks which subsection of lines contains the content for the current lineGroup.
 	var lineRange indexRange
+
+	// group=yes and block=no, these pieces of information are used to determine
+	// when we group lines together into a single group.
+
+	// Indent: All lines indented further than the first line are grouped together.
+	// Edge case: Whitespace-only lines are included in the group based on the
+	// indentation of the next non-empty line after the whitespace-only line.
 	var indents []int
 	var initialIndent *int
+	// Counts the number of unmatched start directives we've seen in the current group.
+	// We will include entire keep-sorted blocks as grouped lines to avoid
+	// breaking nested keep-sorted blocks that don't have indentation.
+	var numUnmatchedStartDirectives int
+
+	// block=yes: The code block that we're constructing until we have matched braces and quotations.
 	var block codeBlock
 
-	if opts.Group {
+	if metadata.opts.Group {
 		indents = calculateIndents(lines)
 	}
 
 	// append a line to both lineRange, and block, if necessary.
 	appendLine := func(i int, l string) {
 		lineRange.append(i)
-		if opts.Block {
-			block.append(l, opts)
+		if metadata.opts.Block {
+			block.append(l, metadata.opts)
+		} else if metadata.opts.Group {
+			if strings.Contains(l, metadata.startDirective) {
+				numUnmatchedStartDirectives++
+			} else if strings.Contains(l, metadata.endDirective) {
+				numUnmatchedStartDirectives--
+			}
 		}
 	}
 	// finish an outstanding lineGroup and reset our state to prepare for a new lineGroup.
@@ -57,21 +78,27 @@ func groupLines(lines []string, opts blockOptions) []lineGroup {
 		block = codeBlock{}
 	}
 	for i, l := range lines {
-		if opts.Block && !lineRange.empty() && block.expectsContinuation() {
+		if metadata.opts.Block && !lineRange.empty() && block.expectsContinuation() {
 			appendLine(i, l)
-		} else if opts.Group && !lineRange.empty() && initialIndent != nil && indents[i] > *initialIndent {
+		} else if metadata.opts.Group && (!lineRange.empty() && initialIndent != nil && indents[i] > *initialIndent || numUnmatchedStartDirectives > 0) {
 			appendLine(i, l)
-		} else if opts.hasStickyPrefix(l) {
+		} else if metadata.opts.hasStickyPrefix(l) {
 			if !lineRange.empty() {
 				finishGroup()
 			}
 
-			commentRange.append(i)
+			if !metadata.opts.Block && metadata.opts.Group && strings.Contains(l, metadata.startDirective) {
+				// We don't need to check for end directives here because this makes
+				// numUnmatchedStartDirectives > 0, so we'll take the code path above through appendLine.
+				appendLine(i, l)
+			} else {
+				commentRange.append(i)
+			}
 		} else {
 			if !lineRange.empty() {
 				finishGroup()
 			}
-			if opts.Group && initialIndent == nil {
+			if metadata.opts.Group && initialIndent == nil {
 				initialIndent = &indents[i]
 			}
 			appendLine(i, l)

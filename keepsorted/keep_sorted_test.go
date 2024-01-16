@@ -39,6 +39,12 @@ var (
 		CaseSensitive:    true,
 		commentMarker:    "//",
 	}
+
+	defaultMetadata = blockMetadata{
+		startDirective: "keep-sorted-test start",
+		endDirective:   "keep-sorted-test end",
+		opts:           defaultOptions,
+	}
 )
 
 // initZerolog initializes zerolog to log as part of the test.
@@ -53,6 +59,12 @@ func defaultOptionsWith(f func(*blockOptions)) blockOptions {
 	opts := defaultOptions
 	f(&opts)
 	return opts
+}
+
+func defaultMetadataWith(opts blockOptions) blockMetadata {
+	meta := defaultMetadata
+	meta.opts = opts
+	return meta
 }
 
 func TestFix(t *testing.T) {
@@ -348,9 +360,9 @@ cat`,
 
 			wantBlocks: []block{
 				{
-					opts:  defaultOptions,
-					start: 3,
-					end:   7,
+					metadata: defaultMetadata,
+					start:    3,
+					end:      7,
 					lines: []string{
 						"c",
 						"b",
@@ -358,9 +370,9 @@ cat`,
 					},
 				},
 				{
-					opts:  defaultOptions,
-					start: 9,
-					end:   13,
+					metadata: defaultMetadata,
+					start:    9,
+					end:      13,
 					lines: []string{
 						"1",
 						"2",
@@ -385,9 +397,9 @@ dog
 
 			wantBlocks: []block{
 				{
-					opts:  defaultOptions,
-					start: 5,
-					end:   7,
+					metadata: defaultMetadata,
+					start:    5,
+					end:      7,
 					lines: []string{
 						"baz",
 					},
@@ -423,9 +435,9 @@ cat`,
 
 			wantBlocks: []block{
 				{
-					opts:  defaultOptions,
-					start: 3,
-					end:   7,
+					metadata: defaultMetadata,
+					start:    3,
+					end:      7,
 					lines: []string{
 						"c",
 						"b",
@@ -451,9 +463,9 @@ cat`,
 
 			wantBlocks: []block{
 				{
-					opts:  defaultOptions,
-					start: 1,
-					end:   6,
+					metadata: defaultMetadata,
+					start:    1,
+					end:      6,
 					lines: []string{
 						"",
 						"1",
@@ -484,9 +496,9 @@ i
 
 			wantBlocks: []block{
 				{
-					opts:  defaultOptions,
-					start: 1,
-					end:   13,
+					metadata: defaultMetadata,
+					start:    1,
+					end:      13,
 					lines: []string{
 						"a",
 						"b",
@@ -502,9 +514,9 @@ i
 					},
 					nestedBlocks: []block{
 						{
-							opts:  defaultOptions,
-							start: 5,
-							end:   9,
+							metadata: defaultMetadata,
+							start:    5,
+							end:      9,
 							lines: []string{
 								"d",
 								"e",
@@ -562,9 +574,9 @@ i
 
 			wantBlocks: []block{
 				{
-					opts:  defaultOptions,
-					start: 1,
-					end:   34,
+					metadata: defaultMetadata,
+					start:    1,
+					end:      34,
 					lines: []string{
 						"0.1",
 						"0.2",
@@ -601,9 +613,9 @@ i
 					},
 					nestedBlocks: []block{
 						{
-							opts:  defaultOptions,
-							start: 5,
-							end:   30,
+							metadata: defaultMetadata,
+							start:    5,
+							end:      30,
 							lines: []string{
 								"1.1",
 								"1.2",
@@ -632,9 +644,9 @@ i
 							},
 							nestedBlocks: []block{
 								{
-									opts:  defaultOptions,
-									start: 9,
-									end:   21,
+									metadata: defaultMetadata,
+									start:    9,
+									end:      21,
 									lines: []string{
 										"2.1",
 										"2.2",
@@ -650,9 +662,9 @@ i
 									},
 									nestedBlocks: []block{
 										{
-											opts:  defaultOptions,
-											start: 13,
-											end:   17,
+											metadata: defaultMetadata,
+											start:    13,
+											end:      17,
 											lines: []string{
 												"3.1",
 												"3.2",
@@ -662,9 +674,9 @@ i
 									},
 								},
 								{
-									opts:  defaultOptions,
-									start: 22,
-									end:   26,
+									metadata: defaultMetadata,
+									start:    22,
+									end:      26,
 									lines: []string{
 										"4.1",
 										"4.2",
@@ -676,9 +688,9 @@ i
 					},
 				},
 				{
-					opts:  defaultOptions,
-					start: 35,
-					end:   39,
+					metadata: defaultMetadata,
+					start:    35,
+					end:      39,
 					lines: []string{
 						"5.1",
 						"5.2",
@@ -702,10 +714,10 @@ i
 
 			wantBlocks: []block{
 				{
-					opts:  defaultOptions,
-					start: 5,
-					end:   7,
-					lines: []string{"2"},
+					metadata: defaultMetadata,
+					start:    5,
+					end:      7,
+					lines:    []string{"2"},
 				},
 			},
 			wantIncompleteBlocks: []incompleteBlock{
@@ -721,7 +733,7 @@ i
 			}
 
 			gotBlocks, gotIncompleteBlocks := New("keep-sorted-test").newBlocks(strings.Split(tc.in, "\n"), 0, tc.include)
-			if diff := cmp.Diff(tc.wantBlocks, gotBlocks, cmp.AllowUnexported(block{}), cmp.AllowUnexported(blockOptions{})); diff != "" {
+			if diff := cmp.Diff(tc.wantBlocks, gotBlocks, cmp.AllowUnexported(block{}, blockMetadata{}, blockOptions{})); diff != "" {
 				t.Errorf("blocks diff (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(tc.wantIncompleteBlocks, gotIncompleteBlocks, cmp.AllowUnexported(incompleteBlock{})); diff != "" {
@@ -1144,7 +1156,7 @@ func TestLineSorting(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
-			got, gotAlreadySorted := block{lines: tc.in, opts: tc.opts}.sorted()
+			got, gotAlreadySorted := block{lines: tc.in, metadata: defaultMetadataWith(tc.opts)}.sorted()
 			if gotAlreadySorted != tc.wantAlreadySorted {
 				t.Errorf("alreadySorted mismatch: got %t want %t", gotAlreadySorted, tc.wantAlreadySorted)
 			}
@@ -1226,6 +1238,7 @@ func TestLineGrouping(t *testing.T) {
 			name: "Group",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Group = true
+				opts.Block = false
 			}),
 
 			want: []lineGroup{
@@ -1242,6 +1255,7 @@ func TestLineGrouping(t *testing.T) {
 			name: "Group_UnindentedNewlines",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Group = true
+				opts.Block = false
 			}),
 
 			want: []lineGroup{
@@ -1258,6 +1272,34 @@ func TestLineGrouping(t *testing.T) {
 				}},
 				{nil, []string{
 					"", // There is no next non-empty line.
+				}},
+			},
+		},
+		{
+			name: "Group_NestedKeepSortedBlocksWithoutAnyIndentation",
+			opts: defaultOptionsWith(func(opts *blockOptions) {
+				opts.Group = true
+				opts.Block = false
+			}),
+
+			want: []lineGroup{
+				{[]string{
+					"// def",
+				}, []string{
+					"// keep-sorted-test start",
+					"3",
+					"1",
+					"2",
+					"// keep-sorted-test end",
+				}},
+				{[]string{
+					"// abc",
+				}, []string{
+					"// keep-sorted-test start",
+					"b",
+					"c",
+					"a",
+					"// keep-sorted-test end",
 				}},
 			},
 		},
@@ -1440,7 +1482,7 @@ func TestLineGrouping(t *testing.T) {
 				in = append(in, lg.lines...)
 			}
 
-			got := groupLines(in, tc.opts)
+			got := groupLines(in, defaultMetadataWith(tc.opts))
 			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(lineGroup{})); diff != "" {
 				t.Errorf("groupLines mismatch (-want +got):\n%s", diff)
 			}
