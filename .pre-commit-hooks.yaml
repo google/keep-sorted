@@ -3,4 +3,5 @@
 - id: keep-sorted
   name: keep-sorted
   language: golang
+  language_version: 1.21.6
   entry: keep-sorted
