@@ -1,5 +1,7 @@
 # keep-sorted
 
+change to force workflows again
+
 ![go workflow status](https://github.com/google/keep-sorted/actions/workflows/go.yml/badge.svg)
 ![pre-commit workflow status](https://github.com/google/keep-sorted/actions/workflows/pre-commit.yml/badge.svg)
 

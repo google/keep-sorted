@@ -1,14 +1,10 @@
 # https://pre-commit.com/
 
 repos:
-  - repo: local
+  - repo: https://github.com/google/keep-sorted
+    rev: bootstrap-testing
     hooks:
       - id: keep-sorted
-        name: keep-sorted
-        language: golang
-        # Remember to also update language_version in .pre-commit-hooks.yaml!
-        language_version: 1.21.6
-        entry: go run .
   - repo: https://github.com/pre-commit/pre-commit
     rev: v3.6.0
     hooks:
