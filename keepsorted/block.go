@@ -115,6 +115,11 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 				log.Err(fmt.Errorf("keep-sorted block at index %d had bad start directive: %w", start.index+offset, err)).Msg("")
 			}
 
+			start.index += opts.SkipLines
+			if start.index > endIndex {
+				continue
+			}
+
 			// Top-level keep-sorted directives have depth 0. Nested keep-sorted
 			// directives will have depth >= 1 based on how deep it is.
 			depth := len(starts)

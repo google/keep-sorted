@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -37,10 +38,11 @@ var (
 
 // blockOptions enable/disable extra features that control how a block of lines is sorted.
 //
-// Currently, only three types are supported:
+// Currently, only four types are supported:
 //  1. bool:            key=yes, key=true, key=no, key=false
 //  2. []string:        key=a,b,c,d
 //  3. map[string]bool: key=a,b,c,d
+//  4. int:             key=123
 type blockOptions struct {
 	// Lint determines whether we emit lint warnings for this block.
 	Lint bool `default:"true"`
@@ -50,6 +52,8 @@ type blockOptions struct {
 	//  Pre-sorting options  //
 	///////////////////////////
 
+	// SkipLines is the number of lines to ignore before sorting.
+	SkipLines int `key:"skip_lines"`
 	// Group determines whether we group lines together based on increasing indentation.
 	Group bool `default:"true"`
 	// Block opts us into a more complicated algorithm to try and understand blocks of code.
@@ -103,6 +107,11 @@ func (f *Fixer) parseBlockOptions(startLine string) (blockOptions, error) {
 		}
 
 		opts.Elem().Field(i).Set(val)
+	}
+
+	if ret.SkipLines < 0 {
+		errs = errors.Join(errs, fmt.Errorf("skip_lines has invalid value: %v", ret.SkipLines))
+		ret.SkipLines = 0
 	}
 
 	if cm := f.guessCommentMarker(startLine); cm != "" {
@@ -174,6 +183,16 @@ func parseValueWithDefault(f reflect.StructField, key, val string, defaultFn fun
 			m[s] = true
 		}
 		return reflect.ValueOf(m), nil
+	case reflect.TypeOf(0):
+		if val == "" {
+			return defaultFn(), nil
+		}
+
+		i, err := strconv.Atoi(val)
+		if err != nil {
+			return defaultFn(), fmt.Errorf("option %q has invalid value %q: %w", key, val, err)
+		}
+		return reflect.ValueOf(i), nil
 	}
 
 	panic(fmt.Errorf("unsupported blockOptions type: %v", f.Type))
