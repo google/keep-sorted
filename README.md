@@ -288,7 +288,7 @@ treated as sticky. These prefixes cannot contain space characters.
 
 In some cases, it may not be possible to have the start directive on the line
 immediately before the sorted region. In this case, `skip_lines` can be used to
-indicate how many lines must are to be skipped before the sorted region.
+indicate how many lines are to be skipped before the sorted region.
 
 For instance, this can be used with a Markdown table, to prevent the headers
 and the dashed line after the headers from being sorted:
@@ -312,14 +312,14 @@ Alpha   | Foo
 <td>
 
 ```diff
-<!-- keep-sorted start skip_lines=2 -->
-Name    | Value
-------- | -----
-Alpha   | Foo
-Bravo   | Bar
-Charlie | Baz
-Delta   | Qux
-<!-- keep-sorted end -->
++<!-- keep-sorted start skip_lines=2 -->
+ Name    | Value
+ ------- | -----
+ Alpha   | Foo
+ Bravo   | Bar
+ Charlie | Baz
+ Delta   | Qux
++<!-- keep-sorted end -->
 ```
 
 </td>
