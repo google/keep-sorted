@@ -253,15 +253,15 @@ and tomatoes
 <td>
 
 ```diff
-// keep-sorted start group_prefixes=and,with
-hamburger
-with lettuce
-and tomatoes
-peanut butter
-and jelly
-spaghetti
-with meatballs
-// keep-sorted end -->
++// keep-sorted start group_prefixes=and,with
+ hamburger
+ with lettuce
+ and tomatoes
+ peanut butter
+ and jelly
+ spaghetti
+ with meatballs
++// keep-sorted end -->
 ```
 
 </td>
