@@ -261,7 +261,7 @@ and tomatoes
  and jelly
  spaghetti
  with meatballs
-+// keep-sorted end -->
++// keep-sorted end
 ```
 
 </td>
