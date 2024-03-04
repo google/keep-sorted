@@ -284,6 +284,48 @@ treated as sticky. These prefixes cannot contain space characters.
  // keep-sorted end
 ```
 
+#### Skipping lines
+
+In some cases, it may not be possible to have the start directive on the line
+immediately before the sorted region. In this case, `skip_lines` can be used to
+indicate how many lines are to be skipped before the sorted region.
+
+For instance, this can be used with a Markdown table, to prevent the headers
+and the dashed line after the headers from being sorted:
+
+<table border="0">
+<tr>
+<td>
+
+```md
+
+Name    | Value
+------- | -----
+Charlie | Baz
+Delta   | Qux
+Bravo   | Bar
+Alpha   | Foo
+
+```
+
+</td>
+<td>
+
+```diff
++<!-- keep-sorted start skip_lines=2 -->
+ Name    | Value
+ ------- | -----
+ Alpha   | Foo
+ Bravo   | Bar
+ Charlie | Baz
+ Delta   | Qux
++<!-- keep-sorted end -->
+```
+
+</td>
+</tr>
+</table>
+
 ### Sorting options
 
 Sorting options tell keep-sorted how the logical lines in your keep-sorted

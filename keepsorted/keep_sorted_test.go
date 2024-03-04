@@ -27,6 +27,7 @@ import (
 var (
 	defaultOptions = blockOptions{
 		Lint:             true,
+		SkipLines:        0,
 		Group:            true,
 		IgnorePrefixes:   nil,
 		Numeric:          false,
@@ -238,6 +239,20 @@ func TestFindings(t *testing.T) {
 // keep-sorted-test end`,
 
 			want: []*Finding{finding(filename, 3, 5, errorUnordered, "1\n2\n3\n")},
+		},
+		{
+			name: "SkipLines",
+
+			in: `
+// keep-sorted-test start skip_lines=2
+5
+4
+3
+2
+1
+// keep-sorted-test end`,
+
+			want: []*Finding{finding(filename, 5, 7, errorUnordered, "1\n2\n3\n")},
 		},
 		{
 			name: "MismatchedStart",
@@ -1511,6 +1526,21 @@ func TestBlockOptions(t *testing.T) {
 			want: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Lint = false
 			}),
+		},
+		{
+			name: "SkipLines",
+			in:   "// keep-sorted-test skip_lines=10",
+
+			want: defaultOptionsWith(func(opts *blockOptions) {
+				opts.SkipLines = 10
+			}),
+		},
+		{
+			name: "ErrorSkipLinesIsNegative",
+			in:   "// keep-sorted-test skip_lines=-1",
+
+			want:    defaultOptions,
+			wantErr: `skip_lines has invalid value: -1`,
 		},
 		{
 			name: "ItemList",
