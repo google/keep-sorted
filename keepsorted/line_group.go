@@ -82,6 +82,8 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 			appendLine(i, l)
 		} else if metadata.opts.Group && (!lineRange.empty() && initialIndent != nil && indents[i] > *initialIndent || numUnmatchedStartDirectives > 0) {
 			appendLine(i, l)
+		} else if metadata.opts.Group && metadata.opts.hasGroupPrefix(l) {
+			appendLine(i, l)
 		} else if metadata.opts.hasStickyPrefix(l) {
 			if !lineRange.empty() {
 				finishGroup()

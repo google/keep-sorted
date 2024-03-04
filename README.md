@@ -227,6 +227,47 @@ allows for sorting data such as Go structs and JSON objects.
 > Note: angle brackets (`<` and `>`) are not supported by block mode due to
 > being used for mathematical expressions in an unbalanced format.
 
+#### Custom grouping
+
+Another way to group lines together is with the `group_prefixes` argument. This
+takes a comma-separated list of prefixes. Any line beginning with one of those
+prefixes will be treated as a continuation line.
+
+<table border="0">
+<tr>
+<td>
+
+```
+
+spaghetti
+with meatballs
+peanut butter
+and jelly
+hamburger
+with lettuce
+and tomatoes
+
+```
+
+</td>
+<td>
+
+```diff
+// keep-sorted start group_prefixes=and,with
+hamburger
+with lettuce
+and tomatoes
+peanut butter
+and jelly
+spaghetti
+with meatballs
+// keep-sorted end -->
+```
+
+</td>
+</tr>
+</table>
+
 #### Comments
 
 Comments embedded within the sorted block are made to stick with their

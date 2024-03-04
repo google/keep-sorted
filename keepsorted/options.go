@@ -56,6 +56,8 @@ type blockOptions struct {
 	SkipLines int `key:"skip_lines"`
 	// Group determines whether we group lines together based on increasing indentation.
 	Group bool `default:"true"`
+	// GroupPrefixes tells us about other types of lines that should be added to a group.
+	GroupPrefixes map[string]bool `key:"group_prefixes"`
 	// Block opts us into a more complicated algorithm to try and understand blocks of code.
 	Block bool `default:"false"`
 	// StickyComments tells us to attach comments to the line immediately below them while sorting.
@@ -112,6 +114,11 @@ func (f *Fixer) parseBlockOptions(startLine string) (blockOptions, error) {
 	if ret.SkipLines < 0 {
 		errs = errors.Join(errs, fmt.Errorf("skip_lines has invalid value: %v", ret.SkipLines))
 		ret.SkipLines = 0
+	}
+
+	if ret.GroupPrefixes != nil && !ret.Group {
+		errs = errors.Join(errs, fmt.Errorf("group_prefixes may not be used with group=no"))
+		ret.GroupPrefixes = nil
 	}
 
 	if cm := f.guessCommentMarker(startLine); cm != "" {
@@ -216,15 +223,28 @@ func (f *Fixer) guessCommentMarker(startLine string) string {
 	return ""
 }
 
-// hasStickyPrefix determines if s has one of the StickyPrefixes.
-func (opts blockOptions) hasStickyPrefix(s string) bool {
+// hasPrefix determines if s has one of the prefixes.
+func hasPrefix(s string, prefixes map[string]bool) bool {
+	if len(prefixes) == 0 {
+		return false
+	}
 	s = strings.TrimLeftFunc(s, unicode.IsSpace)
-	for p := range opts.StickyPrefixes {
+	for p := range prefixes {
 		if strings.HasPrefix(s, p) {
 			return true
 		}
 	}
 	return false
+}
+
+// hasStickyPrefix determines if s has one of the StickyPrefixes.
+func (opts blockOptions) hasStickyPrefix(s string) bool {
+	return hasPrefix(s, opts.StickyPrefixes)
+}
+
+// hasGroupPrefix determines if s has one of the GroupPrefixes.
+func (opts blockOptions) hasGroupPrefix(s string) bool {
+	return hasPrefix(s, opts.GroupPrefixes)
 }
 
 // removeIgnorePrefix removes the first matching IgnorePrefixes from s, if s
