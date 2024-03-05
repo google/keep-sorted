@@ -34,3 +34,25 @@ This line should not be sorted.
   Charlie | Baz
   <!-- keep-sorted-test end -->
 <!-- keep-sorted-test end -->
+
+Skip lines with group_prefixes:
+// keep-sorted-test start skip_lines=2 group_prefixes=:
+| birds        |
+| ------------ |
+| blue footed  |
+: booby        |
+| crested      |
+: bobwhite     |
+| anhinga      |
+// keep-sorted-test end
+
+Skip lines with group_prefixes indented:
+// keep-sorted-test start skip_lines=2 group_prefixes=:
+    | birds        |
+    | ------------ |
+    | blue footed  |
+    : booby        |
+    | crested      |
+    : bobwhite     |
+    | anhinga      |
+// keep-sorted-test end

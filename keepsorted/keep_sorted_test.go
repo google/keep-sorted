@@ -29,6 +29,7 @@ var (
 		Lint:             true,
 		SkipLines:        0,
 		Group:            true,
+		GroupPrefixes:    nil,
 		IgnorePrefixes:   nil,
 		Numeric:          false,
 		StickyComments:   true,
@@ -1267,6 +1268,33 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
+			name: "Group_Prefixes",
+			opts: defaultOptionsWith(func(opts *blockOptions) {
+				opts.GroupPrefixes = map[string]bool{"and": true, "with": true}
+				opts.Block = false
+			}),
+
+			want: []lineGroup{
+				{nil, []string{
+					"peanut butter",
+					"and jelly",
+				}},
+				{nil, []string{
+					"spaghetti",
+					"with meatballs",
+				}},
+				{nil, []string{
+					"hamburger",
+					"  with lettuce",
+					" and tomatoes",
+					"and cheese",
+				}},
+				{nil, []string{
+					"dogs and cats",
+				}},
+			},
+		},
+		{
 			name: "Group_UnindentedNewlines",
 			opts: defaultOptionsWith(func(opts *blockOptions) {
 				opts.Group = true
@@ -1566,6 +1594,15 @@ func TestBlockOptions(t *testing.T) {
 			want: defaultOptionsWith(func(opts *blockOptions) {
 				opts.IgnorePrefixes = []string{"a", "b", "c", "d"}
 			}),
+		},
+		{
+			name: "GroupPrefixesRequiresGrouping",
+			in:   "// keep-sorted-test group_prefixes=a,b,c group=no",
+
+			want: defaultOptionsWith(func(opts *blockOptions) {
+				opts.Group = false
+			}),
+			wantErr: "group_prefixes may not be used with group=no",
 		},
 		{
 			name: "ignore_prefixes_ChecksLognestPrefixesFirst",
