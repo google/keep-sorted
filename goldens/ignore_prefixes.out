@@ -1,18 +1,18 @@
 Already sorted:
-// keep-sorted-test start ignore_prefixes=A,B
-Bar
-Baz
-Aoo
-zebra
-// keep-sorted-test end
+  // keep-sorted-test start ignore_prefixes=A,B
+  Bar
+  Baz
+  Aoo
+  zebra
+  // keep-sorted-test end
 
 Needs sorting:
-// keep-sorted-test start ignore_prefixes=A,B
-Bar
-Baz
-Aoo
-zebra
-// keep-sorted-test end
+  // keep-sorted-test start ignore_prefixes=A,B
+  Bar
+  Baz
+  Aoo
+  zebra
+  // keep-sorted-test end
 
 Indented already sorted:
   // keep-sorted-test start ignore_prefixes=A,B
@@ -54,3 +54,10 @@ Combine with numerical:
   R4_MOTIVATOR,
   R2D2_PROJECTOR,
   # keep-sorted-test end
+
+Prefixes with spaces:
+  # keep-sorted-test start ignore_prefixes="* ,* ["
+	* bar
+	* [baz](path/to/baz)
+	* foo
+	# keep-sorted-test end

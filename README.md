@@ -502,6 +502,20 @@ INIT_FOO
 </tr>
 </table>
 
+You can include spaces in your prefixes by quoting the value:
+
+```md
+<!-- keep-sorted start prefix_order="* ,* [" -->
+  * bar
+  * foo
+  * [baz](path/to/baz)
+<!-- keep-sorted end -->
+```
+
+You can include quotes, commas, and backslashes in your prefixes by escaping
+those characters: `\"` will resolve to a quote, `\,` will resolve to a comma,
+and `\\` will resolve to a backslash.
+
 This can also be combined with numeric sorting:
 
 ```diff
@@ -552,6 +566,9 @@ fs.setIntFlag("pretty_whiskered_kitten", 6)
 </td>
 </tr>
 </table>
+
+Similar to [prefix sorting](#prefix-sorting) above, you can include spaces and
+commas in your prefixes with the same syntax.
 
 This can also be combined with numerical sorting:
 

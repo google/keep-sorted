@@ -1579,11 +1579,28 @@ func TestBlockOptions(t *testing.T) {
 			}),
 		},
 		{
+			name: "ItemList_WithSpaces",
+			in:   `// keep-sorted-test prefix_order="a,b,c d,e\"\,\\f"`,
+
+			want: defaultOptionsWith(func(opts *blockOptions) {
+				opts.PrefixOrder = []string{"a", "b", "c d", `e",\f`}
+			}),
+		},
+		{
 			name: "ItemSet",
 			in:   "keep-sorted-test sticky_prefixes=a,b,c,d",
 
 			want: defaultOptionsWith(func(opts *blockOptions) {
 				opts.StickyPrefixes = map[string]bool{"a": true, "b": true, "c": true, "d": true}
+				opts.commentMarker = ""
+			}),
+		},
+		{
+			name: "ItemSet_WithSpaces",
+			in:   `keep-sorted-test sticky_prefixes="a,b,c d,e\"\,\\f"`,
+
+			want: defaultOptionsWith(func(opts *blockOptions) {
+				opts.StickyPrefixes = map[string]bool{"a": true, "b": true, "c d": true, `e",\f`: true}
 				opts.commentMarker = ""
 			}),
 		},

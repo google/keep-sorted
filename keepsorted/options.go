@@ -144,12 +144,47 @@ func parseBlockOption(f reflect.StructField, startLine string) (reflect.Value, e
 		key = k
 	}
 
-	regex := regexp.MustCompile(fmt.Sprintf(`(^|\s)%s=(?P<value>[^ ]+?)($|\s)`, regexp.QuoteMeta(key)))
-	if m := regex.FindStringSubmatchIndex(startLine); m != nil {
-		val := string(regex.ExpandString(nil, "${value}", startLine, m))
-		return parseValue(f, key, val)
+	needle := key + "="
+	i := strings.Index(startLine, needle)
+	if i < 0 {
+		return parseDefaultValue(f, key), nil
 	}
-	return parseDefaultValue(f, key), nil
+
+	valRunes := []rune(startLine[i+len(needle):])
+	var val strings.Builder
+	var quote bool
+loop:
+	for i := 0; i < len(valRunes); i++ {
+		r := valRunes[i]
+		switch {
+		case r == '"':
+			quote = !quote
+		case r == '\\':
+			if i+1 < len(valRunes) {
+				s := valRunes[i+1]
+				i++
+				switch s {
+				case '"', '\\':
+					// Skip the escaping \
+				default:
+					val.WriteRune(r)
+				}
+				val.WriteRune(s)
+			} else {
+				val.WriteRune(r)
+			}
+		case !quote && unicode.IsSpace(r):
+			break loop
+		default:
+			val.WriteRune(r)
+		}
+	}
+
+	if quote {
+		return parseDefaultValue(f, key), fmt.Errorf("value for %q option has no terminating quote", key)
+	}
+
+	return parseValue(f, key, val.String())
 }
 
 func parseDefaultValue(f reflect.StructField, key string) reflect.Value {
@@ -178,13 +213,13 @@ func parseValueWithDefault(f reflect.StructField, key, val string, defaultFn fun
 			return defaultFn(), nil
 		}
 
-		return reflect.ValueOf(strings.Split(val, ",")), nil
+		return reflect.ValueOf(splitStringVal(val)), nil
 	case reflect.TypeOf(map[string]bool{}):
 		if val == "" {
 			return defaultFn(), nil
 		}
 
-		sp := strings.Split(val, ",")
+		sp := splitStringVal(val)
 		m := make(map[string]bool)
 		for _, s := range sp {
 			m[s] = true
@@ -203,6 +238,30 @@ func parseValueWithDefault(f reflect.StructField, key, val string, defaultFn fun
 	}
 
 	panic(fmt.Errorf("unsupported blockOptions type: %v", f.Type))
+}
+
+func splitStringVal(val string) []string {
+	runes := []rune(val)
+	var vals []string
+	var cur strings.Builder
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		switch r {
+		case ',':
+			vals = append(vals, cur.String())
+			cur.Reset()
+		case '\\':
+			if i+1 < len(runes) && runes[i+1] == ',' {
+				cur.WriteRune(',')
+				i++
+			} else {
+				cur.WriteRune(r)
+			}
+		default:
+			cur.WriteRune(r)
+		}
+	}
+	return append(vals, cur.String())
 }
 
 func (f *Fixer) guessCommentMarker(startLine string) string {
