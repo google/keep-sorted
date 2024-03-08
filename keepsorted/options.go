@@ -180,11 +180,11 @@ loop:
 		}
 	}
 
+	parsed, err := parseValue(f, key, val.String())
 	if quote {
-		return parseDefaultValue(f, key), fmt.Errorf("value for %q option has no terminating quote", key)
+		err = errors.Join(fmt.Errorf("value for %q has no terminating quote", key), err)
 	}
-
-	return parseValue(f, key, val.String())
+	return parsed, err
 }
 
 func parseDefaultValue(f reflect.StructField, key string) reflect.Value {
@@ -201,7 +201,7 @@ func parseValue(f reflect.StructField, key, val string) (reflect.Value, error) {
 
 func parseValueWithDefault(f reflect.StructField, key, val string, defaultFn func() reflect.Value) (reflect.Value, error) {
 	switch f.Type {
-	case reflect.TypeOf(true):
+	case reflect.TypeOf(bool(false)):
 		b, ok := boolValues[val]
 		if !ok {
 			return defaultFn(), fmt.Errorf("option %q has unknown value %q", key, val)
@@ -225,7 +225,7 @@ func parseValueWithDefault(f reflect.StructField, key, val string, defaultFn fun
 			m[s] = true
 		}
 		return reflect.ValueOf(m), nil
-	case reflect.TypeOf(0):
+	case reflect.TypeOf(int(0)):
 		if val == "" {
 			return defaultFn(), nil
 		}
