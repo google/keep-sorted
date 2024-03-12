@@ -47,7 +47,6 @@ type blockOptions struct {
 	// Lint determines whether we emit lint warnings for this block.
 	Lint bool `default:"true"`
 
-	// LINT.IfChange
 	///////////////////////////
 	//  Pre-sorting options  //
 	///////////////////////////
@@ -86,8 +85,6 @@ type blockOptions struct {
 	NewlineSeparated bool `key:"newline_separated" default:"false"`
 	// RemoveDuplicates determines whether we drop lines that are an exact duplicate.
 	RemoveDuplicates bool `key:"remove_duplicates" default:"true"`
-
-	// LINT.ThenChange(//depot/google3/devtools/keep_sorted/README.md)
 
 	// Syntax used to start a comment for keep-sorted annotation, e.g. "//".
 	commentMarker string
