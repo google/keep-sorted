@@ -1,5 +1,7 @@
 module github.com/google/keep-sorted
 
+// Remember to also update language_version in .pre-commit-config.yaml,
+// .pre-commit-hooks.yaml, and README.md!
 go 1.21
 
 require (
