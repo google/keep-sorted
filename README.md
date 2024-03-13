@@ -111,8 +111,8 @@ bar = [
 
 1. Install go: https://go.dev/doc/install
 
-   > [!NOTE]
-   > keep-sorted currently requires at least go 1.21.
+> [!NOTE]
+> keep-sorted currently requires at least go 1.21.
 
 2. Install keep-sorted:
 
