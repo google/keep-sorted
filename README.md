@@ -109,15 +109,29 @@ bar = [
 
 ### Sorting your file
 
-```sh
-$ keep-sorted [file1] [file2] ...
-```
+1. Install go: https://go.dev/doc/install
 
-If the file is `-`, the tool will read from stdin and write to stdout.
+   > [!NOTE]
+   > keep-sorted currently requires at least go 1.21.
+
+2. Install keep-sorted:
+    \
+   ```sh
+   $ go install github.com/google/keep-sorted@v0.4.0
+   ```
+
+3. Run keep-sorted:
+    \
+
+   ```sh
+   $ keep-sorted [file1] [file2] ...
+   ```
+
+   If the file is `-`, the tool will read from stdin and write to stdout.
 
 #### pre-commit
 
-You can automatically run keep-sorted by adding this repository to your
+You can run keep-sorted automatically by adding this repository to your
 [pre-commit](https://pre-commit.com/).
 
 ```yaml
