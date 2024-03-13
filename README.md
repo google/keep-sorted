@@ -115,13 +115,12 @@ bar = [
    > keep-sorted currently requires at least go 1.21.
 
 2. Install keep-sorted:
-    \
+
    ```sh
    $ go install github.com/google/keep-sorted@v0.4.0
    ```
 
 3. Run keep-sorted:
-    \
 
    ```sh
    $ keep-sorted [file1] [file2] ...
