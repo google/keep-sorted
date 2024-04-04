@@ -109,7 +109,7 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 				continue
 			}
 
-			opts, err := f.parseBlockOptions(start.line)
+			opts, err := f.parseBlockOptions(start.line, defaultOptions)
 			if err != nil {
 				// TODO(b/250608236): Is there a better way to surface this error?
 				log.Err(fmt.Errorf("keep-sorted block at index %d had bad start directive: %w", start.index+offset, err)).Msg("")
