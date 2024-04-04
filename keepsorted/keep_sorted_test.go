@@ -21,7 +21,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/testing/protocmp"
 )
 
 var (
@@ -337,7 +336,7 @@ baz
 				}
 			}
 			got := New("keep-sorted-test").findings(filename, strings.Split(tc.in, "\n"), mod, tc.considerLintOption)
-			if diff := cmp.Diff(tc.want, got, protocmp.Transform()); diff != "" {
+			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("Findings diff (-want +got):\n%s", diff)
 			}
 		})
