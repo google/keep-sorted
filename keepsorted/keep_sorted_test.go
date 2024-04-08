@@ -15,10 +15,13 @@
 package keepsorted
 
 import (
+	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -31,26 +34,18 @@ func initZerolog(t testing.TB) {
 	t.Cleanup(func() { log.Logger = oldLogger })
 }
 
-func defaultOptionsWithCommentMarker(marker string) blockOptions {
-	opts := defaultOptions
-	opts.StickyComments = true
-	opts.setCommentMarker(marker)
-	return opts
-}
-
-func optionsWithCommentMarker(marker string) blockOptions {
-	var opts blockOptions
-	opts.StickyComments = true
-	opts.setCommentMarker(marker)
-	return opts
-}
-
 func defaultMetadataWith(opts blockOptions) blockMetadata {
 	return blockMetadata{
 		startDirective: "keep-sorted-test start",
 		endDirective:   "keep-sorted-test end",
 		opts:           opts,
 	}
+}
+
+func defaultMetadataWithCommentMarker(marker string) blockMetadata {
+	var opts blockOptions
+	opts.setCommentMarker(marker)
+	return defaultMetadataWith(opts)
 }
 
 func TestFix(t *testing.T) {
@@ -179,7 +174,7 @@ foo
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
-			got, gotAlreadyFixed := New("keep-sorted-test").Fix(tc.in, nil)
+			got, gotAlreadyFixed := New("keep-sorted-test", BlockOptions{}).Fix(tc.in, nil)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("Fix diff (-want +got):\n%s", diff)
 			}
@@ -320,7 +315,7 @@ baz
 					mod = append(mod, LineRange{l, l})
 				}
 			}
-			got := New("keep-sorted-test").findings(filename, strings.Split(tc.in, "\n"), mod, tc.considerLintOption)
+			got := New("keep-sorted-test", BlockOptions{}).findings(filename, strings.Split(tc.in, "\n"), mod, tc.considerLintOption)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("Findings diff (-want +got):\n%s", diff)
 			}
@@ -360,7 +355,7 @@ cat`,
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+					metadata: defaultMetadataWithCommentMarker("//"),
 					start:    3,
 					end:      7,
 					lines: []string{
@@ -370,7 +365,7 @@ cat`,
 					},
 				},
 				{
-					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+					metadata: defaultMetadataWithCommentMarker("//"),
 					start:    9,
 					end:      13,
 					lines: []string{
@@ -397,7 +392,7 @@ dog
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+					metadata: defaultMetadataWithCommentMarker("//"),
 					start:    5,
 					end:      7,
 					lines: []string{
@@ -435,7 +430,7 @@ cat`,
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+					metadata: defaultMetadataWithCommentMarker("//"),
 					start:    3,
 					end:      7,
 					lines: []string{
@@ -463,7 +458,7 @@ cat`,
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+					metadata: defaultMetadataWithCommentMarker("//"),
 					start:    1,
 					end:      6,
 					lines: []string{
@@ -496,7 +491,7 @@ i
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+					metadata: defaultMetadataWithCommentMarker("//"),
 					start:    1,
 					end:      13,
 					lines: []string{
@@ -514,7 +509,7 @@ i
 					},
 					nestedBlocks: []block{
 						{
-							metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+							metadata: defaultMetadataWithCommentMarker("//"),
 							start:    5,
 							end:      9,
 							lines: []string{
@@ -574,7 +569,7 @@ i
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+					metadata: defaultMetadataWithCommentMarker("//"),
 					start:    1,
 					end:      34,
 					lines: []string{
@@ -613,7 +608,7 @@ i
 					},
 					nestedBlocks: []block{
 						{
-							metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+							metadata: defaultMetadataWithCommentMarker("//"),
 							start:    5,
 							end:      30,
 							lines: []string{
@@ -644,7 +639,7 @@ i
 							},
 							nestedBlocks: []block{
 								{
-									metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+									metadata: defaultMetadataWithCommentMarker("//"),
 									start:    9,
 									end:      21,
 									lines: []string{
@@ -662,7 +657,7 @@ i
 									},
 									nestedBlocks: []block{
 										{
-											metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+											metadata: defaultMetadataWithCommentMarker("//"),
 											start:    13,
 											end:      17,
 											lines: []string{
@@ -674,7 +669,7 @@ i
 									},
 								},
 								{
-									metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+									metadata: defaultMetadataWithCommentMarker("//"),
 									start:    22,
 									end:      26,
 									lines: []string{
@@ -688,7 +683,7 @@ i
 					},
 				},
 				{
-					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+					metadata: defaultMetadataWithCommentMarker("//"),
 					start:    35,
 					end:      39,
 					lines: []string{
@@ -714,7 +709,7 @@ i
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
+					metadata: defaultMetadataWithCommentMarker("//"),
 					start:    5,
 					end:      7,
 					lines:    []string{"2"},
@@ -732,7 +727,7 @@ i
 				tc.include = func(start, end int) bool { return true }
 			}
 
-			gotBlocks, gotIncompleteBlocks := New("keep-sorted-test").newBlocks(strings.Split(tc.in, "\n"), 0, tc.include)
+			gotBlocks, gotIncompleteBlocks := New("keep-sorted-test", BlockOptions{}).newBlocks(strings.Split(tc.in, "\n"), 0, tc.include)
 			if diff := cmp.Diff(tc.wantBlocks, gotBlocks, cmp.AllowUnexported(block{}, blockMetadata{}, blockOptions{})); diff != "" {
 				t.Errorf("blocks diff (-want +got):\n%s", diff)
 			}
@@ -861,7 +856,13 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "CommentOnlyBlock",
 
-			opts: optionsWithCommentMarker("//"),
+			opts: func() blockOptions {
+				opts := blockOptions{
+					StickyComments: true,
+				}
+				opts.setCommentMarker("//")
+				return opts
+			}(),
 			in: []string{
 				"2",
 				"1",
@@ -919,8 +920,11 @@ func TestLineSorting(t *testing.T) {
 			name: "RemoveDuplicates_ConsidersComments",
 
 			opts: func() blockOptions {
-				opts := optionsWithCommentMarker("//")
-				opts.RemoveDuplicates = true
+				opts := blockOptions{
+					RemoveDuplicates: true,
+					StickyComments:   true,
+				}
+				opts.setCommentMarker("//")
 				return opts
 			}(),
 			in: []string{
@@ -1180,7 +1184,13 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "StickyComments",
-			opts: optionsWithCommentMarker("//"),
+			opts: func() blockOptions {
+				opts := blockOptions{
+					StickyComments: true,
+				}
+				opts.setCommentMarker("//")
+				return opts
+			}(),
 
 			want: []lineGroup{
 				{
@@ -1203,7 +1213,13 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "CommentOnlyGroup",
-			opts: optionsWithCommentMarker("//"),
+			opts: func() blockOptions {
+				opts := blockOptions{
+					StickyComments: true,
+				}
+				opts.setCommentMarker("//")
+				return opts
+			}(),
 
 			want: []lineGroup{
 				{
@@ -1291,8 +1307,11 @@ func TestLineGrouping(t *testing.T) {
 		{
 			name: "Group_NestedKeepSortedBlocksWithoutAnyIndentation",
 			opts: func() blockOptions {
-				opts := optionsWithCommentMarker("//")
-				opts.Group = true
+				opts := blockOptions{
+					Group:          true,
+					StickyComments: true,
+				}
+				opts.setCommentMarker("//")
 				return opts
 			}(),
 
@@ -1425,8 +1444,10 @@ func TestLineGrouping(t *testing.T) {
 		{
 			name: "Block_IgnoresSpecialCharactersWithinFullLineComments",
 			opts: func() blockOptions {
-				opts := optionsWithCommentMarker("//")
-				opts.Block = true
+				opts := blockOptions{
+					Block: true,
+				}
+				opts.setCommentMarker("//")
 				return opts
 			}(),
 
@@ -1450,8 +1471,10 @@ func TestLineGrouping(t *testing.T) {
 		{
 			name: "Block_IgnoresSpecialCharactersWithinTrailingComments",
 			opts: func() blockOptions {
-				opts := optionsWithCommentMarker("//")
-				opts.Block = true
+				opts := blockOptions{
+					Block: true,
+				}
+				opts.setCommentMarker("//")
 				return opts
 			}(),
 
@@ -1628,7 +1651,7 @@ func TestBlockOptions(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
-			got, err := New("keep-sorted-test").parseBlockOptions(tc.in, tc.defaultOptions)
+			got, err := parseBlockOptions(tc.in, tc.defaultOptions)
 			if err != nil {
 				if tc.wantErr == "" {
 					t.Errorf("parseBlockOptions(%q) = %v", tc.in, err)
@@ -1639,6 +1662,47 @@ func TestBlockOptions(t *testing.T) {
 			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(blockOptions{})); diff != "" {
 				t.Errorf("parseBlockOptions(%q) mismatch (-want +got):\n%s", tc.in, diff)
 			}
+
+			_ = got.String() // Make sure this doesn't panic.
 		})
+	}
+}
+
+func TestBlockOptions_ClonesDefaultOptions(t *testing.T) {
+	defaults := blockOptions{
+		StickyPrefixes: map[string]bool{},
+	}
+	_, err := parseBlockOptions("sticky_prefixes=//", defaults)
+	if err != nil {
+		t.Errorf("parseBlockOptions() = _, %v", err)
+	}
+	if diff := cmp.Diff(blockOptions{}, defaults, cmp.AllowUnexported(blockOptions{}), cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("defaults appear to have been modified (-want +got):\n%s", diff)
+	}
+}
+
+func TestBlockOptions_ClonesDefaultOptions_Reflection(t *testing.T) {
+	defaults := blockOptions{}
+	defaultOpts := reflect.ValueOf(&defaults).Elem()
+	var s []string
+	for i := 0; i < defaultOpts.NumField(); i++ {
+		val := defaultOpts.Field(i)
+		switch val.Kind() {
+		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
+			continue
+		case reflect.Slice:
+			val.Set(reflect.MakeSlice(val.Type(), 0, 0))
+			s = append(s, fmt.Sprintf("%s=a,b,c", key(defaultOpts.Type().Field(i))))
+		case reflect.Map:
+			val.Set(reflect.MakeMap(val.Type()))
+			s = append(s, fmt.Sprintf("%s=a,b,c", key(defaultOpts.Type().Field(i))))
+		default:
+			t.Fatalf("unhandled type in blockOptions: %v", val.Type())
+		}
+
+	}
+	_, _ = parseBlockOptions(strings.Join(s, " "), defaults)
+	if diff := cmp.Diff(blockOptions{}, defaults, cmp.AllowUnexported(blockOptions{}), cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("defaults appear to have been modified (-want +got):\n%s", diff)
 	}
 }

@@ -25,6 +25,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"golang.org/x/exp/maps"
 )
 
 var (
@@ -34,7 +36,31 @@ var (
 		"no":    false,
 		"false": false,
 	}
+	boolString = map[bool]string{
+		true:  "yes",
+		false: "no",
+	}
 )
+
+type BlockOptions struct {
+	opts blockOptions
+}
+
+func DefaultBlockOptions() BlockOptions {
+	return BlockOptions{defaultOptions}
+}
+
+func ParseBlockOptions(startLine string) (BlockOptions, error) {
+	opts, err := parseBlockOptions(startLine, blockOptions{})
+	if err != nil {
+		return BlockOptions{}, err
+	}
+	return BlockOptions{opts}, nil
+}
+
+func (opts BlockOptions) String() string {
+	return opts.opts.String()
+}
 
 // blockOptions enable/disable extra features that control how a block of lines is sorted.
 //
@@ -97,12 +123,9 @@ var defaultOptions = blockOptions{
 	StickyPrefixes:   nil, // Will be populated with the comment marker of the start directive.
 	CaseSensitive:    true,
 	RemoveDuplicates: true,
-	// If we ever add a default map or slice or other reference type to this
-	// struct, we'll want to make sure we're doing a deep copy in
-	// parseBlockOptions.
 }
 
-func (f *Fixer) parseBlockOptions(startLine string, defaults blockOptions) (blockOptions, error) {
+func parseBlockOptions(startLine string, defaults blockOptions) (blockOptions, error) {
 	ret := defaults
 	opts := reflect.ValueOf(&ret)
 	var errs error
@@ -133,7 +156,7 @@ func (f *Fixer) parseBlockOptions(startLine string, defaults blockOptions) (bloc
 		ret.GroupPrefixes = nil
 	}
 
-	if cm := f.guessCommentMarker(startLine); cm != "" {
+	if cm := guessCommentMarker(startLine); cm != "" {
 		ret.setCommentMarker(cm)
 	}
 	if len(ret.IgnorePrefixes) > 1 {
@@ -147,11 +170,7 @@ func (f *Fixer) parseBlockOptions(startLine string, defaults blockOptions) (bloc
 var errOptionNotSet = errors.New("not set in start directive")
 
 func parseBlockOption(f reflect.StructField, startLine string) (reflect.Value, error) {
-	key := strings.ToLower(f.Name)
-	if k, ok := f.Tag.Lookup("key"); ok {
-		key = k
-	}
-
+	key := key(f)
 	regex := regexp.MustCompile(fmt.Sprintf(`(^|\s)%s=(?P<value>[^ ]+?)($|\s)`, regexp.QuoteMeta(key)))
 	if m := regex.FindStringSubmatchIndex(startLine); m != nil {
 		val := string(regex.ExpandString(nil, "${value}", startLine, m))
@@ -160,9 +179,17 @@ func parseBlockOption(f reflect.StructField, startLine string) (reflect.Value, e
 	return reflect.Zero(f.Type), fmt.Errorf("option %q: %w", key, errOptionNotSet)
 }
 
+func key(f reflect.StructField) string {
+	key := strings.ToLower(f.Name)
+	if k, ok := f.Tag.Lookup("key"); ok {
+		key = k
+	}
+	return key
+}
+
 func parseValue(f reflect.StructField, key, val string) (reflect.Value, error) {
 	switch f.Type {
-	case reflect.TypeOf(true):
+	case reflect.TypeOf(bool(false)):
 		b, ok := boolValues[val]
 		if !ok {
 			return reflect.Zero(f.Type), fmt.Errorf("option %q has unknown value %q", key, val)
@@ -186,7 +213,7 @@ func parseValue(f reflect.StructField, key, val string) (reflect.Value, error) {
 			m[s] = true
 		}
 		return reflect.ValueOf(m), nil
-	case reflect.TypeOf(0):
+	case reflect.TypeOf(int(0)):
 		if val == "" {
 			return reflect.Zero(f.Type), nil
 		}
@@ -201,7 +228,24 @@ func parseValue(f reflect.StructField, key, val string) (reflect.Value, error) {
 	panic(fmt.Errorf("unsupported blockOptions type: %v", f.Type))
 }
 
-func (f *Fixer) guessCommentMarker(startLine string) string {
+func formatValue(val reflect.Value) string {
+	switch val.Type() {
+	case reflect.TypeOf(bool(false)):
+		return boolString[val.Bool()]
+	case reflect.TypeOf([]string{}):
+		return strings.Join(val.Interface().([]string), ",")
+	case reflect.TypeOf(map[string]bool{}):
+		keys := maps.Keys(val.Interface().(map[string]bool))
+		slices.Sort(keys)
+		return strings.Join(keys, ",")
+	case reflect.TypeOf(int(0)):
+		return strconv.Itoa(int(val.Int()))
+	}
+
+	panic(fmt.Errorf("unsupported blockOptions type: %v", val.Type()))
+}
+
+func guessCommentMarker(startLine string) string {
 	startLine = strings.TrimSpace(startLine)
 	if strings.HasPrefix(startLine, "//") {
 		return "//"
@@ -227,6 +271,25 @@ func (opts *blockOptions) setCommentMarker(marker string) {
 		}
 		opts.StickyPrefixes[marker] = true
 	}
+}
+
+func (opts blockOptions) String() string {
+	var s []string
+	val := reflect.ValueOf(opts)
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Type().Field(i)
+		if !field.IsExported() {
+			continue
+		}
+
+		fieldVal := val.FieldByIndex(field.Index)
+		if fieldVal.IsZero() {
+			continue
+		}
+		s = append(s, fmt.Sprintf("%s=%s", key(field), formatValue(fieldVal)))
+	}
+
+	return strings.Join(s, " ")
 }
 
 // hasPrefix determines if s has one of the prefixes.
