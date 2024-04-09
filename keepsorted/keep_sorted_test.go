@@ -1697,7 +1697,7 @@ func TestBlockOptions_ClonesDefaultOptions_Reflection(t *testing.T) {
 			val.Set(reflect.MakeMap(val.Type()))
 			s = append(s, fmt.Sprintf("%s=a,b,c", key(defaultOpts.Type().Field(i))))
 		default:
-			t.Fatalf("unhandled type in blockOptions: %v", val.Type())
+			t.Errorf("Option %q has unhandled type: %v", key(defaultOpts.Type().Field(i)), val.Type())
 		}
 
 	}
