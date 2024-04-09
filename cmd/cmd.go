@@ -55,7 +55,7 @@ func (c *Config) FromFlags(fs *flag.FlagSet) {
 	}
 	fs.Var(of, "mode", fmt.Sprintf("Determines what mode to run this tool in. One of %q", knownModes()))
 
-	fs.Var(&lineRangeFlag{lineRanges: &c.modifiedLines}, "lines", "Line ranges of the form \"start:end\". Only processes keep-sorted blocks that overlap with the given line ranges. Can only be used when fixing a single file.")
+	fs.Var(&lineRangeFlag{lineRanges: &c.modifiedLines}, "lines", "Line ranges of the form \"start:end\". Only processes keep-sorted blocks that overlap with the given line ranges. Can only be used when fixing a single file. This flag can either be a comma-separated list of line ranges, or it can be specified multiple times on the command line to specify multiple line ranges.")
 }
 
 type blockOptionsFlag struct {
@@ -108,6 +108,7 @@ func (f *operationFlag) Set(val string) error {
 	if op == nil {
 		return fmt.Errorf("unknown mode %q. Valid modes: %q", val, knownModes())
 	}
+	f.s = val
 	*f.op = op
 	return nil
 }
@@ -141,7 +142,7 @@ func (f *lineRangeFlag) Set(val string) error {
 }
 
 func (f *lineRangeFlag) Type() string {
-	return "line ranges"
+	return "line_ranges"
 }
 
 func (f *lineRangeFlag) Append(val string) error {
