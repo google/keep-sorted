@@ -23,31 +23,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	defaultOptions = blockOptions{
-		Lint:             true,
-		SkipLines:        0,
-		Group:            true,
-		GroupPrefixes:    nil,
-		IgnorePrefixes:   nil,
-		Numeric:          false,
-		StickyComments:   true,
-		StickyPrefixes:   map[string]bool{"//": true},
-		RemoveDuplicates: true,
-		PrefixOrder:      nil,
-		Block:            false,
-		NewlineSeparated: false,
-		CaseSensitive:    true,
-		commentMarker:    "//",
-	}
-
-	defaultMetadata = blockMetadata{
-		startDirective: "keep-sorted-test start",
-		endDirective:   "keep-sorted-test end",
-		opts:           defaultOptions,
-	}
-)
-
 // initZerolog initializes zerolog to log as part of the test.
 // It returns a function that restores zerolog to its state before this function was called.
 func initZerolog(t testing.TB) {
@@ -56,16 +31,26 @@ func initZerolog(t testing.TB) {
 	t.Cleanup(func() { log.Logger = oldLogger })
 }
 
-func defaultOptionsWith(f func(*blockOptions)) blockOptions {
+func defaultOptionsWithCommentMarker(marker string) blockOptions {
 	opts := defaultOptions
-	f(&opts)
+	opts.StickyComments = true
+	opts.setCommentMarker(marker)
+	return opts
+}
+
+func optionsWithCommentMarker(marker string) blockOptions {
+	var opts blockOptions
+	opts.StickyComments = true
+	opts.setCommentMarker(marker)
 	return opts
 }
 
 func defaultMetadataWith(opts blockOptions) blockMetadata {
-	meta := defaultMetadata
-	meta.opts = opts
-	return meta
+	return blockMetadata{
+		startDirective: "keep-sorted-test start",
+		endDirective:   "keep-sorted-test end",
+		opts:           opts,
+	}
 }
 
 func TestFix(t *testing.T) {
@@ -375,7 +360,7 @@ cat`,
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadata,
+					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 					start:    3,
 					end:      7,
 					lines: []string{
@@ -385,7 +370,7 @@ cat`,
 					},
 				},
 				{
-					metadata: defaultMetadata,
+					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 					start:    9,
 					end:      13,
 					lines: []string{
@@ -412,7 +397,7 @@ dog
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadata,
+					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 					start:    5,
 					end:      7,
 					lines: []string{
@@ -450,7 +435,7 @@ cat`,
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadata,
+					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 					start:    3,
 					end:      7,
 					lines: []string{
@@ -478,7 +463,7 @@ cat`,
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadata,
+					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 					start:    1,
 					end:      6,
 					lines: []string{
@@ -511,7 +496,7 @@ i
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadata,
+					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 					start:    1,
 					end:      13,
 					lines: []string{
@@ -529,7 +514,7 @@ i
 					},
 					nestedBlocks: []block{
 						{
-							metadata: defaultMetadata,
+							metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 							start:    5,
 							end:      9,
 							lines: []string{
@@ -589,7 +574,7 @@ i
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadata,
+					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 					start:    1,
 					end:      34,
 					lines: []string{
@@ -628,7 +613,7 @@ i
 					},
 					nestedBlocks: []block{
 						{
-							metadata: defaultMetadata,
+							metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 							start:    5,
 							end:      30,
 							lines: []string{
@@ -659,7 +644,7 @@ i
 							},
 							nestedBlocks: []block{
 								{
-									metadata: defaultMetadata,
+									metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 									start:    9,
 									end:      21,
 									lines: []string{
@@ -677,7 +662,7 @@ i
 									},
 									nestedBlocks: []block{
 										{
-											metadata: defaultMetadata,
+											metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 											start:    13,
 											end:      17,
 											lines: []string{
@@ -689,7 +674,7 @@ i
 									},
 								},
 								{
-									metadata: defaultMetadata,
+									metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 									start:    22,
 									end:      26,
 									lines: []string{
@@ -703,7 +688,7 @@ i
 					},
 				},
 				{
-					metadata: defaultMetadata,
+					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 					start:    35,
 					end:      39,
 					lines: []string{
@@ -729,7 +714,7 @@ i
 
 			wantBlocks: []block{
 				{
-					metadata: defaultMetadata,
+					metadata: defaultMetadataWith(defaultOptionsWithCommentMarker("//")),
 					start:    5,
 					end:      7,
 					lines:    []string{"2"},
@@ -771,8 +756,7 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "NothingToSort",
 
-			opts: defaultOptions,
-			in:   []string{},
+			in: []string{},
 
 			want:              []string{},
 			wantAlreadySorted: true,
@@ -780,7 +764,6 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "AlreadySorted",
 
-			opts: defaultOptions,
 			in: []string{
 				"Bar",
 				"Baz",
@@ -799,7 +782,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "AlreadySorted_ExceptForDuplicate",
 
-			opts: defaultOptions,
+			opts: blockOptions{
+				RemoveDuplicates: true,
+			},
 			in: []string{
 				"Bar",
 				"Bar",
@@ -815,9 +800,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "AlreadySorted_NewlineSeparated",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.NewlineSeparated = true
-			}),
+			opts: blockOptions{
+				NewlineSeparated: true,
+			},
 			in: []string{
 				"Bar",
 				"",
@@ -838,9 +823,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "AlreadySorted_ExceptForNewlineSorted",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.NewlineSeparated = true
-			}),
+			opts: blockOptions{
+				NewlineSeparated: true,
+			},
 			in: []string{
 				"Bar",
 				"Baz",
@@ -859,7 +844,6 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "SimpleSorting",
 
-			opts: defaultOptions,
 			in: []string{
 				"Baz",
 				"Foo",
@@ -877,10 +861,7 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "CommentOnlyBlock",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.StickyComments = true
-				opts.StickyPrefixes = map[string]bool{"//": true}
-			}),
+			opts: optionsWithCommentMarker("//"),
 			in: []string{
 				"2",
 				"1",
@@ -896,9 +877,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "Prefix",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.PrefixOrder = []string{"INIT_", "", "FINAL_"}
-			}),
+			opts: blockOptions{
+				PrefixOrder: []string{"INIT_", "", "FINAL_"},
+			},
 			in: []string{
 				// keep-sorted start prefix_order=
 				"DO_SOMETHING_WITH_BAR",
@@ -937,11 +918,11 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "RemoveDuplicates_ConsidersComments",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
+			opts: func() blockOptions {
+				opts := optionsWithCommentMarker("//")
 				opts.RemoveDuplicates = true
-				opts.StickyComments = true
-				opts.StickyPrefixes = map[string]bool{"//": true}
-			}),
+				return opts
+			}(),
 			in: []string{
 				"// comment 1",
 				"foo",
@@ -963,9 +944,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "RemoveDuplicates_IgnoresTraliningCommas",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.RemoveDuplicates = true
-			}),
+			opts: blockOptions{
+				RemoveDuplicates: true,
+			},
 			in: []string{
 				"foo,",
 				"bar,",
@@ -980,9 +961,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "RemoveDuplicates_IgnoresTrailingCommas_RemovesCommaIfLastElement",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.RemoveDuplicates = true
-			}),
+			opts: blockOptions{
+				RemoveDuplicates: true,
+			},
 			in: []string{
 				"foo,",
 				"foo,",
@@ -997,9 +978,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "RemoveDuplicates_IgnoresTrailingCommas_RemovesCommaIfOnlyElement",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.RemoveDuplicates = true
-			}),
+			opts: blockOptions{
+				RemoveDuplicates: true,
+			},
 			in: []string{
 				"foo,",
 				"foo",
@@ -1012,9 +993,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "RemoveDuplicates_Keep",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.RemoveDuplicates = false
-			}),
+			opts: blockOptions{
+				RemoveDuplicates: false,
+			},
 			in: []string{
 				"foo",
 				"foo",
@@ -1030,7 +1011,6 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "TrailingCommas",
 
-			opts: defaultOptions,
 			in: []string{
 				"foo,",
 				"baz,",
@@ -1046,9 +1026,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "IgnorePrefixes",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.IgnorePrefixes = []string{"fs.setBoolFlag", "fs.setIntFlag"}
-			}),
+			opts: blockOptions{
+				IgnorePrefixes: []string{"fs.setBoolFlag", "fs.setIntFlag"},
+			},
 			in: []string{
 				// keep-sorted start ignore_prefixes=
 				`fs.setBoolFlag("paws_with_cute_toebeans", true)`,
@@ -1066,9 +1046,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "CaseInsensitive",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.CaseSensitive = false
-			}),
+			opts: blockOptions{
+				CaseSensitive: false,
+			},
 			in: []string{
 				// keep-sorted start case=yes
 				"Bravo",
@@ -1086,9 +1066,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "Numeric",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Numeric = true
-			}),
+			opts: blockOptions{
+				Numeric: true,
+			},
 			in: []string{
 				// keep-sorted start numeric=no
 				"PROGRESS_100_PERCENT",
@@ -1110,10 +1090,10 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "MultipleTransforms",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.IgnorePrefixes = []string{"R2D2", "C3PO", "R4"}
-				opts.Numeric = true
-			}),
+			opts: blockOptions{
+				IgnorePrefixes: []string{"R2D2", "C3PO", "R4"},
+				Numeric:        true,
+			},
 			in: []string{
 				// keep-sorted start ignore_prefixes= numeric=no
 				"C3PO_ARM_L",
@@ -1139,9 +1119,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "NewlineSeparated",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.NewlineSeparated = true
-			}),
+			opts: blockOptions{
+				NewlineSeparated: true,
+			},
 			in: []string{
 				"B",
 				"",
@@ -1160,9 +1140,9 @@ func TestLineSorting(t *testing.T) {
 		{
 			name: "NewlineSeparated_Empty",
 
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.NewlineSeparated = true
-			}),
+			opts: blockOptions{
+				NewlineSeparated: true,
+			},
 			in: []string{},
 
 			want:              []string{},
@@ -1192,7 +1172,6 @@ func TestLineGrouping(t *testing.T) {
 	}{
 		{
 			name: "Simple",
-			opts: defaultOptions,
 
 			want: []lineGroup{
 				{nil, []string{"foo"}},
@@ -1201,10 +1180,7 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "StickyComments",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.StickyComments = true
-				opts.StickyPrefixes = map[string]bool{"//": true}
-			}),
+			opts: optionsWithCommentMarker("//"),
 
 			want: []lineGroup{
 				{
@@ -1227,10 +1203,7 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "CommentOnlyGroup",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.StickyComments = true
-				opts.StickyPrefixes = map[string]bool{"//": true}
-			}),
+			opts: optionsWithCommentMarker("//"),
 
 			want: []lineGroup{
 				{
@@ -1251,10 +1224,9 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Group",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Group = true
-				opts.Block = false
-			}),
+			opts: blockOptions{
+				Group: true,
+			},
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1268,10 +1240,10 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Group_Prefixes",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.GroupPrefixes = map[string]bool{"and": true, "with": true}
-				opts.Block = false
-			}),
+			opts: blockOptions{
+				Group:         true,
+				GroupPrefixes: map[string]bool{"and": true, "with": true},
+			},
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1295,10 +1267,9 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Group_UnindentedNewlines",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Group = true
-				opts.Block = false
-			}),
+			opts: blockOptions{
+				Group: true,
+			},
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1319,10 +1290,11 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Group_NestedKeepSortedBlocksWithoutAnyIndentation",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
+			opts: func() blockOptions {
+				opts := optionsWithCommentMarker("//")
 				opts.Group = true
-				opts.Block = false
-			}),
+				return opts
+			}(),
 
 			want: []lineGroup{
 				{[]string{
@@ -1347,9 +1319,9 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Block_Brackets",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Block = true
-			}),
+			opts: blockOptions{
+				Block: true,
+			},
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1368,9 +1340,9 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Block_Quotes",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Block = true
-			}),
+			opts: blockOptions{
+				Block: true,
+			},
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1389,9 +1361,9 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Block_EscapedQuote",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Block = true
-			}),
+			opts: blockOptions{
+				Block: true,
+			},
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1410,9 +1382,9 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Block_IgnoresQuotesWithinQuotes",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Block = true
-			}),
+			opts: blockOptions{
+				Block: true,
+			},
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1431,9 +1403,9 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Block_IgnoresBracesWithinQuotes",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Block = true
-			}),
+			opts: blockOptions{
+				Block: true,
+			},
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1452,10 +1424,11 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Block_IgnoresSpecialCharactersWithinFullLineComments",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
+			opts: func() blockOptions {
+				opts := optionsWithCommentMarker("//")
 				opts.Block = true
-				opts.StickyPrefixes["//"] = true
-			}),
+				return opts
+			}(),
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1476,10 +1449,11 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Block_IgnoresSpecialCharactersWithinTrailingComments",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
+			opts: func() blockOptions {
+				opts := optionsWithCommentMarker("//")
 				opts.Block = true
-				opts.StickyPrefixes["//"] = true
-			}),
+				return opts
+			}(),
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1502,9 +1476,9 @@ func TestLineGrouping(t *testing.T) {
 		},
 		{
 			name: "Block_TripleQuotes",
-			opts: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Block = true
-			}),
+			opts: blockOptions{
+				Block: true,
+			},
 
 			want: []lineGroup{
 				{nil, []string{
@@ -1534,106 +1508,127 @@ func TestLineGrouping(t *testing.T) {
 
 func TestBlockOptions(t *testing.T) {
 	for _, tc := range []struct {
-		name string
-		in   string
+		name           string
+		in             string
+		defaultOptions blockOptions
 
 		want    blockOptions
 		wantErr string
 	}{
 		{
-			name: "DefaultOptions",
-			in:   "// keep-sorted-test",
+			name:           "DefaultOptions",
+			in:             "",
+			defaultOptions: defaultOptions,
 
 			want: defaultOptions,
 		},
 		{
-			name: "SimpleSwitch",
-			in:   "// keep-sorted-test lint=no",
+			name: "CommentMarker",
+			in:   "// keep-sorted-test start",
 
-			want: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Lint = false
-			}),
+			want: blockOptions{
+				commentMarker: "//",
+			},
+		},
+		{
+			name: "StickyComments",
+			in:   "// keep-sorted-test start sticky_comments=yes",
+
+			want: blockOptions{
+				StickyComments: true,
+				StickyPrefixes: map[string]bool{"//": true},
+				commentMarker:  "//",
+			},
+		},
+		{
+			name: "SimpleSwitch",
+			in:   "lint=yes",
+
+			want: blockOptions{Lint: true},
 		},
 		{
 			name: "SkipLines",
-			in:   "// keep-sorted-test skip_lines=10",
+			in:   "skip_lines=10",
 
-			want: defaultOptionsWith(func(opts *blockOptions) {
-				opts.SkipLines = 10
-			}),
+			want: blockOptions{SkipLines: 10},
 		},
 		{
 			name: "ErrorSkipLinesIsNegative",
-			in:   "// keep-sorted-test skip_lines=-1",
+			in:   "skip_lines=-1",
 
-			want:    defaultOptions,
-			wantErr: `skip_lines has invalid value: -1`,
+			wantErr: "skip_lines has invalid value: -1",
 		},
 		{
 			name: "ItemList",
-			in:   "// keep-sorted-test prefix_order=a,b,c,d",
+			in:   "prefix_order=a,b,c,d",
 
-			want: defaultOptionsWith(func(opts *blockOptions) {
-				opts.PrefixOrder = []string{"a", "b", "c", "d"}
-			}),
+			want: blockOptions{
+				PrefixOrder: []string{"a", "b", "c", "d"},
+			},
 		},
 		{
 			name: "ItemSet",
-			in:   "keep-sorted-test sticky_prefixes=a,b,c,d",
+			in:   "sticky_prefixes=a,b,c,d",
 
-			want: defaultOptionsWith(func(opts *blockOptions) {
-				opts.StickyPrefixes = map[string]bool{"a": true, "b": true, "c": true, "d": true}
-				opts.commentMarker = ""
-			}),
+			want: blockOptions{
+				StickyPrefixes: map[string]bool{
+					"a": true,
+					"b": true,
+					"c": true,
+					"d": true,
+				},
+			},
 		},
 		{
 			name: "ignore_prefixes",
-			in:   "// keep-sorted-test ignore_prefixes=a,b,c,d",
+			in:   "ignore_prefixes=a,b,c,d",
 
-			want: defaultOptionsWith(func(opts *blockOptions) {
-				opts.IgnorePrefixes = []string{"a", "b", "c", "d"}
-			}),
+			want: blockOptions{
+				IgnorePrefixes: []string{"a", "b", "c", "d"},
+			},
+		},
+		{
+			name: "ignore_prefixes_ChecksLongestPrefixesFirst",
+			in:   "ignore_prefixes=DoSomething(,DoSomething({",
+
+			want: blockOptions{
+				IgnorePrefixes: []string{"DoSomething({", "DoSomething("},
+			},
 		},
 		{
 			name: "GroupPrefixesRequiresGrouping",
-			in:   "// keep-sorted-test group_prefixes=a,b,c group=no",
+			in:   "group_prefixes=a,b,c group=no",
 
-			want: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Group = false
-			}),
 			wantErr: "group_prefixes may not be used with group=no",
 		},
 		{
-			name: "ignore_prefixes_ChecksLognestPrefixesFirst",
-			in:   "// keep-sorted-test ignore_prefixes=DoSomething(,DoSomething({",
-
-			want: defaultOptionsWith(func(opts *blockOptions) {
-				opts.IgnorePrefixes = []string{"DoSomething({", "DoSomething("}
-			}),
-		},
-		{
 			name: "OptionInTrailingComment",
-			in:   "// keep-sorted-test block=yes  # lint=no",
+			in:   "# keep-sorted-test start block=yes  # lint=yes",
 
-			want: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Block = true
-				opts.Lint = false
-			}),
+			want: blockOptions{
+				Block:         true,
+				Lint:          true,
+				commentMarker: "#",
+			},
 		},
 		{
 			name: "ErrorDoesNotStopParsing",
-			in:   "// keep-sorted-test lint=yep case=no",
+			in:   "lint=nah case=no",
+			defaultOptions: blockOptions{
+				Lint:          true,
+				CaseSensitive: true,
+			},
 
-			want: defaultOptionsWith(func(opts *blockOptions) {
-				opts.Lint = true // The default value should not change.
-				opts.CaseSensitive = false
-			}),
-			wantErr: `option "lint" has unknown value "yep"`,
+			want: blockOptions{
+				Lint:          true, // The default value should not change.
+				CaseSensitive: false,
+			},
+			wantErr: `option "lint" has unknown value "nah"`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
-			got, err := New("keep-sorted-test").parseBlockOptions(tc.in)
+			got, err := New("keep-sorted-test").parseBlockOptions(tc.in, tc.defaultOptions)
 			if err != nil {
 				if tc.wantErr == "" {
 					t.Errorf("parseBlockOptions(%q) = %v", tc.in, err)
