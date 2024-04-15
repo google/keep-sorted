@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime/debug"
 	"time"
 
 	"github.com/google/keep-sorted/cmd"
@@ -34,6 +35,7 @@ func main() {
 	logLevel := flag.CountP("verbose", "v", "Log more verbosely")
 	colorMode := flag.String("color", "auto", "Whether to color debug output. One of \"always\", \"never\", or \"auto\"")
 	omitTimestamps := flag.Bool("omit-timestamps", false, "Do not emit timestamps in console logging. Useful for tests")
+	version := flag.Bool("version", false, "Report the keep-sorted version.")
 	if err := flag.CommandLine.MarkHidden("omit-timestamps"); err != nil {
 		panic(err)
 	}
@@ -47,6 +49,11 @@ func main() {
 	}
 
 	flag.Parse()
+
+	if *version {
+		fmt.Fprintln(os.Stdout, readVersion())
+		return
+	}
 
 	out := os.Stderr
 	var shouldColor bool
@@ -71,4 +78,44 @@ func main() {
 	} else if !ok {
 		os.Exit(1)
 	}
+}
+
+func readVersion() string {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+
+	const revisionKey = "vcs.revision"
+	const timeKey = "vcs.time"
+	const dirtyKey = "vcs.modified"
+	settings := make(map[string]string)
+	for _, s := range bi.Settings {
+		settings[s.Key] = s.Value
+	}
+
+	var s string
+	if v := bi.Main.Version; v != "" && v != "(devel)" {
+		s = v
+	} else if r := settings[revisionKey]; r != "" {
+		s = r
+		if len(s) > 7 {
+			s = s[:7]
+		}
+	}
+
+	if s == "" {
+		return "unknown"
+	}
+
+	if settings[dirtyKey] == "true" {
+		s += "-dev"
+	}
+	if t := settings[timeKey]; t != "" {
+		if ts, err := time.Parse(time.RFC3339, t); err == nil {
+			t = ts.In(time.Local).Format(time.RFC3339)
+		}
+		s += fmt.Sprintf(" (%s)", t)
+	}
+	return s
 }
