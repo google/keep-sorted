@@ -27,6 +27,12 @@ var (
 
 type parser struct {
 	line string
+
+	allowYAMLLists bool
+}
+
+func newParser(options string) *parser {
+	return &parser{line: options}
 }
 
 func (p *parser) popKey() (string, bool) {
@@ -79,12 +85,14 @@ func (p *parser) popInt() (int, error) {
 }
 
 func (p *parser) popList() ([]string, error) {
-	val, rest, ok := tryFindYAMLListAtStart(p.line)
-	if ok {
-		p.line = rest
-		return parseYAMLList(val)
+	if p.allowYAMLLists {
+		val, rest, ok := tryFindYAMLListAtStart(p.line)
+		if ok {
+			p.line = rest
+			return parseYAMLList(val)
+		}
 	}
-	val, rest, _ = strings.Cut(p.line, " ")
+	val, rest, _ := strings.Cut(p.line, " ")
 	p.line = rest
 	return strings.Split(val, ","), nil
 }

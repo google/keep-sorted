@@ -58,6 +58,8 @@ func (opts BlockOptions) String() string {
 type blockOptions struct {
 	// Lint determines whether we emit lint warnings for this block.
 	Lint bool
+	// AllowYAMLLists determines whether list.set valued options are allowed to be specified by YAML.
+	AllowYAMLLists bool `key:"allow_yaml_lists"`
 
 	///////////////////////////
 	//  Pre-sorting options  //
@@ -105,6 +107,7 @@ type blockOptions struct {
 var (
 	defaultOptions = blockOptions{
 		Lint:             true,
+		AllowYAMLLists:   true,
 		Group:            true,
 		StickyComments:   true,
 		StickyPrefixes:   nil, // Will be populated with the comment marker of the start directive.
@@ -143,8 +146,9 @@ func parseBlockOptions(commentMarker, options string, defaults blockOptions) (bl
 	ret := defaults
 	opts := reflect.ValueOf(&ret).Elem()
 	var errs []error
-	parser := &parser{options}
+	parser := newParser(options)
 	for {
+		parser.allowYAMLLists = ret.AllowYAMLLists
 		key, ok := parser.popKey()
 		if !ok {
 			break
