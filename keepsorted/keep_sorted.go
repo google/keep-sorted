@@ -31,15 +31,17 @@ const (
 type Fixer struct {
 	ID string
 
+	defaultOptions blockOptions
 	startDirective string
 	endDirective   string
 }
 
 // New creates a new fixer with the given string as its identifier.
 // By default, id is "keep-sorted"
-func New(id string) *Fixer {
+func New(id string, defaultOptions BlockOptions) *Fixer {
 	return &Fixer{
 		ID:             id,
+		defaultOptions: defaultOptions.opts,
 		startDirective: id + " start",
 		endDirective:   id + " end",
 	}

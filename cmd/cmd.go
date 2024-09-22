@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"slices"
 	"strconv"
@@ -26,13 +27,13 @@ import (
 
 	"github.com/google/keep-sorted/keepsorted"
 	flag "github.com/spf13/pflag"
-	"golang.org/x/exp/maps"
 )
 
 type Config struct {
-	id            string
-	operation     operation
-	modifiedLines []keepsorted.LineRange
+	id             string
+	defaultOptions keepsorted.BlockOptions
+	operation      operation
+	modifiedLines  []keepsorted.LineRange
 }
 
 func (c *Config) FromFlags(fs *flag.FlagSet) {
@@ -45,13 +46,37 @@ func (c *Config) FromFlags(fs *flag.FlagSet) {
 		panic(err)
 	}
 
+	c.defaultOptions = keepsorted.DefaultBlockOptions()
+	fs.Var(&blockOptionsFlag{&c.defaultOptions}, "default-options", "The options keep-sorted will use to sort. Per-block overrides apply on top of these options. Note: list options like prefix_order are not merged with per-block overrides. They are completely overridden.")
+
 	of := &operationFlag{op: &c.operation}
 	if err := of.Set("fix"); err != nil {
 		panic(err)
 	}
 	fs.Var(of, "mode", fmt.Sprintf("Determines what mode to run this tool in. One of %q", knownModes()))
 
-	fs.Var(&lineRangeFlag{lineRanges: &c.modifiedLines}, "lines", "Line ranges of the form \"start:end\". Only processes keep-sorted blocks that overlap with the given line ranges. Can only be used when fixing a single file.")
+	fs.Var(&lineRangeFlag{lineRanges: &c.modifiedLines}, "lines", "Line ranges of the form \"start:end\". Only processes keep-sorted blocks that overlap with the given line ranges. Can only be used when fixing a single file. This flag can either be a comma-separated list of line ranges, or it can be specified multiple times on the command line to specify multiple line ranges.")
+}
+
+type blockOptionsFlag struct {
+	opts *keepsorted.BlockOptions
+}
+
+func (f *blockOptionsFlag) String() string {
+	return f.opts.String()
+}
+
+func (f *blockOptionsFlag) Set(val string) error {
+	opts, err := keepsorted.ParseBlockOptions(val)
+	if err != nil {
+		return err
+	}
+	*f.opts = opts
+	return nil
+}
+
+func (f *blockOptionsFlag) Type() string {
+	return "options"
 }
 
 var (
@@ -62,12 +87,10 @@ var (
 )
 
 func knownModes() []string {
-	ms := maps.Keys(operations)
-	slices.Sort(ms)
-	return ms
+	return slices.Sorted(maps.Keys(operations))
 }
 
-type operation func(id string, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error)
+type operation func(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error)
 
 type operationFlag struct {
 	op *operation
@@ -83,6 +106,7 @@ func (f *operationFlag) Set(val string) error {
 	if op == nil {
 		return fmt.Errorf("unknown mode %q. Valid modes: %q", val, knownModes())
 	}
+	f.s = val
 	*f.op = op
 	return nil
 }
@@ -116,7 +140,7 @@ func (f *lineRangeFlag) Set(val string) error {
 }
 
 func (f *lineRangeFlag) Type() string {
-	return "line ranges"
+	return "line_ranges"
 }
 
 func (f *lineRangeFlag) Append(val string) error {
@@ -185,16 +209,16 @@ func Run(c *Config, files []string) (ok bool, err error) {
 		return false, errors.New("cannot specify modifiedLines with more than one file")
 	}
 
-	return c.operation(c.id, files, c.modifiedLines)
+	return c.operation(keepsorted.New(c.id, c.defaultOptions), files, c.modifiedLines)
 }
 
-func fix(id string, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error) {
+func fix(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error) {
 	for _, fn := range filenames {
 		contents, err := read(fn)
 		if err != nil {
 			return false, err
 		}
-		if want, alreadyFixed := keepsorted.New(id).Fix(contents, modifiedLines); fn == stdin || !alreadyFixed {
+		if want, alreadyFixed := fixer.Fix(contents, modifiedLines); fn == stdin || !alreadyFixed {
 			if err := write(fn, want); err != nil {
 				return false, err
 			}
@@ -203,14 +227,14 @@ func fix(id string, filenames []string, modifiedLines []keepsorted.LineRange) (o
 	return true, nil
 }
 
-func lint(id string, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error) {
+func lint(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error) {
 	var fs []*keepsorted.Finding
 	for _, fn := range filenames {
 		contents, err := read(fn)
 		if err != nil {
 			return false, err
 		}
-		fs = append(fs, keepsorted.New(id).Findings(fn, contents, modifiedLines)...)
+		fs = append(fs, fixer.Findings(fn, contents, modifiedLines)...)
 	}
 
 	if len(fs) == 0 {

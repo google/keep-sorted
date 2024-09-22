@@ -18,6 +18,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"reflect"
 	"regexp"
@@ -27,14 +28,25 @@ import (
 	"unicode"
 )
 
-var (
-	boolValues = map[string]bool{
-		"yes":   true,
-		"true":  true,
-		"no":    false,
-		"false": false,
+type BlockOptions struct {
+	opts blockOptions
+}
+
+func DefaultBlockOptions() BlockOptions {
+	return BlockOptions{defaultOptions}
+}
+
+func ParseBlockOptions(options string) (BlockOptions, error) {
+	opts, err := parseBlockOptions( /*commentMarker=*/ "", options, blockOptions{})
+	if err != nil {
+		return BlockOptions{}, err
 	}
-)
+	return BlockOptions{opts}, nil
+}
+
+func (opts BlockOptions) String() string {
+	return opts.opts.String()
+}
 
 // blockOptions enable/disable extra features that control how a block of lines is sorted.
 //
@@ -45,9 +57,8 @@ var (
 //  4. int:             key=123
 type blockOptions struct {
 	// Lint determines whether we emit lint warnings for this block.
-	Lint bool `default:"true"`
+	Lint bool
 
-	// LINT.IfChange
 	///////////////////////////
 	//  Pre-sorting options  //
 	///////////////////////////
@@ -55,13 +66,13 @@ type blockOptions struct {
 	// SkipLines is the number of lines to ignore before sorting.
 	SkipLines int `key:"skip_lines"`
 	// Group determines whether we group lines together based on increasing indentation.
-	Group bool `default:"true"`
+	Group bool
 	// GroupPrefixes tells us about other types of lines that should be added to a group.
 	GroupPrefixes map[string]bool `key:"group_prefixes"`
 	// Block opts us into a more complicated algorithm to try and understand blocks of code.
-	Block bool `default:"false"`
+	Block bool
 	// StickyComments tells us to attach comments to the line immediately below them while sorting.
-	StickyComments bool `key:"sticky_comments" default:"true"`
+	StickyComments bool `key:"sticky_comments"`
 	// StickyPrefixes tells us about other types of lines that should behave as sticky comments.
 	StickyPrefixes map[string]bool `key:"sticky_prefixes"`
 
@@ -70,9 +81,9 @@ type blockOptions struct {
 	///////////////////////
 
 	// CaseSensitive is whether we're case sensitive while sorting.
-	CaseSensitive bool `key:"case" default:"true"`
+	CaseSensitive bool `key:"case"`
 	// Numeric indicates that the contents should be sorted like numbers.
-	Numeric bool `default:"false"`
+	Numeric bool
 	// PrefixOrder allows the user to explicitly order lines based on their matching prefix.
 	PrefixOrder []string `key:"prefix_order"`
 	// IgnorePrefixes is a slice of prefixes that we do not consider when sorting lines.
@@ -83,188 +94,113 @@ type blockOptions struct {
 	////////////////////////////
 
 	// NewlineSeparated indicates that the groups should be separated with newlines.
-	NewlineSeparated bool `key:"newline_separated" default:"false"`
+	NewlineSeparated bool `key:"newline_separated"`
 	// RemoveDuplicates determines whether we drop lines that are an exact duplicate.
-	RemoveDuplicates bool `key:"remove_duplicates" default:"true"`
-
-	// LINT.ThenChange(//depot/google3/devtools/keep_sorted/README.md)
+	RemoveDuplicates bool `key:"remove_duplicates"`
 
 	// Syntax used to start a comment for keep-sorted annotation, e.g. "//".
 	commentMarker string
 }
 
-func (f *Fixer) parseBlockOptions(startLine string) (blockOptions, error) {
-	ret := blockOptions{}
-	opts := reflect.ValueOf(&ret)
-	var errs error
-	for i := 0; i < opts.Elem().NumField(); i++ {
-		field := opts.Elem().Type().Field(i)
+var (
+	defaultOptions = blockOptions{
+		Lint:             true,
+		Group:            true,
+		StickyComments:   true,
+		StickyPrefixes:   nil, // Will be populated with the comment marker of the start directive.
+		CaseSensitive:    true,
+		RemoveDuplicates: true,
+	}
+
+	fieldIndexByKey map[string]int
+)
+
+func init() {
+	fieldIndexByKey = make(map[string]int)
+	typ := reflect.TypeFor[blockOptions]()
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
 		if !field.IsExported() {
 			continue
 		}
+		key := key(field)
+		if !keyRegex.MatchString(key + "=") {
+			panic(fmt.Errorf("key %q for blockOptions.%s would not be matched by parser (regex: %v)", key, field.Name, keyRegex))
+		}
+		fieldIndexByKey[key] = i
+	}
+}
 
-		val, err := parseBlockOption(field, startLine)
-		if err != nil {
-			errs = errors.Join(errs, err)
+func key(f reflect.StructField) string {
+	key := strings.ToLower(f.Name)
+	if k, ok := f.Tag.Lookup("key"); ok {
+		key = k
+	}
+	return key
+}
+
+func parseBlockOptions(commentMarker, options string, defaults blockOptions) (blockOptions, error) {
+	ret := defaults
+	opts := reflect.ValueOf(&ret).Elem()
+	var errs []error
+	parser := &parser{options}
+	for {
+		key, ok := parser.popKey()
+		if !ok {
+			break
+		}
+		fieldIdx, ok := fieldIndexByKey[key]
+		if !ok {
+			errs = append(errs, fmt.Errorf("unrecognized option %q", key))
+			continue
 		}
 
-		opts.Elem().Field(i).Set(val)
+		field := opts.Field(fieldIdx)
+		val, err := parser.popValue(field.Type())
+		if err != nil {
+			errs = append(errs, fmt.Errorf("while parsing option %q: %w", key, err))
+			continue
+		}
+		field.Set(val)
 	}
 
 	if ret.SkipLines < 0 {
-		errs = errors.Join(errs, fmt.Errorf("skip_lines has invalid value: %v", ret.SkipLines))
+		errs = append(errs, fmt.Errorf("skip_lines has invalid value: %v", ret.SkipLines))
 		ret.SkipLines = 0
 	}
 
 	if ret.GroupPrefixes != nil && !ret.Group {
-		errs = errors.Join(errs, fmt.Errorf("group_prefixes may not be used with group=no"))
+		errs = append(errs, fmt.Errorf("group_prefixes may not be used with group=no"))
 		ret.GroupPrefixes = nil
 	}
 
-	if cm := f.guessCommentMarker(startLine); cm != "" {
-		ret.commentMarker = cm
-		if ret.StickyComments {
-			if ret.StickyPrefixes == nil {
-				ret.StickyPrefixes = make(map[string]bool)
-			}
-			ret.StickyPrefixes[cm] = true
-		}
+	if cm := guessCommentMarker(commentMarker); cm != "" {
+		ret.setCommentMarker(cm)
 	}
 	if len(ret.IgnorePrefixes) > 1 {
 		// Look at longer prefixes first, in case one of these prefixes is a prefix of another.
 		slices.SortFunc(ret.IgnorePrefixes, func(a string, b string) int { return cmp.Compare(len(b), len(a)) })
 	}
 
-	return ret, errs
+	return ret, errors.Join(errs...)
 }
 
-func parseBlockOption(f reflect.StructField, startLine string) (reflect.Value, error) {
-	key := strings.ToLower(f.Name)
-	if k, ok := f.Tag.Lookup("key"); ok {
-		key = k
+func formatValue(val reflect.Value) string {
+	switch val.Type() {
+	case reflect.TypeFor[bool]():
+		return boolString[val.Bool()]
+	case reflect.TypeFor[[]string]():
+		return strings.Join(val.Interface().([]string), ",")
+	case reflect.TypeFor[map[string]bool]():
+		return strings.Join(slices.Sorted(maps.Keys(val.Interface().(map[string]bool))), ",")
+	case reflect.TypeFor[int]():
+		return strconv.Itoa(int(val.Int()))
 	}
 
-	needle := key + "="
-	i := strings.Index(startLine, needle)
-	if i < 0 {
-		return parseDefaultValue(f, key), nil
-	}
-
-	valRunes := []rune(startLine[i+len(needle):])
-	var val strings.Builder
-	var quote bool
-loop:
-	for i := 0; i < len(valRunes); i++ {
-		r := valRunes[i]
-		switch {
-		case r == '"':
-			quote = !quote
-		case r == '\\':
-			if i+1 < len(valRunes) {
-				s := valRunes[i+1]
-				i++
-				switch s {
-				case '"', '\\':
-					// Skip the escaping \
-				default:
-					val.WriteRune(r)
-				}
-				val.WriteRune(s)
-			} else {
-				val.WriteRune(r)
-			}
-		case !quote && unicode.IsSpace(r):
-			break loop
-		default:
-			val.WriteRune(r)
-		}
-	}
-
-	parsed, err := parseValue(f, key, val.String())
-	if quote {
-		err = errors.Join(fmt.Errorf("value for %q has no terminating quote", key), err)
-	}
-	return parsed, err
+	panic(fmt.Errorf("unsupported blockOptions type: %v", val.Type()))
 }
 
-func parseDefaultValue(f reflect.StructField, key string) reflect.Value {
-	val, err := parseValueWithDefault(f, key, f.Tag.Get("default"), func() reflect.Value { return reflect.Zero(f.Type) })
-	if err != nil {
-		panic(fmt.Errorf("blockOptions field %s has invalid default %q: %w", f.Name, f.Tag.Get("default"), err))
-	}
-	return val
-}
-
-func parseValue(f reflect.StructField, key, val string) (reflect.Value, error) {
-	return parseValueWithDefault(f, key, val, func() reflect.Value { return parseDefaultValue(f, key) })
-}
-
-func parseValueWithDefault(f reflect.StructField, key, val string, defaultFn func() reflect.Value) (reflect.Value, error) {
-	switch f.Type {
-	case reflect.TypeOf(bool(false)):
-		b, ok := boolValues[val]
-		if !ok {
-			return defaultFn(), fmt.Errorf("option %q has unknown value %q", key, val)
-		}
-
-		return reflect.ValueOf(b), nil
-	case reflect.TypeOf([]string{}):
-		if val == "" {
-			return defaultFn(), nil
-		}
-
-		return reflect.ValueOf(splitStringVal(val)), nil
-	case reflect.TypeOf(map[string]bool{}):
-		if val == "" {
-			return defaultFn(), nil
-		}
-
-		sp := splitStringVal(val)
-		m := make(map[string]bool)
-		for _, s := range sp {
-			m[s] = true
-		}
-		return reflect.ValueOf(m), nil
-	case reflect.TypeOf(int(0)):
-		if val == "" {
-			return defaultFn(), nil
-		}
-
-		i, err := strconv.Atoi(val)
-		if err != nil {
-			return defaultFn(), fmt.Errorf("option %q has invalid value %q: %w", key, val, err)
-		}
-		return reflect.ValueOf(i), nil
-	}
-
-	panic(fmt.Errorf("unsupported blockOptions type: %v", f.Type))
-}
-
-func splitStringVal(val string) []string {
-	runes := []rune(val)
-	var vals []string
-	var cur strings.Builder
-	for i := 0; i < len(runes); i++ {
-		r := runes[i]
-		switch r {
-		case ',':
-			vals = append(vals, cur.String())
-			cur.Reset()
-		case '\\':
-			if i+1 < len(runes) && runes[i+1] == ',' {
-				cur.WriteRune(',')
-				i++
-			} else {
-				cur.WriteRune(r)
-			}
-		default:
-			cur.WriteRune(r)
-		}
-	}
-	return append(vals, cur.String())
-}
-
-func (f *Fixer) guessCommentMarker(startLine string) string {
+func guessCommentMarker(startLine string) string {
 	startLine = strings.TrimSpace(startLine)
 	if strings.HasPrefix(startLine, "//") {
 		return "//"
@@ -280,6 +216,31 @@ func (f *Fixer) guessCommentMarker(startLine string) string {
 		return "<!--"
 	}
 	return ""
+}
+
+func (opts *blockOptions) setCommentMarker(marker string) {
+	opts.commentMarker = marker
+	if opts.StickyComments {
+		if opts.StickyPrefixes == nil {
+			opts.StickyPrefixes = make(map[string]bool)
+		}
+		opts.StickyPrefixes[marker] = true
+	}
+}
+
+func (opts blockOptions) String() string {
+	var s []string
+	val := reflect.ValueOf(opts)
+	for _, key := range slices.Sorted(maps.Keys(fieldIndexByKey)) {
+		field := val.Type().Field(fieldIndexByKey[key])
+		fieldVal := val.FieldByIndex(field.Index)
+		if fieldVal.IsZero() {
+			continue
+		}
+		s = append(s, fmt.Sprintf("%s=%s", key, formatValue(fieldVal)))
+	}
+
+	return strings.Join(s, " ")
 }
 
 // hasPrefix determines if s has one of the prefixes.
