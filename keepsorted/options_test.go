@@ -88,13 +88,21 @@ func TestBlockOptions(t *testing.T) {
 			},
 		},
 		{
-			name:           "ItemList_WithSpaces",
+			name:           "ItemList_YAML",
 			in:             `prefix_order=[a, b, c d, 'e",\f', 'g]', "h\"]"]`,
 			defaultOptions: blockOptions{AllowYAMLLists: true},
 
 			want: blockOptions{
 				AllowYAMLLists: true,
 				PrefixOrder:    []string{"a", "b", "c d", `e",\f`, "g]", `h"]`},
+			},
+		},
+		{
+			name: "ItemList_YAML_NotAllowed",
+			in:   `prefix_order=[a, b, c d, 'e",\f', 'g]', "h\"]"]`,
+
+			want: blockOptions{
+				PrefixOrder: []string{"[a", ""},
 			},
 		},
 		{
@@ -111,7 +119,7 @@ func TestBlockOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "ItemSet_WithSpaces",
+			name: "ItemSet_YAML",
 			in:   `allow_yaml_lists=yes sticky_prefixes=[a, b, c d, 'e",\f', 'g]', "h\"]"]`,
 
 			want: blockOptions{
