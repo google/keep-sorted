@@ -6,6 +6,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
+
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -76,9 +79,78 @@ func (p *parser) popInt() (int, error) {
 }
 
 func (p *parser) popList() ([]string, error) {
-	val, rest, _ := strings.Cut(p.line, " ")
+	val, rest, ok := tryFindYAMLListAtStart(p.line)
+	if ok {
+		p.line = rest
+		return parseYAMLList(val)
+	}
+	val, rest, _ = strings.Cut(p.line, " ")
 	p.line = rest
 	return strings.Split(val, ","), nil
+}
+
+func tryFindYAMLListAtStart(s string) (list, rest string, ok bool) {
+	if s[0] != '[' {
+		return "", "", false
+	}
+
+	var quote rune
+	var depth int // s[0] == '[' forces this to 1 after the first iteration.
+	iter := newRuneIter(s)
+	for {
+		ch, ok := iter.pop()
+		if !ok {
+			break
+		}
+		switch ch {
+		case '[':
+			if quote == 0 {
+				depth++
+			}
+		case ']':
+			if quote == 0 {
+				if depth > 1 {
+					depth--
+					continue
+				}
+
+				// depth == 1
+
+				// Force the last ] to either be the end, or followed by a space
+				// We don't want to allow
+				// key1=[a, b, c ,d]key2=yes
+				if next, ok := iter.peek(); !ok || next == ' ' {
+					depth--
+				}
+				break
+			}
+		case '"', '\'':
+			if quote == ch {
+				quote = 0
+			} else if quote == 0 {
+				quote = ch
+			}
+		case '\\':
+			if quote == '"' {
+				if next, ok := iter.peek(); ok && (next == '"' || next == '\\') {
+					iter.pop()
+				}
+			}
+		}
+	}
+	if depth != 0 {
+		// YAML list doesn't appear to terminate.
+		return "", "", false
+	}
+	return s[:iter.idx], s[iter.idx:], true
+}
+
+func parseYAMLList(list string) ([]string, error) {
+	var val []string
+	if err := yaml.Unmarshal([]byte(list), &val); err != nil {
+		return nil, err
+	}
+	return val, nil
 }
 
 func (p *parser) popSet() (map[string]bool, error) {
@@ -91,4 +163,32 @@ func (p *parser) popSet() (map[string]bool, error) {
 		val[e] = true
 	}
 	return val, nil
+}
+
+type runeIter struct {
+	s   string
+	idx int
+}
+
+func newRuneIter(s string) *runeIter {
+	return &runeIter{s: s}
+}
+
+func (iter *runeIter) peek() (rune, bool) {
+	if iter.s[iter.idx:] == "" {
+		return utf8.RuneError, false
+	}
+	ch, _ := utf8.DecodeRuneInString(iter.s[iter.idx:])
+	if ch == utf8.RuneError {
+		return utf8.RuneError, false
+	}
+	return ch, true
+}
+
+func (iter *runeIter) pop() (rune, bool) {
+	ch, ok := iter.peek()
+	if ok {
+		iter.idx += utf8.RuneLen(ch)
+	}
+	return ch, ok
 }

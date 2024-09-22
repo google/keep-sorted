@@ -88,6 +88,14 @@ func TestBlockOptions(t *testing.T) {
 			},
 		},
 		{
+			name: "ItemList_WithSpaces",
+			in:   `prefix_order=[a, b, c d, 'e",\f', 'g]', "h\"]"]`,
+
+			want: blockOptions{
+				PrefixOrder: []string{"a", "b", "c d", `e",\f`, "g]", `h"]`},
+			},
+		},
+		{
 			name: "ItemSet",
 			in:   "sticky_prefixes=a,b,c,d",
 
@@ -98,6 +106,14 @@ func TestBlockOptions(t *testing.T) {
 					"c": true,
 					"d": true,
 				},
+			},
+		},
+		{
+			name: "ItemSet_WithSpaces",
+			in:   `sticky_prefixes=[a, b, c d, 'e",\f', 'g]', "h\"]"]`,
+
+			want: blockOptions{
+				StickyPrefixes: map[string]bool{"a": true, "b": true, "c d": true, `e",\f`: true, "g]": true, `h"]`: true},
 			},
 		},
 		{
