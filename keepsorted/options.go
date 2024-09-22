@@ -188,20 +188,20 @@ func key(f reflect.StructField) string {
 
 func parseValue(f reflect.StructField, key, val string) (reflect.Value, error) {
 	switch f.Type {
-	case reflect.TypeOf(bool(false)):
+	case reflect.TypeFor[bool]():
 		b, ok := boolValues[val]
 		if !ok {
 			return reflect.Zero(f.Type), fmt.Errorf("option %q has unknown value %q", key, val)
 		}
 
 		return reflect.ValueOf(b), nil
-	case reflect.TypeOf([]string{}):
+	case reflect.TypeFor[[]string]():
 		if val == "" {
 			return reflect.Zero(f.Type), nil
 		}
 
 		return reflect.ValueOf(strings.Split(val, ",")), nil
-	case reflect.TypeOf(map[string]bool{}):
+	case reflect.TypeFor[map[string]bool]():
 		if val == "" {
 			return reflect.Zero(f.Type), nil
 		}
@@ -212,7 +212,7 @@ func parseValue(f reflect.StructField, key, val string) (reflect.Value, error) {
 			m[s] = true
 		}
 		return reflect.ValueOf(m), nil
-	case reflect.TypeOf(int(0)):
+	case reflect.TypeFor[int]():
 		if val == "" {
 			return reflect.Zero(f.Type), nil
 		}
@@ -229,13 +229,13 @@ func parseValue(f reflect.StructField, key, val string) (reflect.Value, error) {
 
 func formatValue(val reflect.Value) string {
 	switch val.Type() {
-	case reflect.TypeOf(bool(false)):
+	case reflect.TypeFor[bool]():
 		return boolString[val.Bool()]
-	case reflect.TypeOf([]string{}):
+	case reflect.TypeFor[[]string]():
 		return strings.Join(val.Interface().([]string), ",")
-	case reflect.TypeOf(map[string]bool{}):
+	case reflect.TypeFor[map[string]bool]():
 		return strings.Join(slices.Sorted(maps.Keys(val.Interface().(map[string]bool))), ",")
-	case reflect.TypeOf(int(0)):
+	case reflect.TypeFor[int]():
 		return strconv.Itoa(int(val.Int()))
 	}
 
