@@ -90,7 +90,7 @@ func (p *parser) popList() ([]string, error) {
 }
 
 func tryFindYAMLListAtStart(s string) (list, rest string, ok bool) {
-	if s[0] != '[' {
+	if s == "" || s[0] != '[' {
 		return "", "", false
 	}
 
