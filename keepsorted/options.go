@@ -18,6 +18,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"reflect"
 	"regexp"
@@ -25,8 +26,6 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-
-	"golang.org/x/exp/maps"
 )
 
 var (
@@ -235,9 +234,7 @@ func formatValue(val reflect.Value) string {
 	case reflect.TypeOf([]string{}):
 		return strings.Join(val.Interface().([]string), ",")
 	case reflect.TypeOf(map[string]bool{}):
-		keys := maps.Keys(val.Interface().(map[string]bool))
-		slices.Sort(keys)
-		return strings.Join(keys, ",")
+		return strings.Join(slices.Sorted(maps.Keys(val.Interface().(map[string]bool))), ",")
 	case reflect.TypeOf(int(0)):
 		return strconv.Itoa(int(val.Int()))
 	}

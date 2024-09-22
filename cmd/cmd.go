@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"slices"
 	"strconv"
@@ -26,7 +27,6 @@ import (
 
 	"github.com/google/keep-sorted/keepsorted"
 	flag "github.com/spf13/pflag"
-	"golang.org/x/exp/maps"
 )
 
 type Config struct {
@@ -87,9 +87,7 @@ var (
 )
 
 func knownModes() []string {
-	ms := maps.Keys(operations)
-	slices.Sort(ms)
-	return ms
+	return slices.Sorted(maps.Keys(operations))
 }
 
 type operation func(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error)
