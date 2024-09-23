@@ -2,7 +2,7 @@ module github.com/google/keep-sorted
 
 // Remember to also update language_version in .pre-commit-config.yaml,
 // .pre-commit-hooks.yaml, and README.md!
-go 1.21
+go 1.23.1
 
 require (
 	github.com/Workiva/go-datastructures v1.0.53
@@ -10,7 +10,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc
 )
 
 require (
