@@ -19,7 +19,7 @@ var (
 		true:  "yes",
 		false: "no",
 	}
-	keyRegex = regexp.MustCompile("(?P<key>[a-z_]+)=")
+	keyRegex = regexp.MustCompile("(^| )(?P<key>[a-z_]+)=")
 )
 
 type parser struct {
