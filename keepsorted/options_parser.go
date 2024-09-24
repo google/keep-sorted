@@ -108,6 +108,7 @@ func tryFindYAMLListAtStart(s string) (list, rest string, ok bool) {
 	var quote rune
 	var depth int // s[0] == '[' forces this to 1 after the first iteration.
 	iter := newRuneIter(s)
+loop:
 	for {
 		ch, ok := iter.pop()
 		if !ok {
@@ -131,9 +132,12 @@ func tryFindYAMLListAtStart(s string) (list, rest string, ok bool) {
 				// We don't want to allow
 				// key1=[a, b, c ,d]key2=yes
 				if next, ok := iter.peek(); !ok || next == ' ' {
+					if next == ' ' {
+						iter.pop()
+					}
 					depth--
 				}
-				break
+				break loop
 			}
 		case '"', '\'':
 			if quote == ch {
