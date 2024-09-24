@@ -1,6 +1,7 @@
 package keepsorted
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -23,6 +24,8 @@ var (
 		false: "no",
 	}
 	keyRegex = regexp.MustCompile("(^| )(?P<key>[a-z_]+)=")
+
+	errNotYAMLList = fmt.Errorf("content does not appear to be a YAML list")
 )
 
 type parser struct {
@@ -86,11 +89,16 @@ func (p *parser) popInt() (int, error) {
 
 func (p *parser) popList() ([]string, error) {
 	if p.allowYAMLLists {
-		val, rest, ok := tryFindYAMLListAtStart(p.line)
-		if ok {
+		val, rest, err := tryFindYAMLListAtStart(p.line)
+		if err != nil && !errors.Is(err, errNotYAMLList) {
+			return nil, err
+		}
+		if err == nil {
 			p.line = rest
 			return parseYAMLList(val)
 		}
+
+		// err is errNotYAMLList, parse it as a regular list.
 	}
 	val, rest, _ := strings.Cut(p.line, " ")
 	p.line = rest
@@ -100,9 +108,9 @@ func (p *parser) popList() ([]string, error) {
 	return strings.Split(val, ","), nil
 }
 
-func tryFindYAMLListAtStart(s string) (list, rest string, ok bool) {
+func tryFindYAMLListAtStart(s string) (list, rest string, err error) {
 	if s == "" || s[0] != '[' {
-		return "", "", false
+		return "", "", errNotYAMLList
 	}
 
 	var quote rune
@@ -155,9 +163,9 @@ loop:
 	}
 	if depth != 0 {
 		// YAML list doesn't appear to terminate.
-		return "", "", false
+		return "", "", fmt.Errorf("content appears to be an unterminated YAML list: %q", s[:iter.idx])
 	}
-	return s[:iter.idx], s[iter.idx:], true
+	return s[:iter.idx], s[iter.idx:], nil
 }
 
 func parseYAMLList(list string) ([]string, error) {

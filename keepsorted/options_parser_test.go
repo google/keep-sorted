@@ -70,19 +70,28 @@ func TestPopValue(t *testing.T) {
 			want:          []string{"foo", "bar", "foo"},
 		},
 		{
-			name: "List_YAML_LooksLikeYAMLButIsnt",
-
-			input:         "[,[`",
-			allowYAMLList: true,
-			want:          []string{"[", "[`"},
-		},
-		{
 			name: "List_YAML_YAMLNotAllowed",
 
 			input:                     "[foo, bar, foo]",
 			allowYAMLList:             false,
 			want:                      []string{"[foo", ""},
 			additionalTrailingContent: "bar, foo]",
+		},
+		{
+			name: "List_YAML_LooksLikeYAMLButIsnt",
+
+			input:                     "[,[`",
+			allowYAMLList:             true,
+			want:                      []string{},
+			wantErr:                   true,
+			additionalTrailingContent: "[,[`",
+		},
+		{
+			name: "List_YAML_YamlNotAllowed_LooksLikeYAMLButIsnt",
+
+			input:         "[,[`",
+			allowYAMLList: false,
+			want:          []string{"[", "[`"},
 		},
 		{
 			name: "List_YAML_NotTerminated",
@@ -105,8 +114,9 @@ func TestPopValue(t *testing.T) {
 
 			input:                     "[foo, [bar]",
 			allowYAMLList:             true,
-			want:                      []string{"[foo", ""},
-			additionalTrailingContent: "[bar]",
+			want:                      []string{},
+			wantErr:                   true,
+			additionalTrailingContent: "[foo, [bar]",
 		},
 		{
 			name: "List_YAML_EscapingRules_SinglyQuotedOpenBracketDoesNotIncreaseDepth",
