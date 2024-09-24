@@ -78,6 +78,9 @@ func (p *parser) popInt() (int, error) {
 func (p *parser) popList() ([]string, error) {
 	val, rest, _ := strings.Cut(p.line, " ")
 	p.line = rest
+	if val == "" {
+		return []string{}, nil
+	}
 	return strings.Split(val, ","), nil
 }
 
