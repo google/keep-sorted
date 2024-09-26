@@ -168,22 +168,16 @@ func parseBlockOptions(commentMarker, options string, defaults blockOptions) (bl
 		field.Set(val)
 	}
 
-	if ret.SkipLines < 0 {
-		errs = append(errs, fmt.Errorf("skip_lines has invalid value: %v", ret.SkipLines))
-		ret.SkipLines = 0
-	}
-
-	if ret.GroupPrefixes != nil && !ret.Group {
-		errs = append(errs, fmt.Errorf("group_prefixes may not be used with group=no"))
-		ret.GroupPrefixes = nil
-	}
-
 	if cm := guessCommentMarker(commentMarker); cm != "" {
 		ret.setCommentMarker(cm)
 	}
 	if len(ret.IgnorePrefixes) > 1 {
 		// Look at longer prefixes first, in case one of these prefixes is a prefix of another.
 		slices.SortFunc(ret.IgnorePrefixes, func(a string, b string) int { return cmp.Compare(len(b), len(a)) })
+	}
+
+	if err := validate(&ret); err != nil {
+		errs = append(errs, err)
 	}
 
 	return ret, errors.Join(errs...)
@@ -230,6 +224,21 @@ func (opts *blockOptions) setCommentMarker(marker string) {
 		}
 		opts.StickyPrefixes[marker] = true
 	}
+}
+
+func validate(opts *blockOptions) error {
+	var errs []error
+	if opts.SkipLines < 0 {
+		errs = append(errs, fmt.Errorf("skip_lines has invalid value: %v", opts.SkipLines))
+		opts.SkipLines = 0
+	}
+
+	if opts.GroupPrefixes != nil && !opts.Group {
+		errs = append(errs, fmt.Errorf("group_prefixes may not be used with group=no"))
+		opts.GroupPrefixes = nil
+	}
+
+	return errors.Join(errs...)
 }
 
 func (opts blockOptions) String() string {
