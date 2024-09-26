@@ -150,8 +150,8 @@ func TestBlockOptions(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
-			got, err := parseBlockOptions(tc.commentMarker, tc.in, tc.defaultOptions)
-			if err != nil {
+			got, warns := parseBlockOptions(tc.commentMarker, tc.in, tc.defaultOptions)
+			if err := warns.err(); err != nil {
 				if tc.wantErr == "" {
 					t.Errorf("parseBlockOptions(%q, %q) = %v", tc.commentMarker, tc.in, err)
 				} else if !strings.Contains(err.Error(), tc.wantErr) {
@@ -171,8 +171,8 @@ func TestBlockOptions_ClonesDefaultOptions(t *testing.T) {
 	defaults := blockOptions{
 		StickyPrefixes: map[string]bool{},
 	}
-	_, err := parseBlockOptions("", "sticky_prefixes=//", defaults)
-	if err != nil {
+	_, warns := parseBlockOptions("", "sticky_prefixes=//", defaults)
+	if err := warns.err(); err != nil {
 		t.Errorf("parseBlockOptions() = _, %v", err)
 	}
 	if diff := cmp.Diff(blockOptions{}, defaults, cmp.AllowUnexported(blockOptions{}), cmpopts.EquateEmpty()); diff != "" {

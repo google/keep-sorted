@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -171,12 +172,15 @@ foo
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
-			got, gotAlreadyFixed := New("keep-sorted-test", BlockOptions{}).Fix(tc.in, nil)
+			got, gotAlreadyFixed, gotWarnings := New("keep-sorted-test", BlockOptions{}).Fix("unused-filename", tc.in, nil)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("Fix diff (-want +got):\n%s", diff)
 			}
 			if gotAlreadyFixed != tc.wantAlreadyFixed {
 				t.Errorf("alreadyFixed diff: got %t want %t", gotAlreadyFixed, tc.wantAlreadyFixed)
+			}
+			if len(gotWarnings) != 0 {
+				t.Errorf("Fix returned warnings, expected none:\n%v", gotWarnings)
 			}
 		})
 	}
@@ -215,7 +219,7 @@ func TestFindings(t *testing.T) {
 3
 // keep-sorted-test end`,
 
-			want: []*Finding{finding(filename, 3, 5, errorUnordered, "1\n2\n3\n")},
+			want: []*Finding{finding(filename, 3, 5, errorUnordered, replacement(3, 5, "1\n2\n3\n"))},
 		},
 		{
 			name: "SkipLines",
@@ -229,7 +233,7 @@ func TestFindings(t *testing.T) {
 1
 // keep-sorted-test end`,
 
-			want: []*Finding{finding(filename, 5, 7, errorUnordered, "1\n2\n3\n")},
+			want: []*Finding{finding(filename, 5, 7, errorUnordered, replacement(5, 7, "1\n2\n3\n"))},
 		},
 		{
 			name: "MismatchedStart",
@@ -237,7 +241,7 @@ func TestFindings(t *testing.T) {
 			in: `
 // keep-sorted-test start`,
 
-			want: []*Finding{finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test end' line", "")},
+			want: []*Finding{finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test end' line", replacement(2, 2, ""))},
 		},
 		{
 			name: "MismatchedEnd",
@@ -245,7 +249,7 @@ func TestFindings(t *testing.T) {
 			in: `
 // keep-sorted-test end`,
 
-			want: []*Finding{finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test start' line", "")},
+			want: []*Finding{finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test start' line", replacement(2, 2, ""))},
 		},
 		{
 			name: "MultipleFindings",
@@ -266,10 +270,10 @@ baz
 `,
 
 			want: []*Finding{
-				finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test start' line", ""),
-				finding(filename, 3, 3, "This instruction doesn't have matching 'keep-sorted-test end' line", ""),
-				finding(filename, 5, 7, errorUnordered, "1\n2\n3\n"),
-				finding(filename, 10, 12, errorUnordered, "bar\nbaz\nfoo\n"),
+				finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test start' line", replacement(2, 2, "")),
+				finding(filename, 3, 3, "This instruction doesn't have matching 'keep-sorted-test end' line", replacement(3, 3, "")),
+				finding(filename, 5, 7, errorUnordered, replacement(5, 7, "1\n2\n3\n")),
+				finding(filename, 10, 12, errorUnordered, replacement(10, 12, "bar\nbaz\nfoo\n")),
 			},
 		},
 		{
@@ -288,7 +292,7 @@ baz
 // keep-sorted-test end`,
 			modifiedLines: []int{3},
 
-			want: []*Finding{finding(filename, 3, 5, errorUnordered, "1\n2\n3\n")},
+			want: []*Finding{finding(filename, 3, 5, errorUnordered, replacement(3, 5, "1\n2\n3\n"))},
 		},
 		{
 			name: "lint=no",
@@ -329,6 +333,7 @@ func TestCreatingBlocks(t *testing.T) {
 
 		wantBlocks           []block
 		wantIncompleteBlocks []incompleteBlock
+		wantWarnings         map[int]int
 	}{
 		{
 			name: "MultipleBlocks",
@@ -717,6 +722,33 @@ i
 				{3, startDirective},
 			},
 		},
+		{
+			name: "BadOption",
+			in: `
+// keep-sorted-test start foo=bar block=yes
+0
+1
+2
+// keep-sorted-test end
+`,
+
+			wantBlocks: []block{
+				{
+					metadata: defaultMetadataWith(func() blockOptions {
+						var opts blockOptions
+						opts.Block = true
+						opts.setCommentMarker("//")
+						return opts
+					}()),
+					start: 1,
+					end:   5,
+					lines: []string{"0", "1", "2"},
+				},
+			},
+			wantWarnings: map[int]int{
+				1: 1,
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
@@ -724,12 +756,20 @@ i
 				tc.include = func(start, end int) bool { return true }
 			}
 
-			gotBlocks, gotIncompleteBlocks := New("keep-sorted-test", BlockOptions{}).newBlocks(strings.Split(tc.in, "\n"), 0, tc.include)
+			gotBlocks, gotIncompleteBlocks, gotWarnings := New("keep-sorted-test", BlockOptions{}).newBlocks(strings.Split(tc.in, "\n"), 0, tc.include)
 			if diff := cmp.Diff(tc.wantBlocks, gotBlocks, cmp.AllowUnexported(block{}, blockMetadata{}, blockOptions{})); diff != "" {
 				t.Errorf("blocks diff (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(tc.wantIncompleteBlocks, gotIncompleteBlocks, cmp.AllowUnexported(incompleteBlock{})); diff != "" {
 				t.Errorf("incompleteBlocks diff (-want +got):\n%s", diff)
+			}
+
+			warnings := make(map[int]int)
+			for k, v := range gotWarnings {
+				warnings[k] = len(v)
+			}
+			if diff := cmp.Diff(tc.wantWarnings, warnings, cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("warnings diff (-want +got):\n%s", diff)
 			}
 		})
 	}

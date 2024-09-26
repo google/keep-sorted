@@ -87,7 +87,12 @@ func TestGoldens(t *testing.T) {
 				if stderr, err := io.ReadAll(stderr); err != nil {
 					t.Errorf("could not read keep-sorted stderr: %v", err)
 				} else if len(stderr) != 0 {
-					t.Errorf("keep-sorted stderr: %s", string(stderr))
+					wantStderr := discoverWantStderr(string(want))
+					lines := strings.Split(strings.TrimSpace(string(stderr)), "\n")
+
+					if diff := compareStderr(wantStderr, lines); diff != "" {
+						t.Errorf("keep-sorted stderr:\n%s", diff)
+					}
 				}
 
 				if got, err := io.ReadAll(stdout); err != nil {
@@ -118,4 +123,22 @@ func TestGoldens(t *testing.T) {
 func showTopLevel(dir string) (string, error) {
 	b, err := exec.Command("git", "-C", dir, "rev-parse", "--show-toplevel").Output()
 	return strings.TrimSpace(string(b)), err
+}
+
+func discoverWantStderr(want string) []string {
+	lines := strings.Split(want, "\n")
+	var wantStderr []string
+	for _, l := range lines {
+		want, ok := strings.CutPrefix(l, "STDERR: ")
+		if ok {
+			wantStderr = append(wantStderr, want)
+		}
+	}
+	return wantStderr
+}
+
+func compareStderr(want, got []string) string {
+	return cmp.Diff(want, got, cmp.Comparer(func(x, y string) bool {
+		return strings.Contains(y, x) || strings.Contains(x, y)
+	}))
 }

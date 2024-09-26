@@ -37,8 +37,8 @@ func DefaultBlockOptions() BlockOptions {
 }
 
 func ParseBlockOptions(options string) (BlockOptions, error) {
-	opts, err := parseBlockOptions( /*commentMarker=*/ "", options, blockOptions{})
-	if err != nil {
+	opts, warns := parseBlockOptions( /*commentMarker=*/ "", options, blockOptions{})
+	if err := warns.err(); err != nil {
 		return BlockOptions{}, err
 	}
 	return BlockOptions{opts}, nil
@@ -139,10 +139,17 @@ func key(f reflect.StructField) string {
 	return key
 }
 
-func parseBlockOptions(commentMarker, options string, defaults blockOptions) (blockOptions, error) {
+// optionWarnings are things that we found wrong with the option string but don't need to halt the entire keep-sorted operation.
+type optionWarnings []error
+
+func (warns optionWarnings) err() error {
+	return errors.Join(warns...)
+}
+
+func parseBlockOptions(commentMarker, options string, defaults blockOptions) (blockOptions, optionWarnings) {
 	ret := defaults
 	opts := reflect.ValueOf(&ret).Elem()
-	var errs []error
+	var warns optionWarnings
 	parser := &parser{options}
 	for {
 		key, ok := parser.popKey()
@@ -151,14 +158,14 @@ func parseBlockOptions(commentMarker, options string, defaults blockOptions) (bl
 		}
 		fieldIdx, ok := fieldIndexByKey[key]
 		if !ok {
-			errs = append(errs, fmt.Errorf("unrecognized option %q", key))
+			warns = append(warns, fmt.Errorf("unrecognized option %q", key))
 			continue
 		}
 
 		field := opts.Field(fieldIdx)
 		val, err := parser.popValue(field.Type())
 		if err != nil {
-			errs = append(errs, fmt.Errorf("while parsing option %q: %w", key, err))
+			warns = append(warns, fmt.Errorf("while parsing option %q: %w", key, err))
 			continue
 		}
 		field.Set(val)
@@ -172,11 +179,11 @@ func parseBlockOptions(commentMarker, options string, defaults blockOptions) (bl
 		slices.SortFunc(ret.IgnorePrefixes, func(a string, b string) int { return cmp.Compare(len(b), len(a)) })
 	}
 
-	if err := validate(&ret); err != nil {
-		errs = append(errs, err)
+	if warn := validate(&ret); len(warn) > 0 {
+		warns = append(warns, warn...)
 	}
 
-	return ret, errors.Join(errs...)
+	return ret, warns
 }
 
 func formatValue(val reflect.Value) string {
@@ -222,19 +229,19 @@ func (opts *blockOptions) setCommentMarker(marker string) {
 	}
 }
 
-func validate(opts *blockOptions) error {
-	var errs []error
+func validate(opts *blockOptions) optionWarnings {
+	var warns optionWarnings
 	if opts.SkipLines < 0 {
-		errs = append(errs, fmt.Errorf("skip_lines has invalid value: %v", opts.SkipLines))
+		warns = append(warns, fmt.Errorf("skip_lines has invalid value: %v", opts.SkipLines))
 		opts.SkipLines = 0
 	}
 
 	if opts.GroupPrefixes != nil && !opts.Group {
-		errs = append(errs, fmt.Errorf("group_prefixes may not be used with group=no"))
+		warns = append(warns, fmt.Errorf("group_prefixes may not be used with group=no"))
 		opts.GroupPrefixes = nil
 	}
 
-	return errors.Join(errs...)
+	return warns
 }
 
 func (opts blockOptions) String() string {
