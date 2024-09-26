@@ -28,19 +28,6 @@ import (
 	"unicode"
 )
 
-var (
-	boolValues = map[string]bool{
-		"yes":   true,
-		"true":  true,
-		"no":    false,
-		"false": false,
-	}
-	boolString = map[bool]string{
-		true:  "yes",
-		false: "no",
-	}
-)
-
 type BlockOptions struct {
 	opts blockOptions
 }
@@ -49,8 +36,8 @@ func DefaultBlockOptions() BlockOptions {
 	return BlockOptions{defaultOptions}
 }
 
-func ParseBlockOptions(startLine string) (BlockOptions, error) {
-	opts, err := parseBlockOptions(startLine, blockOptions{})
+func ParseBlockOptions(options string) (BlockOptions, error) {
+	opts, err := parseBlockOptions( /*commentMarker=*/ "", options, blockOptions{})
 	if err != nil {
 		return BlockOptions{}, err
 	}
@@ -115,67 +102,33 @@ type blockOptions struct {
 	commentMarker string
 }
 
-var defaultOptions = blockOptions{
-	Lint:             true,
-	Group:            true,
-	StickyComments:   true,
-	StickyPrefixes:   nil, // Will be populated with the comment marker of the start directive.
-	CaseSensitive:    true,
-	RemoveDuplicates: true,
-}
+var (
+	defaultOptions = blockOptions{
+		Lint:             true,
+		Group:            true,
+		StickyComments:   true,
+		StickyPrefixes:   nil, // Will be populated with the comment marker of the start directive.
+		CaseSensitive:    true,
+		RemoveDuplicates: true,
+	}
 
-func parseBlockOptions(startLine string, defaults blockOptions) (blockOptions, error) {
-	ret := defaults
-	opts := reflect.ValueOf(&ret)
-	var errs error
-	for i := 0; i < opts.Elem().NumField(); i++ {
-		field := opts.Elem().Type().Field(i)
+	fieldIndexByKey map[string]int
+)
+
+func init() {
+	fieldIndexByKey = make(map[string]int)
+	typ := reflect.TypeFor[blockOptions]()
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
 		if !field.IsExported() {
 			continue
 		}
-
-		val, err := parseBlockOption(field, startLine)
-		if err != nil {
-			if errors.Is(err, errOptionNotSet) {
-				continue
-			}
-			errs = errors.Join(errs, err)
-		} else {
-			opts.Elem().Field(i).Set(val)
+		key := key(field)
+		if !keyRegex.MatchString(key + "=") {
+			panic(fmt.Errorf("key %q for blockOptions.%s would not be matched by parser (regex: %v)", key, field.Name, keyRegex))
 		}
+		fieldIndexByKey[key] = i
 	}
-
-	if ret.SkipLines < 0 {
-		errs = errors.Join(errs, fmt.Errorf("skip_lines has invalid value: %v", ret.SkipLines))
-		ret.SkipLines = 0
-	}
-
-	if ret.GroupPrefixes != nil && !ret.Group {
-		errs = errors.Join(errs, fmt.Errorf("group_prefixes may not be used with group=no"))
-		ret.GroupPrefixes = nil
-	}
-
-	if cm := guessCommentMarker(startLine); cm != "" {
-		ret.setCommentMarker(cm)
-	}
-	if len(ret.IgnorePrefixes) > 1 {
-		// Look at longer prefixes first, in case one of these prefixes is a prefix of another.
-		slices.SortFunc(ret.IgnorePrefixes, func(a string, b string) int { return cmp.Compare(len(b), len(a)) })
-	}
-
-	return ret, errs
-}
-
-var errOptionNotSet = errors.New("not set in start directive")
-
-func parseBlockOption(f reflect.StructField, startLine string) (reflect.Value, error) {
-	key := key(f)
-	regex := regexp.MustCompile(fmt.Sprintf(`(^|\s)%s=(?P<value>[^ ]+?)($|\s)`, regexp.QuoteMeta(key)))
-	if m := regex.FindStringSubmatchIndex(startLine); m != nil {
-		val := string(regex.ExpandString(nil, "${value}", startLine, m))
-		return parseValue(f, key, val)
-	}
-	return reflect.Zero(f.Type), fmt.Errorf("option %q: %w", key, errOptionNotSet)
 }
 
 func key(f reflect.StructField) string {
@@ -186,45 +139,44 @@ func key(f reflect.StructField) string {
 	return key
 }
 
-func parseValue(f reflect.StructField, key, val string) (reflect.Value, error) {
-	switch f.Type {
-	case reflect.TypeFor[bool]():
-		b, ok := boolValues[val]
+func parseBlockOptions(commentMarker, options string, defaults blockOptions) (blockOptions, error) {
+	ret := defaults
+	opts := reflect.ValueOf(&ret).Elem()
+	var errs []error
+	parser := &parser{options}
+	for {
+		key, ok := parser.popKey()
 		if !ok {
-			return reflect.Zero(f.Type), fmt.Errorf("option %q has unknown value %q", key, val)
+			break
+		}
+		fieldIdx, ok := fieldIndexByKey[key]
+		if !ok {
+			errs = append(errs, fmt.Errorf("unrecognized option %q", key))
+			continue
 		}
 
-		return reflect.ValueOf(b), nil
-	case reflect.TypeFor[[]string]():
-		if val == "" {
-			return reflect.Zero(f.Type), nil
-		}
-
-		return reflect.ValueOf(strings.Split(val, ",")), nil
-	case reflect.TypeFor[map[string]bool]():
-		if val == "" {
-			return reflect.Zero(f.Type), nil
-		}
-
-		sp := strings.Split(val, ",")
-		m := make(map[string]bool)
-		for _, s := range sp {
-			m[s] = true
-		}
-		return reflect.ValueOf(m), nil
-	case reflect.TypeFor[int]():
-		if val == "" {
-			return reflect.Zero(f.Type), nil
-		}
-
-		i, err := strconv.Atoi(val)
+		field := opts.Field(fieldIdx)
+		val, err := parser.popValue(field.Type())
 		if err != nil {
-			return reflect.Zero(f.Type), fmt.Errorf("option %q has invalid value %q: %w", key, val, err)
+			errs = append(errs, fmt.Errorf("while parsing option %q: %w", key, err))
+			continue
 		}
-		return reflect.ValueOf(i), nil
+		field.Set(val)
 	}
 
-	panic(fmt.Errorf("unsupported blockOptions type: %v", f.Type))
+	if cm := guessCommentMarker(commentMarker); cm != "" {
+		ret.setCommentMarker(cm)
+	}
+	if len(ret.IgnorePrefixes) > 1 {
+		// Look at longer prefixes first, in case one of these prefixes is a prefix of another.
+		slices.SortFunc(ret.IgnorePrefixes, func(a string, b string) int { return cmp.Compare(len(b), len(a)) })
+	}
+
+	if err := validate(&ret); err != nil {
+		errs = append(errs, err)
+	}
+
+	return ret, errors.Join(errs...)
 }
 
 func formatValue(val reflect.Value) string {
@@ -270,20 +222,31 @@ func (opts *blockOptions) setCommentMarker(marker string) {
 	}
 }
 
+func validate(opts *blockOptions) error {
+	var errs []error
+	if opts.SkipLines < 0 {
+		errs = append(errs, fmt.Errorf("skip_lines has invalid value: %v", opts.SkipLines))
+		opts.SkipLines = 0
+	}
+
+	if opts.GroupPrefixes != nil && !opts.Group {
+		errs = append(errs, fmt.Errorf("group_prefixes may not be used with group=no"))
+		opts.GroupPrefixes = nil
+	}
+
+	return errors.Join(errs...)
+}
+
 func (opts blockOptions) String() string {
 	var s []string
 	val := reflect.ValueOf(opts)
-	for i := 0; i < val.NumField(); i++ {
-		field := val.Type().Field(i)
-		if !field.IsExported() {
-			continue
-		}
-
+	for _, key := range slices.Sorted(maps.Keys(fieldIndexByKey)) {
+		field := val.Type().Field(fieldIndexByKey[key])
 		fieldVal := val.FieldByIndex(field.Index)
 		if fieldVal.IsZero() {
 			continue
 		}
-		s = append(s, fmt.Sprintf("%s=%s", key(field), formatValue(fieldVal)))
+		s = append(s, fmt.Sprintf("%s=%s", key, formatValue(fieldVal)))
 	}
 
 	return strings.Join(s, " ")
