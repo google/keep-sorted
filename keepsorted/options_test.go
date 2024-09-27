@@ -64,9 +64,9 @@ func TestBlockOptions(t *testing.T) {
 		},
 		{
 			name: "SimpleSwitch",
-			in:   "lint=yes",
+			in:   "group=yes",
 
-			want: blockOptions{Lint: true},
+			want: blockOptions{Group: true},
 		},
 		{
 			name: "SkipLines",
@@ -145,27 +145,27 @@ func TestBlockOptions(t *testing.T) {
 		{
 			name:          "OptionInTrailingComment",
 			commentMarker: "#",
-			in:            "block=yes  # lint=yes",
+			in:            "block=yes  # group=yes",
 
 			want: blockOptions{
 				Block:         true,
-				Lint:          true,
+				Group:         true,
 				commentMarker: "#",
 			},
 		},
 		{
 			name: "ErrorDoesNotStopParsing",
-			in:   "lint=nah case=no",
+			in:   "group=nah case=no",
 			defaultOptions: blockOptions{
-				Lint:          true,
+				Group:         true,
 				CaseSensitive: true,
 			},
 
 			want: blockOptions{
-				Lint:          true, // The default value should not change.
+				Group:         true, // The default value should not change.
 				CaseSensitive: false,
 			},
-			wantErr: `while parsing option "lint": unrecognized bool value "nah"`,
+			wantErr: `while parsing option "group": unrecognized bool value "nah"`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

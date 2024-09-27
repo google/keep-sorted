@@ -58,7 +58,7 @@ func (f *Fixer) errorMissingEnd() string {
 // Fix all of the findings on contents to make keep-sorted happy.
 func (f *Fixer) Fix(filename, contents string, modifiedLines []LineRange) (fixed string, alreadyCorrect bool, warnings []*Finding) {
 	lines := strings.Split(contents, "\n")
-	fs := f.findings(filename, lines, modifiedLines, false)
+	fs := f.findings(filename, lines, modifiedLines)
 	if len(fs) == 0 {
 		return contents, true, nil
 	}
@@ -91,7 +91,7 @@ func (f *Fixer) Fix(filename, contents string, modifiedLines []LineRange) (fixed
 // If modifiedLines is non-nil, we only report findings for issues within the
 // modified lines. Otherwise, we report all findings.
 func (f *Fixer) Findings(filename, contents string, modifiedLines []LineRange) []*Finding {
-	return f.findings(filename, strings.Split(contents, "\n"), modifiedLines, true)
+	return f.findings(filename, strings.Split(contents, "\n"), modifiedLines)
 }
 
 // Finding is something that keep-sorted thinks is wrong with a particular file.
@@ -130,15 +130,12 @@ type Replacement struct {
 	NewContent string    `json:"new_content"`
 }
 
-func (f *Fixer) findings(filename string, contents []string, modifiedLines []LineRange, considerLintOption bool) []*Finding {
+func (f *Fixer) findings(filename string, contents []string, modifiedLines []LineRange) []*Finding {
 	blocks, incompleteBlocks, warns := f.newBlocks(filename, contents, 1, includeModifiedLines(modifiedLines))
 
 	var fs []*Finding
 	fs = append(fs, warns...)
 	for _, b := range blocks {
-		if considerLintOption && !b.metadata.opts.Lint {
-			continue
-		}
 		if s, alreadySorted := b.sorted(); !alreadySorted {
 			fs = append(fs, finding(filename, b.start+1, b.end-1, errorUnordered, replacement(b.start+1, b.end-1, linesToString(s))))
 		}
