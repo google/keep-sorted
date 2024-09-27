@@ -224,7 +224,10 @@ func fix(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted
 				return false, err
 			}
 			for _, warn := range warnings {
-				log := log.Warn().Str("file", warn.Path)
+				log := log.Warn()
+				if warn.Path != stdin {
+					log = log.Str("file", warn.Path)
+				}
 				if warn.Lines.Start == warn.Lines.End {
 					log = log.Int("line", warn.Lines.Start)
 				} else {
