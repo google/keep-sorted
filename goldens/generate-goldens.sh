@@ -18,13 +18,15 @@
 set -euo pipefail
 [[ -n "${DEBUG:-}" ]] && set -x
 
-files=()
-for i in "$@"; do
-  o="${i%%in}out"
-  cp "${i}" "${i%%in}out"
-  files+=( "$o" )
-done
-
 dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 git_dir="$(git -C "${dir}" rev-parse --show-toplevel)"
-go run "${git_dir}" --id=keep-sorted-test -- "${files[@]}"
+
+for i in "$@"; do
+  out="${i%%in}out"
+  err="${i%%in}err"
+
+  go run "${git_dir}" --id=keep-sorted-test --omit-timestamps - < "${i}" >"${out}" 2>"${err}"
+  if (( $(wc -l < "${err}") == 0 )); then
+    rm "${err}"
+  fi
+done

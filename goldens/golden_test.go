@@ -15,11 +15,14 @@
 package golden_test
 
 import (
+	"errors"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -49,7 +52,7 @@ func TestGoldens(t *testing.T) {
 		t.Fatalf("Did not find any golden files.")
 	}
 
-	needsRegen := make(chan string, len(tcs))
+	needsRegen := make(chan string, 2*len(tcs))
 	t.Run("group", func(t *testing.T) {
 		for _, tc := range tcs {
 			tc := tc
@@ -61,16 +64,18 @@ func TestGoldens(t *testing.T) {
 					t.Fatalf("Could not open .in file: %v", err)
 				}
 
-				out, err := os.Open(filepath.Join(dir, tc+".out"))
-				if err != nil {
-					t.Fatalf("Could not open .out file: %v", err)
-				}
-				want, err := io.ReadAll(out)
+				wantOut, err := os.ReadFile(filepath.Join(dir, tc+".out"))
 				if err != nil {
 					t.Fatalf("Could not read .out file: %v", err)
 				}
+				wantErr, err := os.ReadFile(filepath.Join(dir, tc+".err"))
+				if err != nil {
+					if !errors.Is(err, os.ErrNotExist) {
+						t.Fatalf("Could not read .err file: %v", err)
+					}
+				}
 
-				cmd := exec.Command("go", "run", gitDir, "--id=keep-sorted-test", "-")
+				cmd := exec.Command("go", "run", gitDir, "--id=keep-sorted-test", "--omit-timestamps", "-")
 				cmd.Stdin = in
 				stdout, err := cmd.StdoutPipe()
 				if err != nil {
@@ -84,20 +89,16 @@ func TestGoldens(t *testing.T) {
 					t.Errorf("could not start keep-sorted: %v", err)
 				}
 
-				if stderr, err := io.ReadAll(stderr); err != nil {
+				if gotErr, err := io.ReadAll(stderr); err != nil {
 					t.Errorf("could not read keep-sorted stderr: %v", err)
-				} else if len(stderr) != 0 {
-					wantStderr := discoverWantStderr(string(want))
-					lines := strings.Split(strings.TrimSpace(string(stderr)), "\n")
-
-					if diff := compareStderr(wantStderr, lines); diff != "" {
-						t.Errorf("keep-sorted stderr:\n%s", diff)
-					}
+				} else if diff := cmp.Diff(strings.Split(string(wantErr), "\n"), strings.Split(string(gotErr), "\n")); diff != "" {
+					t.Errorf("keep-sorted stderr:\n%s", diff)
+					needsRegen <- inFile
 				}
 
-				if got, err := io.ReadAll(stdout); err != nil {
+				if gotOut, err := io.ReadAll(stdout); err != nil {
 					t.Errorf("could not read keep-sorted stdout: %v", err)
-				} else if diff := cmp.Diff(strings.Split(string(want), "\n"), strings.Split(string(got), "\n")); diff != "" {
+				} else if diff := cmp.Diff(strings.Split(string(wantOut), "\n"), strings.Split(string(gotOut), "\n")); diff != "" {
 					t.Errorf("keep-sorted stdout diff (-want +got):\n%s", diff)
 					needsRegen <- inFile
 				}
@@ -110,35 +111,17 @@ func TestGoldens(t *testing.T) {
 	})
 
 	close(needsRegen)
-	var files []string
+	files := make(map[string]bool)
 	for f := range needsRegen {
-		files = append(files, f)
+		files[f] = true
 	}
 
 	if len(files) != 0 {
-		t.Logf("Run the following to fix: %s %s", filepath.Join(gitDir, "goldens/generate-goldens.sh"), strings.Join(files, " "))
+		t.Logf("Run the following to fix: %s %s", filepath.Join(gitDir, "goldens/generate-goldens.sh"), strings.Join(slices.Sorted(maps.Keys(files)), " "))
 	}
 }
 
 func showTopLevel(dir string) (string, error) {
 	b, err := exec.Command("git", "-C", dir, "rev-parse", "--show-toplevel").Output()
 	return strings.TrimSpace(string(b)), err
-}
-
-func discoverWantStderr(want string) []string {
-	lines := strings.Split(want, "\n")
-	var wantStderr []string
-	for _, l := range lines {
-		want, ok := strings.CutPrefix(l, "STDERR: ")
-		if ok {
-			wantStderr = append(wantStderr, want)
-		}
-	}
-	return wantStderr
-}
-
-func compareStderr(want, got []string) string {
-	return cmp.Diff(want, got, cmp.Comparer(func(x, y string) bool {
-		return strings.Contains(y, x) || strings.Contains(x, y)
-	}))
 }
