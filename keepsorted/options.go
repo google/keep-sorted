@@ -56,8 +56,6 @@ func (opts BlockOptions) String() string {
 //  3. map[string]bool: key=a,b,c,d
 //  4. int:             key=123
 type blockOptions struct {
-	// Lint determines whether we emit lint warnings for this block.
-	Lint bool
 	// AllowYAMLLists determines whether list.set valued options are allowed to be specified by YAML.
 	AllowYAMLLists bool `key:"allow_yaml_lists"`
 
@@ -106,7 +104,6 @@ type blockOptions struct {
 
 var (
 	defaultOptions = blockOptions{
-		Lint:             true,
 		AllowYAMLLists:   true,
 		Group:            true,
 		StickyComments:   true,

@@ -191,9 +191,8 @@ func TestFindings(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 
-		in                 string
-		modifiedLines      []int
-		considerLintOption bool
+		in            string
+		modifiedLines []int
 
 		want []*Finding
 	}{
@@ -294,19 +293,6 @@ baz
 
 			want: []*Finding{finding(filename, 3, 5, errorUnordered, replacement(3, 5, "1\n2\n3\n"))},
 		},
-		{
-			name: "lint=no",
-
-			in: `
-// keep-sorted-test start lint=no
-2
-1
-3
-// keep-sorted-test end`,
-			considerLintOption: true,
-
-			want: nil,
-		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
@@ -316,7 +302,7 @@ baz
 					mod = append(mod, LineRange{l, l})
 				}
 			}
-			got := New("keep-sorted-test", BlockOptions{}).findings(filename, strings.Split(tc.in, "\n"), mod, tc.considerLintOption)
+			got := New("keep-sorted-test", BlockOptions{}).findings(filename, strings.Split(tc.in, "\n"), mod)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("Findings diff (-want +got):\n%s", diff)
 			}
