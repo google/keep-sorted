@@ -17,7 +17,6 @@ package keepsorted
 import (
 	"cmp"
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 
@@ -132,9 +131,10 @@ type Replacement struct {
 }
 
 func (f *Fixer) findings(filename string, contents []string, modifiedLines []LineRange, considerLintOption bool) []*Finding {
-	blocks, incompleteBlocks, warns := f.newBlocks(contents, 1, includeModifiedLines(modifiedLines))
+	blocks, incompleteBlocks, warns := f.newBlocks(filename, contents, 1, includeModifiedLines(modifiedLines))
 
 	var fs []*Finding
+	fs = append(fs, warns...)
 	for _, b := range blocks {
 		if considerLintOption && !b.metadata.opts.Lint {
 			continue
@@ -154,11 +154,6 @@ func (f *Fixer) findings(filename string, contents []string, modifiedLines []Lin
 			panic(fmt.Errorf("unknown directive type: %v", ib.dir))
 		}
 		fs = append(fs, finding(filename, ib.line, ib.line, msg, replacement(ib.line, ib.line, "")))
-	}
-	for _, line := range slices.Sorted(maps.Keys(warns)) {
-		for _, warn := range warns[line] {
-			fs = append(fs, finding(filename, line, line, warn.Error()))
-		}
 	}
 
 	slices.SortFunc(fs, func(a, b *Finding) int {

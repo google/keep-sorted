@@ -38,7 +38,7 @@ func DefaultBlockOptions() BlockOptions {
 
 func ParseBlockOptions(options string) (BlockOptions, error) {
 	opts, warns := parseBlockOptions( /*commentMarker=*/ "", options, blockOptions{})
-	if err := warns.err(); err != nil {
+	if err := errors.Join(warns...); err != nil {
 		return BlockOptions{}, err
 	}
 	return BlockOptions{opts}, nil
@@ -139,17 +139,10 @@ func key(f reflect.StructField) string {
 	return key
 }
 
-// optionWarnings are things that we found wrong with the option string but don't need to halt the entire keep-sorted operation.
-type optionWarnings []error
-
-func (warns optionWarnings) err() error {
-	return errors.Join(warns...)
-}
-
-func parseBlockOptions(commentMarker, options string, defaults blockOptions) (blockOptions, optionWarnings) {
+func parseBlockOptions(commentMarker, options string, defaults blockOptions) (_ blockOptions, warnings []error) {
 	ret := defaults
 	opts := reflect.ValueOf(&ret).Elem()
-	var warns optionWarnings
+	var warns []error
 	parser := &parser{options}
 	for {
 		key, ok := parser.popKey()
@@ -229,8 +222,8 @@ func (opts *blockOptions) setCommentMarker(marker string) {
 	}
 }
 
-func validate(opts *blockOptions) optionWarnings {
-	var warns optionWarnings
+func validate(opts *blockOptions) (warnings []error) {
+	var warns []error
 	if opts.SkipLines < 0 {
 		warns = append(warns, fmt.Errorf("skip_lines has invalid value: %v", opts.SkipLines))
 		opts.SkipLines = 0

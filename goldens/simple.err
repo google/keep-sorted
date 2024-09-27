@@ -1,2 +1,2 @@
-WRN unrecognized option "foo" file=- line=105
 WRN skip_lines has invalid value: -1 file=- line=105
+WRN unrecognized option "foo" file=- line=105

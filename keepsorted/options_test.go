@@ -15,6 +15,7 @@
 package keepsorted
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -151,7 +152,7 @@ func TestBlockOptions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
 			got, warns := parseBlockOptions(tc.commentMarker, tc.in, tc.defaultOptions)
-			if err := warns.err(); err != nil {
+			if err := errors.Join(warns...); err != nil {
 				if tc.wantErr == "" {
 					t.Errorf("parseBlockOptions(%q, %q) = %v", tc.commentMarker, tc.in, err)
 				} else if !strings.Contains(err.Error(), tc.wantErr) {
@@ -172,7 +173,7 @@ func TestBlockOptions_ClonesDefaultOptions(t *testing.T) {
 		StickyPrefixes: map[string]bool{},
 	}
 	_, warns := parseBlockOptions("", "sticky_prefixes=//", defaults)
-	if err := warns.err(); err != nil {
+	if err := errors.Join(warns...); err != nil {
 		t.Errorf("parseBlockOptions() = _, %v", err)
 	}
 	if diff := cmp.Diff(blockOptions{}, defaults, cmp.AllowUnexported(blockOptions{}), cmpopts.EquateEmpty()); diff != "" {

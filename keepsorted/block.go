@@ -67,10 +67,9 @@ const (
 // include is a function that lets the caller determine if a particular block
 // should be included in the result. Mostly useful for filtering keep-sorted
 // blocks to just the ones that were modified by the currently CL.
-func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end int) bool) ([]block, []incompleteBlock, map[int]optionWarnings) {
+func (f *Fixer) newBlocks(filename string, lines []string, offset int, include func(start, end int) bool) (_ []block, _ []incompleteBlock, warnings []*Finding) {
 	var blocks []block
 	var incompleteBlocks []incompleteBlock
-	warnsByLine := make(map[int]optionWarnings)
 
 	type startLine struct {
 		index int
@@ -111,8 +110,8 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 
 			commentMarker, options, _ := strings.Cut(start.line, f.startDirective)
 			opts, optionWarnings := parseBlockOptions(commentMarker, options, f.defaultOptions)
-			if len(optionWarnings) > 0 {
-				warnsByLine[start.index+offset] = optionWarnings
+			for _, warn := range optionWarnings {
+				warnings = append(warnings, finding(filename, start.index+offset, start.index+offset, warn.Error()))
 			}
 
 			start.index += opts.SkipLines
@@ -171,7 +170,7 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 		}
 	}
 
-	return blocks, incompleteBlocks, warnsByLine
+	return blocks, incompleteBlocks, warnings
 }
 
 // sorted returns a slice which represents the correct sorting of b.lines.

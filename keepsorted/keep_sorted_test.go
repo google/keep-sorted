@@ -333,7 +333,7 @@ func TestCreatingBlocks(t *testing.T) {
 
 		wantBlocks           []block
 		wantIncompleteBlocks []incompleteBlock
-		wantWarnings         map[int]int
+		wantWarnings         []string
 	}{
 		{
 			name: "MultipleBlocks",
@@ -745,9 +745,7 @@ i
 					lines: []string{"0", "1", "2"},
 				},
 			},
-			wantWarnings: map[int]int{
-				1: 1,
-			},
+			wantWarnings: []string{`unrecognized option "foo"`},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -756,7 +754,7 @@ i
 				tc.include = func(start, end int) bool { return true }
 			}
 
-			gotBlocks, gotIncompleteBlocks, gotWarnings := New("keep-sorted-test", BlockOptions{}).newBlocks(strings.Split(tc.in, "\n"), 0, tc.include)
+			gotBlocks, gotIncompleteBlocks, gotWarnings := New("keep-sorted-test", BlockOptions{}).newBlocks("unused-filename", strings.Split(tc.in, "\n"), 0, tc.include)
 			if diff := cmp.Diff(tc.wantBlocks, gotBlocks, cmp.AllowUnexported(block{}, blockMetadata{}, blockOptions{})); diff != "" {
 				t.Errorf("blocks diff (-want +got):\n%s", diff)
 			}
@@ -764,11 +762,7 @@ i
 				t.Errorf("incompleteBlocks diff (-want +got):\n%s", diff)
 			}
 
-			warnings := make(map[int]int)
-			for k, v := range gotWarnings {
-				warnings[k] = len(v)
-			}
-			if diff := cmp.Diff(tc.wantWarnings, warnings, cmpopts.EquateEmpty()); diff != "" {
+			if diff := cmp.Diff(tc.wantWarnings, messages(gotWarnings), cmpopts.EquateEmpty()); diff != "" {
 				t.Errorf("warnings diff (-want +got):\n%s", diff)
 			}
 		})
@@ -1564,4 +1558,12 @@ func TestLineGrouping(t *testing.T) {
 			}
 		})
 	}
+}
+
+func messages(fs []*Finding) []string {
+	ret := make([]string, len(fs))
+	for i, f := range fs {
+		ret[i] = f.Message
+	}
+	return ret
 }
