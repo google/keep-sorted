@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/google/keep-sorted/keepsorted"
+	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
 )
 
@@ -218,9 +219,21 @@ func fix(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted
 		if err != nil {
 			return false, err
 		}
-		if want, alreadyFixed := fixer.Fix(contents, modifiedLines); fn == stdin || !alreadyFixed {
+		if want, alreadyFixed, warnings := fixer.Fix(fn, contents, modifiedLines); fn == stdin || !alreadyFixed {
 			if err := write(fn, want); err != nil {
 				return false, err
+			}
+			for _, warn := range warnings {
+				log := log.Warn()
+				if warn.Path != stdin {
+					log = log.Str("file", warn.Path)
+				}
+				if warn.Lines.Start == warn.Lines.End {
+					log = log.Int("line", warn.Lines.Start)
+				} else {
+					log = log.Int("start", warn.Lines.Start).Int("end", warn.Lines.End)
+				}
+				log.Msg(warn.Message)
 			}
 		}
 	}

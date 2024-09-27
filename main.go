@@ -32,6 +32,10 @@ func main() {
 	c.FromFlags(nil)
 	logLevel := flag.CountP("verbose", "v", "Log more verbosely")
 	colorMode := flag.String("color", "auto", "Whether to color debug output. One of \"always\", \"never\", or \"auto\"")
+	omitTimestamps := flag.Bool("omit-timestamps", false, "Do not emit timestamps in console logging. Useful for tests")
+	if err := flag.CommandLine.MarkHidden("omit-timestamps"); err != nil {
+		panic(err)
+	}
 	flag.Parse()
 
 	out := os.Stderr
@@ -46,7 +50,11 @@ func main() {
 	default:
 		log.Err(fmt.Errorf("invalid --color %q", *colorMode)).Msg("")
 	}
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: out, TimeFormat: time.RFC3339, NoColor: !shouldColor})
+	cw := zerolog.ConsoleWriter{Out: out, TimeFormat: time.RFC3339, NoColor: !shouldColor}
+	if *omitTimestamps {
+		cw.FormatTimestamp = func(any) string { return "" }
+	}
+	log.Logger = log.Output(cw)
 	zerolog.SetGlobalLevel(zerolog.Level(int(zerolog.WarnLevel) - *logLevel))
 	if ok, err := cmd.Run(c, flag.Args()); err != nil {
 		log.Fatal().AnErr("error", err).Msg("")

@@ -16,7 +16,6 @@ package keepsorted
 
 import (
 	"cmp"
-	"fmt"
 	"slices"
 	"strings"
 
@@ -68,7 +67,7 @@ const (
 // include is a function that lets the caller determine if a particular block
 // should be included in the result. Mostly useful for filtering keep-sorted
 // blocks to just the ones that were modified by the currently CL.
-func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end int) bool) ([]block, []incompleteBlock) {
+func (f *Fixer) newBlocks(filename string, lines []string, offset int, include func(start, end int) bool) (_ []block, _ []incompleteBlock, warnings []*Finding) {
 	var blocks []block
 	var incompleteBlocks []incompleteBlock
 
@@ -110,10 +109,9 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 			}
 
 			commentMarker, options, _ := strings.Cut(start.line, f.startDirective)
-			opts, err := parseBlockOptions(commentMarker, options, f.defaultOptions)
-			if err != nil {
-				// TODO(b/250608236): Is there a better way to surface this error?
-				log.Err(fmt.Errorf("keep-sorted block at index %d had bad start directive: %w", start.index+offset, err)).Msg("")
+			opts, optionWarnings := parseBlockOptions(commentMarker, options, f.defaultOptions)
+			for _, warn := range optionWarnings {
+				warnings = append(warnings, finding(filename, start.index+offset, start.index+offset, warn.Error()))
 			}
 
 			start.index += opts.SkipLines
@@ -172,7 +170,7 @@ func (f *Fixer) newBlocks(lines []string, offset int, include func(start, end in
 		}
 	}
 
-	return blocks, incompleteBlocks
+	return blocks, incompleteBlocks, warnings
 }
 
 // sorted returns a slice which represents the correct sorting of b.lines.

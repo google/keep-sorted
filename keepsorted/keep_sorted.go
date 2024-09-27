@@ -56,16 +56,21 @@ func (f *Fixer) errorMissingEnd() string {
 }
 
 // Fix all of the findings on contents to make keep-sorted happy.
-func (f *Fixer) Fix(contents string, modifiedLines []LineRange) (fixed string, alreadyCorrect bool) {
+func (f *Fixer) Fix(filename, contents string, modifiedLines []LineRange) (fixed string, alreadyCorrect bool, warnings []*Finding) {
 	lines := strings.Split(contents, "\n")
-	fs := f.findings("unused-filename", lines, modifiedLines, false)
+	fs := f.findings(filename, lines, modifiedLines, false)
 	if len(fs) == 0 {
-		return contents, true
+		return contents, true, nil
 	}
 
 	var s strings.Builder
 	startLine := 1
 	for _, f := range fs {
+		if len(f.Fixes) == 0 {
+			warnings = append(warnings, f)
+			continue
+		}
+
 		repl := f.Fixes[0].Replacements[0]
 		endLine := repl.Lines.Start
 
@@ -77,7 +82,7 @@ func (f *Fixer) Fix(contents string, modifiedLines []LineRange) (fixed string, a
 	}
 	s.WriteString(strings.Join(lines[startLine-1:], "\n"))
 
-	return s.String(), false
+	return s.String(), false, warnings
 }
 
 // Findings returns a slice of things that need to be addressed in the file to
@@ -126,15 +131,16 @@ type Replacement struct {
 }
 
 func (f *Fixer) findings(filename string, contents []string, modifiedLines []LineRange, considerLintOption bool) []*Finding {
-	blocks, incompleteBlocks := f.newBlocks(contents, 1, includeModifiedLines(modifiedLines))
+	blocks, incompleteBlocks, warns := f.newBlocks(filename, contents, 1, includeModifiedLines(modifiedLines))
 
 	var fs []*Finding
+	fs = append(fs, warns...)
 	for _, b := range blocks {
 		if considerLintOption && !b.metadata.opts.Lint {
 			continue
 		}
 		if s, alreadySorted := b.sorted(); !alreadySorted {
-			fs = append(fs, finding(filename, b.start+1, b.end-1, errorUnordered, linesToString(s)))
+			fs = append(fs, finding(filename, b.start+1, b.end-1, errorUnordered, replacement(b.start+1, b.end-1, linesToString(s))))
 		}
 	}
 	for _, ib := range incompleteBlocks {
@@ -147,7 +153,7 @@ func (f *Fixer) findings(filename string, contents []string, modifiedLines []Lin
 		default:
 			panic(fmt.Errorf("unknown directive type: %v", ib.dir))
 		}
-		fs = append(fs, finding(filename, ib.line, ib.line, msg, ""))
+		fs = append(fs, finding(filename, ib.line, ib.line, msg, replacement(ib.line, ib.line, "")))
 	}
 
 	slices.SortFunc(fs, func(a, b *Finding) int {
@@ -178,30 +184,35 @@ func linesToString(lines []string) string {
 	return strings.Join(lines, "\n") + "\n"
 }
 
-func finding(filename string, start, end int, msg, replace string) *Finding {
-	lr := LineRange{
-		Start: start,
-		End:   end,
-	}
+func finding(filename string, start, end int, msg string, fixes ...Fix) *Finding {
 	return &Finding{
 		Path:    filename,
-		Lines:   lr,
+		Lines:   lineRange(start, end),
 		Message: msg,
-		Fixes: []Fix{
+		Fixes:   fixes,
+	}
+}
+
+func replacement(start, end int, s string) Fix {
+	return Fix{
+		Replacements: []Replacement{
 			{
-				Replacements: []Replacement{
-					{
-						Lines:      lr,
-						NewContent: replace,
-					},
-				},
+				Lines:      lineRange(start, end),
+				NewContent: s,
 			},
 		},
 	}
 }
 
+func lineRange(start, end int) LineRange {
+	return LineRange{
+		Start: start,
+		End:   end,
+	}
+}
+
 func startLine(f *Finding) int {
-	return f.Fixes[0].Replacements[0].Lines.Start
+	return f.Lines.Start
 }
 
 var _ augmentedtree.Interval = LineRange{}
