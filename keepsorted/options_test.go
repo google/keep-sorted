@@ -89,6 +89,16 @@ func TestBlockOptions(t *testing.T) {
 			},
 		},
 		{
+			name:           "ItemList_YAML",
+			in:             `prefix_order=[a, b, c d, 'e",\f']`,
+			defaultOptions: blockOptions{AllowYAMLLists: true},
+
+			want: blockOptions{
+				AllowYAMLLists: true,
+				PrefixOrder:    []string{"a", "b", "c d", `e",\f`},
+			},
+		},
+		{
 			name: "ItemSet",
 			in:   "sticky_prefixes=a,b,c,d",
 
@@ -99,6 +109,15 @@ func TestBlockOptions(t *testing.T) {
 					"c": true,
 					"d": true,
 				},
+			},
+		},
+		{
+			name: "ItemSet_YAML",
+			in:   `allow_yaml_lists=yes sticky_prefixes=[a, b, c d, 'e",\f']`,
+
+			want: blockOptions{
+				AllowYAMLLists: true,
+				StickyPrefixes: map[string]bool{"a": true, "b": true, "c d": true, `e",\f`: true},
 			},
 		},
 		{

@@ -655,3 +655,19 @@ Pineapples
 </td>
 </tr>
 </table>
+
+### Syntax
+
+If you find yourself wanting to include special characters in the value (spaces,
+commas, left brackets) of one of the options, you can do so with a YAML [flow
+sequence](https://yaml.org/spec/1.2.2/#flow-sequences).
+
+```md
+<!-- keep-sorted start prefix_order=["* ", "* ["] -->
+  * bar
+  * foo
+  * [baz](path/to/baz)
+<!-- keep-sorted end -->
+```
+
+This works for any option that accepts more than one value.

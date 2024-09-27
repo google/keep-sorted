@@ -11,10 +11,12 @@ func TestPopValue(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 
-		input string
+		input         string
+		allowYAMLList bool
 
-		want    any
-		wantErr bool
+		want                      any
+		wantErr                   bool
+		additionalTrailingContent string
 	}{
 		{
 			name: "Bool",
@@ -61,6 +63,132 @@ func TestPopValue(t *testing.T) {
 			want:  []string{"foo", "bar", "foo"},
 		},
 		{
+			name: "List_YAML",
+
+			input:         "[foo, bar, foo]",
+			allowYAMLList: true,
+			want:          []string{"foo", "bar", "foo"},
+		},
+		{
+			name: "List_YAML_YAMLNotAllowed",
+
+			input:                     "[foo, bar, foo]",
+			allowYAMLList:             false,
+			want:                      []string{"[foo", ""},
+			additionalTrailingContent: "bar, foo]",
+		},
+		{
+			name: "List_YAML_LooksLikeYAMLButIsnt",
+
+			input:                     "[,[`",
+			allowYAMLList:             true,
+			want:                      []string{},
+			wantErr:                   true,
+			additionalTrailingContent: "[,[`",
+		},
+		{
+			name: "List_YAML_YamlNotAllowed_LooksLikeYAMLButIsnt",
+
+			input:         "[,[`",
+			allowYAMLList: false,
+			want:          []string{"[", "[`"},
+		},
+		{
+			name: "List_YAML_NotTerminated",
+
+			input:                     "[foo, bar, foo",
+			allowYAMLList:             false,
+			want:                      []string{"[foo", ""},
+			additionalTrailingContent: "bar, foo",
+		},
+		{
+			name: "List_YAML_NestedList_ParsesButYieldsError",
+
+			input:         "[foo, [bar]]",
+			allowYAMLList: true,
+			want:          []string{},
+			wantErr:       true,
+		},
+		{
+			name: "List_YAML_NestedList_NotTerminated",
+
+			input:                     "[foo, [bar]",
+			allowYAMLList:             true,
+			want:                      []string{},
+			wantErr:                   true,
+			additionalTrailingContent: "[foo, [bar]",
+		},
+		{
+			name: "List_YAML_EscapingRules_SinglyQuotedOpenBracketDoesNotIncreaseDepth",
+
+			input:         `['[']`,
+			allowYAMLList: true,
+			want:          []string{`[`},
+		},
+		{
+			name: "List_YAML_EscapingRules_SinglyQuotedOpenBracketDoesNotIncreaseDepth_AdditionalDoubleQuoteDoesNotConfuseQuotingRules",
+
+			input:         `['["']`,
+			allowYAMLList: true,
+			want:          []string{`["`},
+		},
+		{
+			name: "List_YAML_EscapingRules_DoublyQuotedOpenBracketDoesNotIncreaseDepth",
+
+			input:         `["["]`,
+			allowYAMLList: true,
+			want:          []string{`[`},
+		},
+		{
+			name: "List_YAML_EscapingRules_DoublyQuotedOpenBracketDoesNotIncreaseDepth_AdditionalSingleQuoteDoesNotConfuseQuotingRules",
+
+			input:         `["['"]`,
+			allowYAMLList: true,
+			want:          []string{`['`},
+		},
+		{
+			name: "List_YAML_EscapingRules_SinglyQuotedClosingBracketDoesNotTerminate",
+
+			input:         `[']']`,
+			allowYAMLList: true,
+			want:          []string{`]`},
+		},
+		{
+			name: "List_YAML_EscapingRules_DoublyQuotedClosingBracketDoesNotTerminate",
+
+			input:         `["]"]`,
+			allowYAMLList: true,
+			want:          []string{`]`},
+		},
+		{
+			name: "List_YAML_EscapingRules_SinglyQuotedClosingBracketDoesNotTerminate_AdditionalEscapedSingleQuote",
+
+			input:         `[']''']`,
+			allowYAMLList: true,
+			want:          []string{`]'`},
+		},
+		{
+			name: "List_YAML_EscapingRules_SinglyQuotedClosingBracketDoesNotTerminate_BackslashDoesNotEscapeSingleQuote",
+
+			input:         `[']\']`,
+			allowYAMLList: true,
+			want:          []string{`]\`},
+		},
+		{
+			name: "List_YAML_EscapingRules_DoublyQuotedClosingBracketDoesNotTerminate_AdditionalEscapedDoubleQuote",
+
+			input:         `["]\""]`,
+			allowYAMLList: true,
+			want:          []string{`]"`},
+		},
+		{
+			name: "List_YAML_EscapingRules_DoublyQuotedClosingBracketDoesNotTerminate_AdditionalEscapedDoubleQuoteAndBackslashes",
+
+			input:         `["]\"\\"]`,
+			allowYAMLList: true,
+			want:          []string{`]"\`},
+		},
+		{
 			name: "Set_Empty",
 
 			input: "",
@@ -84,7 +212,7 @@ func TestPopValue(t *testing.T) {
 			in := tc.input + " " + suffix
 			typ := reflect.TypeOf(tc.want)
 
-			parser := &parser{line: in}
+			parser := &parser{line: in, allowYAMLLists: tc.allowYAMLList}
 
 			val, err := parser.popValue(typ)
 			if (err != nil) != tc.wantErr {
@@ -101,8 +229,11 @@ func TestPopValue(t *testing.T) {
 				}
 			}
 
-			if parser.line != suffix {
-				t.Errorf("parser{%q}.popValue(%v) did not consume the right amount of input. %q is remaining; expected %q", in, typ, parser.line, suffix)
+			if tc.additionalTrailingContent != "" {
+				tc.additionalTrailingContent += " "
+			}
+			if want := tc.additionalTrailingContent + suffix; parser.line != want {
+				t.Errorf("parser{%q}.popValue(%v) did not consume the right amount of input. %q is remaining; expected %q", in, typ, parser.line, want)
 			}
 		})
 	}

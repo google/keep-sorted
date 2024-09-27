@@ -106,3 +106,10 @@ Invalid option
   2
   3
   keep-sorted-test end
+
+Invalid YAML
+  keep-sorted-test start allow_yaml_lists=yes ignore_prefixes=[abc, foo
+  1
+  2
+  3
+  keep-sorted-test end
