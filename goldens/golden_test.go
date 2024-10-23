@@ -16,6 +16,7 @@ package golden_test
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"maps"
 	"os"
@@ -29,13 +30,21 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestGoldens(t *testing.T) {
+var (
+	dir, gitDir string
+)
+
+func init() {
 	_, fn, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(fn)
-	gitDir, err := showTopLevel(dir)
+	dir = filepath.Dir(fn)
+	var err error
+	gitDir, err = showTopLevel(dir)
 	if err != nil {
-		t.Fatalf("Could not find root git dir: %v", err)
+		panic(fmt.Errorf("could not find root git dir: %w", err))
 	}
+}
+
+func TestGoldens(t *testing.T) {
 	des, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("Could not read goldens/ directory: %v", err)
@@ -75,36 +84,25 @@ func TestGoldens(t *testing.T) {
 					}
 				}
 
-				cmd := exec.Command("go", "run", gitDir, "--id=keep-sorted-test", "--omit-timestamps", "-")
-				cmd.Stdin = in
-				stdout, err := cmd.StdoutPipe()
+				gotOut, gotErr, err := runKeepSorted(in)
 				if err != nil {
-					t.Fatalf("Could not create stdout pipe: %v", err)
+					t.Errorf("Had trouble running keep-sorted: %v", err)
 				}
-				stderr, err := cmd.StderrPipe()
-				if err != nil {
-					t.Fatalf("Could not create stderr pipe: %v", err)
-				}
-				if err := cmd.Start(); err != nil {
-					t.Errorf("could not start keep-sorted: %v", err)
-				}
-
-				if gotErr, err := io.ReadAll(stderr); err != nil {
-					t.Errorf("could not read keep-sorted stderr: %v", err)
-				} else if diff := cmp.Diff(strings.Split(string(wantErr), "\n"), strings.Split(string(gotErr), "\n")); diff != "" {
-					t.Errorf("keep-sorted stderr:\n%s", diff)
-					needsRegen <- inFile
-				}
-
-				if gotOut, err := io.ReadAll(stdout); err != nil {
-					t.Errorf("could not read keep-sorted stdout: %v", err)
-				} else if diff := cmp.Diff(strings.Split(string(wantOut), "\n"), strings.Split(string(gotOut), "\n")); diff != "" {
+				if diff := cmp.Diff(strings.Split(string(wantOut), "\n"), strings.Split(gotOut, "\n")); diff != "" {
 					t.Errorf("keep-sorted stdout diff (-want +got):\n%s", diff)
 					needsRegen <- inFile
 				}
+				if diff := cmp.Diff(strings.Split(string(wantErr), "\n"), strings.Split(gotErr, "\n")); diff != "" {
+					t.Errorf("keep-sorted stderr diff (-want +got):\n%s", diff)
+					needsRegen <- inFile
+				}
 
-				if err := cmd.Wait(); err != nil {
-					t.Errorf("keep-sorted failed: %v", err)
+				gotOut2, _, err := runKeepSorted(strings.NewReader(gotOut))
+				if err != nil {
+					t.Errorf("Had trouble running keep-sorted on keep-sorted output: %v", err)
+				}
+				if diff := cmp.Diff(gotOut, gotOut2); diff != "" {
+					t.Errorf("keep-sorted diff on keep-sorted output (should be idempotent) (-want +got)\n%s", diff)
 				}
 			})
 		}
@@ -124,4 +122,38 @@ func TestGoldens(t *testing.T) {
 func showTopLevel(dir string) (string, error) {
 	b, err := exec.Command("git", "-C", dir, "rev-parse", "--show-toplevel").Output()
 	return strings.TrimSpace(string(b)), err
+}
+
+func runKeepSorted(stdin io.Reader) (stdout, stderr string, err error) {
+	cmd := exec.Command("go", "run", gitDir, "--id=keep-sorted-test", "--omit-timestamps", "-")
+	cmd.Stdin = stdin
+	outPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", "", fmt.Errorf("could not create stdout pipe: %w", err)
+	}
+	errPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return "", "", fmt.Errorf("could not create stderr pipe: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return "", "", fmt.Errorf("could not start keep-sorted: %w", err)
+	}
+
+	var errs []error
+	gotOut, err := io.ReadAll(outPipe)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("could not read keep-sorted stdout: %w", err))
+	}
+
+	gotErr, err := io.ReadAll(errPipe)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("could not read keep-sorted stderr: %w", err))
+	}
+
+	if err := cmd.Wait(); err != nil {
+		errs = append(errs, fmt.Errorf("keep-sorted failed: %w", err))
+	}
+
+	return string(gotOut), string(gotErr), errors.Join(errs...)
 }
