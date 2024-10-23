@@ -158,6 +158,7 @@ Nested keep-sorted without indentation
   // keep-sorted-test end
 
 Sorting a switch statement with consecutive cases.
+Note: This doesn't actually work how I was hoping, but it does exercise an edge case.
   switch (foo) {
   // keep-sorted-test start group_prefixes=case
   case 2:

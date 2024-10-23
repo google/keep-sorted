@@ -161,15 +161,15 @@ Sorting a switch statement with consecutive cases.
   switch (foo) {
   // keep-sorted-test start group_prefixes=case
   case 2:
-    return 10
     return 2;
   case 6:
+    return 6;
+  case 4:
     return 4;
   case 3:
   case 1:
   case 5:
-    return 6;
-  case 4:
+    return 10
   // keep-sorted-test end
 
 Sorting a switch statement with consecutive cases using nested keep-sorted block
