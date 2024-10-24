@@ -237,11 +237,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	}
 
 	groups := groupLines(lines, b.metadata)
-	log.Printf("%d groups for block at index %d are (options %v)", len(groups), b.start, b.metadata.opts)
-	for _, lg := range groups {
-		log.Printf("%#v", lg)
-	}
-
+	log.Printf("Previous %d groups were for block at index %d are (options %v)", len(groups), b.start, b.metadata.opts)
 	trimTrailingComma := handleTrailingComma(groups)
 
 	wasNewlineSeparated := true
