@@ -1335,8 +1335,8 @@ func TestLineGrouping(t *testing.T) {
 			want: []lineGroup{
 				{[]string{
 					"// def",
-				}, []string{
 					"// keep-sorted-test start",
+				}, []string{
 					"3",
 					"1",
 					"2",
@@ -1344,8 +1344,8 @@ func TestLineGrouping(t *testing.T) {
 				}},
 				{[]string{
 					"// abc",
-				}, []string{
 					"// keep-sorted-test start",
+				}, []string{
 					"b",
 					"c",
 					"a",
