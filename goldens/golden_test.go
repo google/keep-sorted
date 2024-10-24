@@ -62,51 +62,48 @@ func TestGoldens(t *testing.T) {
 	}
 
 	needsRegen := make(chan string, 2*len(tcs))
-	t.Run("group", func(t *testing.T) {
-		for _, tc := range tcs {
-			tc := tc
-			t.Run(tc, func(t *testing.T) {
-				t.Parallel()
-				inFile := filepath.Join(dir, tc+".in")
-				in, err := os.Open(inFile)
-				if err != nil {
-					t.Fatalf("Could not open .in file: %v", err)
-				}
+	for _, tc := range tcs {
+		t.Run(tc, func(t *testing.T) {
+			t.Parallel()
+			inFile := filepath.Join(dir, tc+".in")
+			in, err := os.Open(inFile)
+			if err != nil {
+				t.Fatalf("Could not open .in file: %v", err)
+			}
 
-				wantOut, err := os.ReadFile(filepath.Join(dir, tc+".out"))
-				if err != nil {
-					t.Fatalf("Could not read .out file: %v", err)
+			wantOut, err := os.ReadFile(filepath.Join(dir, tc+".out"))
+			if err != nil {
+				t.Fatalf("Could not read .out file: %v", err)
+			}
+			wantErr, err := os.ReadFile(filepath.Join(dir, tc+".err"))
+			if err != nil {
+				if !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("Could not read .err file: %v", err)
 				}
-				wantErr, err := os.ReadFile(filepath.Join(dir, tc+".err"))
-				if err != nil {
-					if !errors.Is(err, os.ErrNotExist) {
-						t.Fatalf("Could not read .err file: %v", err)
-					}
-				}
+			}
 
-				gotOut, gotErr, err := runKeepSorted(in)
-				if err != nil {
-					t.Errorf("Had trouble running keep-sorted: %v", err)
-				}
-				if diff := cmp.Diff(strings.Split(string(wantOut), "\n"), strings.Split(gotOut, "\n")); diff != "" {
-					t.Errorf("keep-sorted stdout diff (-want +got):\n%s", diff)
-					needsRegen <- inFile
-				}
-				if diff := cmp.Diff(strings.Split(string(wantErr), "\n"), strings.Split(gotErr, "\n")); diff != "" {
-					t.Errorf("keep-sorted stderr diff (-want +got):\n%s", diff)
-					needsRegen <- inFile
-				}
+			gotOut, gotErr, err := runKeepSorted(in)
+			if err != nil {
+				t.Errorf("Had trouble running keep-sorted: %v", err)
+			}
+			if diff := cmp.Diff(strings.Split(string(wantOut), "\n"), strings.Split(gotOut, "\n")); diff != "" {
+				t.Errorf("keep-sorted stdout diff (-want +got):\n%s", diff)
+				needsRegen <- inFile
+			}
+			if diff := cmp.Diff(strings.Split(string(wantErr), "\n"), strings.Split(gotErr, "\n")); diff != "" {
+				t.Errorf("keep-sorted stderr diff (-want +got):\n%s", diff)
+				needsRegen <- inFile
+			}
 
-				gotOut2, _, err := runKeepSorted(strings.NewReader(gotOut))
-				if err != nil {
-					t.Errorf("Had trouble running keep-sorted on keep-sorted output: %v", err)
-				}
-				if diff := cmp.Diff(gotOut, gotOut2); diff != "" {
-					t.Errorf("keep-sorted diff on keep-sorted output (should be idempotent) (-want +got)\n%s", diff)
-				}
-			})
-		}
-	})
+			gotOut2, _, err := runKeepSorted(strings.NewReader(gotOut))
+			if err != nil {
+				t.Errorf("Had trouble running keep-sorted on keep-sorted output: %v", err)
+			}
+			if diff := cmp.Diff(gotOut, gotOut2); diff != "" {
+				t.Errorf("keep-sorted diff on keep-sorted output (should be idempotent) (-want +got)\n%s", diff)
+			}
+		})
+	}
 
 	close(needsRegen)
 	files := make(map[string]bool)
