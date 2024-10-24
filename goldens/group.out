@@ -189,3 +189,21 @@ Sorting a switch statement with consecutive cases using nested keep-sorted block
   case 6:
     return 6;
   // keep-sorted-test end
+
+Sorting a switch statement with consecutive cases using nested keep-sorted block
+where the nested keep-sorted block shouldn't be the first element.
+  switch (foo) {
+  // keep-sorted-test start
+  case 1:
+    return 1;
+  // keep-sorted-test start
+  case 2:
+  case 4:
+  case 6:
+  // keep-sorted-test end
+    return 10;
+  case 3:
+    return 3;
+  case 5:
+    return 5;
+  // keep-sorted-test end
