@@ -59,17 +59,21 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 		indents = calculateIndents(lines)
 	}
 
+	countStartDirectives := func(l string) {
+		if strings.Contains(l, metadata.startDirective) {
+			numUnmatchedStartDirectives++
+		} else if strings.Contains(l, metadata.endDirective) {
+			numUnmatchedStartDirectives--
+		}
+	}
+
 	// append a line to both lineRange, and block, if necessary.
 	appendLine := func(i int, l string) {
 		lineRange.append(i)
 		if metadata.opts.Block {
 			block.append(l, metadata.opts)
 		} else if metadata.opts.Group {
-			if strings.Contains(l, metadata.startDirective) {
-				numUnmatchedStartDirectives++
-			} else if strings.Contains(l, metadata.endDirective) {
-				numUnmatchedStartDirectives--
-			}
+			countStartDirectives(l)
 		}
 
 		if metadata.opts.Group && initialIndent == nil {
@@ -100,7 +104,12 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 			if !metadata.opts.Block && metadata.opts.Group && strings.Contains(l, metadata.startDirective) {
 				// We don't need to check for end directives here because this makes
 				// numUnmatchedStartDirectives > 0, so we'll take the code path above through appendLine.
-				appendLine(i, l)
+				if lineRange.empty() {
+					commentRange.append(i)
+					countStartDirectives(l)
+				} else {
+					appendLine(i, l)
+				}
 			} else {
 				commentRange.append(i)
 			}
