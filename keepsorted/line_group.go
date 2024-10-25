@@ -20,6 +20,8 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/rs/zerolog/log"
 )
 
 // lineGroup is a logical unit of source code. It's one or more lines combines
@@ -69,6 +71,11 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 				numUnmatchedStartDirectives--
 			}
 		}
+
+		if metadata.opts.Group && initialIndent == nil {
+			initialIndent = &indents[i]
+			log.Printf("initialIndent: %d", *initialIndent)
+		}
 	}
 	// finish an outstanding lineGroup and reset our state to prepare for a new lineGroup.
 	finishGroup := func() {
@@ -76,6 +83,7 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 		commentRange = indexRange{}
 		lineRange = indexRange{}
 		block = codeBlock{}
+		log.Printf("%#v", groups[len(groups)-1])
 	}
 	for i, l := range lines {
 		if metadata.opts.Block && !lineRange.empty() && block.expectsContinuation() {
@@ -99,9 +107,6 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 		} else {
 			if !lineRange.empty() {
 				finishGroup()
-			}
-			if metadata.opts.Group && initialIndent == nil {
-				initialIndent = &indents[i]
 			}
 			appendLine(i, l)
 		}
