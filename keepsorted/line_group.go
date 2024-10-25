@@ -80,11 +80,6 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 			initialIndent = &indents[i]
 			log.Printf("initialIndent: %d", *initialIndent)
 		}
-
-		if metadata.opts.Group && initialIndent == nil {
-			initialIndent = &indents[i]
-			log.Printf("initialIndent: %d", *initialIndent)
-		}
 	}
 	// finish an outstanding lineGroup and reset our state to prepare for a new lineGroup.
 	finishGroup := func() {
