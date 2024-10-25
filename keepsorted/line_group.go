@@ -67,13 +67,6 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 		}
 	}
 
-	appendComment := func(i int, l string) {
-		commentRange.append(i)
-		if metadata.opts.Group {
-			countStartDirectives(l)
-		}
-	}
-
 	// append a line to both lineRange, and block, if necessary.
 	appendLine := func(i int, l string) {
 		lineRange.append(i)
@@ -112,12 +105,13 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 				// We don't need to check for end directives here because this makes
 				// numUnmatchedStartDirectives > 0, so we'll take the code path above through appendLine.
 				if lineRange.empty() {
-					appendComment(i, l)
+					commentRange.append(i)
+					countStartDirectives(l)
 				} else {
 					appendLine(i, l)
 				}
 			} else {
-				appendComment(i, l)
+				commentRange.append(i)
 			}
 		} else {
 			if !lineRange.empty() {
