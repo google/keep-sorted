@@ -26,6 +26,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	yaml "gopkg.in/yaml.v3"
 )
 
 type BlockOptions struct {
@@ -180,19 +182,48 @@ func parseBlockOptions(commentMarker, options string, defaults blockOptions) (_ 
 	return ret, warns
 }
 
-func formatValue(val reflect.Value) string {
+func formatValue(val reflect.Value) (string, error) {
 	switch val.Type() {
 	case reflect.TypeFor[bool]():
-		return boolString[val.Bool()]
+		return boolString[val.Bool()], nil
 	case reflect.TypeFor[[]string]():
-		return strings.Join(val.Interface().([]string), ",")
+		return formatList(val.Interface().([]string))
 	case reflect.TypeFor[map[string]bool]():
-		return strings.Join(slices.Sorted(maps.Keys(val.Interface().(map[string]bool))), ",")
+		return formatList(slices.Sorted(maps.Keys(val.Interface().(map[string]bool))))
 	case reflect.TypeFor[int]():
-		return strconv.Itoa(int(val.Int()))
+		return strconv.Itoa(int(val.Int())), nil
 	}
 
 	panic(fmt.Errorf("unsupported blockOptions type: %v", val.Type()))
+}
+
+func formatList(vals []string) (string, error) {
+	var specialChars bool
+	if len(vals) > 0 && vals[0][0] == '[' {
+		specialChars = true
+	} else {
+		for _, val := range vals {
+			if strings.ContainsAny(val, ", ") {
+				specialChars = true
+				break
+			}
+		}
+	}
+
+	if !specialChars {
+		return strings.Join(vals, ","), nil
+	}
+
+	node := new(yaml.Node)
+	if err := node.Encode(vals); err != nil {
+		return "", fmt.Errorf("while converting list to YAML: %w", err)
+	}
+	node.Style |= yaml.FlowStyle
+	out, err := yaml.Marshal(node)
+	if err != nil {
+		return "", fmt.Errorf("while formatting YAML: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 func guessCommentMarker(startLine string) string {
@@ -241,13 +272,23 @@ func validate(opts *blockOptions) (warnings []error) {
 func (opts blockOptions) String() string {
 	var s []string
 	val := reflect.ValueOf(opts)
+	var errs []error
 	for _, key := range slices.Sorted(maps.Keys(fieldIndexByKey)) {
 		field := val.Type().Field(fieldIndexByKey[key])
 		fieldVal := val.FieldByIndex(field.Index)
 		if fieldVal.IsZero() {
 			continue
 		}
-		s = append(s, fmt.Sprintf("%s=%s", key, formatValue(fieldVal)))
+		val, err := formatValue(fieldVal)
+		if err != nil {
+			errs = append(errs, err)
+		} else {
+			s = append(s, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
+
+	if err := errors.Join(errs...); err != nil {
+		panic(err)
 	}
 
 	return strings.Join(s, " ")

@@ -182,7 +182,18 @@ func TestBlockOptions(t *testing.T) {
 				t.Errorf("parseBlockOptions(%q, %q) mismatch (-want +got):\n%s", tc.commentMarker, tc.in, diff)
 			}
 
-			_ = got.String() // Make sure this doesn't panic.
+			if tc.wantErr == "" {
+				t.Run("StringRoundtrip", func(t *testing.T) {
+					s := got.String()
+					got2, warns := parseBlockOptions(tc.commentMarker, s, tc.defaultOptions)
+					if err := errors.Join(warns...); err != nil {
+						t.Errorf("parseBlockOptions(%q, %q) = %v", tc.commentMarker, s, err)
+					}
+					if diff := cmp.Diff(got, got2, cmp.AllowUnexported(blockOptions{})); diff != "" {
+						t.Errorf("parseBlockOptions(%q, %q) mismatch (-want +got):\n%s", tc.commentMarker, s, diff)
+					}
+				})
+			}
 		})
 	}
 }
