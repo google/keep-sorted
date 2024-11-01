@@ -199,7 +199,7 @@ func formatValue(val reflect.Value) (string, error) {
 
 func formatList(vals []string) (string, error) {
 	var specialChars bool
-	if len(vals) > 0 && vals[0][0] == '[' {
+	if len(vals) > 0 && strings.HasPrefix(vals[0], "[") {
 		specialChars = true
 	} else {
 		for _, val := range vals {
