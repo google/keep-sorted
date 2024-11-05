@@ -231,11 +231,9 @@ allows for sorting data such as Go structs and JSON objects.
 </tr>
 </table>
 
-> Warning: for performance and simplicity reasons, this is extremely basic
-> parsing and is fooled by things like unbalanced symbols in strings. As well,
-> it's not language aware, so the groups are still being sorted as basic
-> strings. e.g., "{\n" comes before "{Name:", so mixing the line break and
-> whitespace usage may cause unexpected sorting.
+> Warning: keep-sorted is not language aware, so the groups are still being
+> sorted as basic strings. e.g., "{\n" comes before "{Name:", so mixing the
+> line break and whitespace usage may cause unexpected sorting.
 
 > Note: angle brackets (`<` and `>`) are not supported by block mode due to
 > being used for mathematical expressions in an unbalanced format.
