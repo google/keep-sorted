@@ -28,12 +28,6 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-func PrintUsage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [flags] file1 [file2 ...]\n\n", path.Base(os.Args[0]))
-	fmt.Fprint(os.Stderr, "Note that '-' can be used to read from stdin, "+
-		"in which case the output is written to stdout.\n\n")
-}
-
 func main() {
 	c := &cmd.Config{}
 	c.FromFlags(nil)
@@ -45,7 +39,9 @@ func main() {
 	}
 
 	flag.Usage = func() {
-		PrintUsage()
+		fmt.Fprintf(os.Stderr, "Usage: %s [flags] file1 [file2 ...]\n\n", path.Base(os.Args[0]))
+		fmt.Fprint(os.Stderr, "Note that '-' can be used to read from stdin, "+
+			"in which case the output is written to stdout.\n\n")
 		fmt.Fprintln(os.Stderr, "Flags:")
 		flag.PrintDefaults()
 	}
