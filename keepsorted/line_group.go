@@ -72,7 +72,8 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 		lineRange.append(i)
 		if metadata.opts.Block {
 			block.append(l, metadata.opts)
-		} else if metadata.opts.Group {
+		}
+		if metadata.opts.Group {
 			countStartDirectives(l)
 		}
 
@@ -101,7 +102,7 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 				finishGroup()
 			}
 
-			if !metadata.opts.Block && metadata.opts.Group && strings.Contains(l, metadata.startDirective) {
+			if metadata.opts.Group && strings.Contains(l, metadata.startDirective) {
 				// We don't need to check for end directives here because this makes
 				// numUnmatchedStartDirectives > 0, so we'll take the code path above through appendLine.
 				if lineRange.empty() {
