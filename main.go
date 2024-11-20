@@ -18,6 +18,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"time"
 
 	"github.com/google/keep-sorted/cmd"
@@ -36,6 +37,15 @@ func main() {
 	if err := flag.CommandLine.MarkHidden("omit-timestamps"); err != nil {
 		panic(err)
 	}
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [flags] file1 [file2 ...]\n\n", path.Base(os.Args[0]))
+		fmt.Fprint(os.Stderr, "Note that '-' can be used to read from stdin, "+
+			"in which case the output is written to stdout.\n\n")
+		fmt.Fprintln(os.Stderr, "Flags:")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 
 	out := os.Stderr
