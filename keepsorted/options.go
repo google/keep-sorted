@@ -90,6 +90,8 @@ type blockOptions struct {
 	PrefixOrder []string `key:"prefix_order"`
 	// IgnorePrefixes is a slice of prefixes that we do not consider when sorting lines.
 	IgnorePrefixes []string `key:"ignore_prefixes"`
+	// CommentOrder allows the user to sort lines based on their comment.
+	CommentOrder bool `key:"comment_order"`
 
 	////////////////////////////
 	//  Post-sorting options  //

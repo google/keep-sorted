@@ -1169,6 +1169,30 @@ func TestLineSorting(t *testing.T) {
 			want:              []string{},
 			wantAlreadySorted: true,
 		},
+		{
+			name: "SortByComment",
+			opts: func() blockOptions {
+				opts := blockOptions{
+					CommentOrder: true,
+				}
+				opts.setCommentMarker("//")
+				return opts
+			}(),
+
+			in: []string{
+				"c // 1",
+				"22",
+				"a // 3",
+				"b // 2",
+			},
+
+			want: []string{
+				"c // 1",
+				"b // 2",
+				"22",
+				"a // 3",
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
