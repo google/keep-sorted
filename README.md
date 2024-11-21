@@ -580,6 +580,44 @@ This can also be combined with numerical sorting:
  ]
 ```
 
+#### Comment Sorting
+
+In some use cases, sorting by a comment identifier is preferable to sorting by value.
+By specifying `comment_order=yes`, the comment text for the line is prioritized when
+sorting.
+
+<table border="0">
+<tr>
+<td>
+
+```
+# keep-sorted start
+200.6.6.7     # Cluster B - Address 2
+200.6.7.8     # Cluster B - Address 1
+34.9.100.220  # Cluster A - Address 2
+35.18.1.22    # Cluster A - Address 3
+35.18.1.40    # Cluster A - Address 1
+# keep-sorted end
+```
+
+</td>
+<td>
+
+```diff
++# keep-sorted start comment_order=yes
+ 35.18.1.40    # Cluster A - Address 1
+ 34.9.100.220  # Cluster A - Address 2
+ 35.18.1.22    # Cluster A - Address 3
+ 200.6.7.8     # Cluster B - Address 1
+ 200.6.6.7     # Cluster B - Address 2
+ # keep-sorted end
+```
+
+</td>
+</tr>
+</table>
+
+
 ### Post-sorting options
 
 Post-sorting options are additional convenience features that make the resulting

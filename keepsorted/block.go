@@ -18,6 +18,7 @@ import (
 	"cmp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/rs/zerolog/log"
 )
@@ -425,6 +426,12 @@ func (b block) lessFn() func(a, b lineGroup) int {
 		}
 		if !b.metadata.opts.CaseSensitive {
 			l = strings.ToLower(l)
+		}
+		if b.metadata.opts.CommentOrder {
+			_, a, ok := strings.Cut(l, b.metadata.opts.commentMarker)
+			if ok {
+				l = strings.TrimLeftFunc(a, unicode.IsSpace)
+			}
 		}
 		return b.metadata.opts.maybeParseNumeric(l)
 	}, numericTokens.compare)
