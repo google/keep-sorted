@@ -1554,3 +1554,9 @@ func messages(fs []*Finding) []string {
 	}
 	return ret
 }
+
+func automaticReplacement(start, end int, s string) Fix {
+	repl := replacement(start, end, s)
+	repl.automatic = true
+	return repl
+}

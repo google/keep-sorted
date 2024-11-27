@@ -219,18 +219,6 @@ func replacement(start, end int, s string) Fix {
 	}
 }
 
-func automaticReplacement(start, end int, s string) Fix {
-	return Fix{
-		automatic: true,
-		Replacements: []Replacement{
-			{
-				Lines:      lineRange(start, end),
-				NewContent: s,
-			},
-		},
-	}
-}
-
 func lineRange(start, end int) LineRange {
 	return LineRange{
 		Start: start,
