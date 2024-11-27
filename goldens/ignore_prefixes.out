@@ -58,6 +58,6 @@ Combine with numerical:
 Prefixes with spaces:
   # keep-sorted-test start ignore_prefixes=['*', '* [']
   * bar
-  * foo
   * [baz](path/to/baz)
+  * foo
   # keep-sorted-test end
