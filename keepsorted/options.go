@@ -324,7 +324,7 @@ func (opts blockOptions) removeIgnorePrefix(s string) (string, bool) {
 	t := strings.TrimLeftFunc(s, unicode.IsSpace)
 	for _, p := range opts.IgnorePrefixes {
 		if strings.HasPrefix(t, p) {
-			return strings.Replace(s, p, "", 1), true
+			return strings.TrimLeftFunc(strings.Replace(s, p, "", 1), unicode.IsSpace), true
 		}
 	}
 	return "", false
