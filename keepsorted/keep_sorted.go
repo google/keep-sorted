@@ -27,8 +27,8 @@ const (
 	errorUnordered = "These lines are out of order."
 )
 
-func errorMissingDirective(dir string) string {
-	return fmt.Sprintf("This instruction doesn't have matching '%s' line", dir)
+func errorMissingDirective(id, dir string) string {
+	return fmt.Sprintf("This instruction doesn't have matching '%s %s' line. %s will not attempt to sort anything until this is addressed.", id, dir, id)
 }
 
 // Fixer runs the business logic of keep-sorted.
@@ -153,9 +153,9 @@ func (f *Fixer) findings(filename string, contents []string, modifiedLines []Lin
 		var msg string
 		switch ib.dir {
 		case startDirective:
-			msg = errorMissingDirective(f.endDirective)
+			msg = errorMissingDirective(f.ID, "end")
 		case endDirective:
-			msg = errorMissingDirective(f.startDirective)
+			msg = errorMissingDirective(f.ID, "start")
 		default:
 			panic(fmt.Errorf("unknown directive type: %v", ib.dir))
 		}

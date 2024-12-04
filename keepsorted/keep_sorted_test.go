@@ -121,7 +121,7 @@ func TestFix(t *testing.T) {
 1
 3
 // keep-sorted-test end`,
-			wantWarnings: []string{errorMissingDirective("keep-sorted-test end"), errorUnordered},
+			wantWarnings: []string{errorMissingDirective("keep-sorted-test", "end"), errorUnordered},
 		},
 		{
 			name: "UnmatchedEnd",
@@ -141,7 +141,7 @@ func TestFix(t *testing.T) {
 3
 // keep-sorted-test end
 // keep-sorted-test end`,
-			wantWarnings: []string{errorUnordered, errorMissingDirective("keep-sorted-test start")},
+			wantWarnings: []string{errorUnordered, errorMissingDirective("keep-sorted-test", "start")},
 		},
 		{
 			name: "MultipleFixes",
@@ -241,7 +241,7 @@ func TestFindings(t *testing.T) {
 			in: `
 // keep-sorted-test start`,
 
-			want: []*Finding{finding(filename, 2, 2, errorMissingDirective("keep-sorted-test end"), replacement(2, 2, ""))},
+			want: []*Finding{finding(filename, 2, 2, errorMissingDirective("keep-sorted-test", "end"), replacement(2, 2, ""))},
 		},
 		{
 			name: "MismatchedEnd",
@@ -249,7 +249,7 @@ func TestFindings(t *testing.T) {
 			in: `
 // keep-sorted-test end`,
 
-			want: []*Finding{finding(filename, 2, 2, errorMissingDirective("keep-sorted-test start"), replacement(2, 2, ""))},
+			want: []*Finding{finding(filename, 2, 2, errorMissingDirective("keep-sorted-test", "start"), replacement(2, 2, ""))},
 		},
 		{
 			name: "MultipleFindings",
@@ -270,8 +270,8 @@ baz
 `,
 
 			want: []*Finding{
-				finding(filename, 2, 2, errorMissingDirective("keep-sorted-test start"), replacement(2, 2, "")),
-				finding(filename, 3, 3, errorMissingDirective("keep-sorted-test end"), replacement(3, 3, "")),
+				finding(filename, 2, 2, errorMissingDirective("keep-sorted-test", "start"), replacement(2, 2, "")),
+				finding(filename, 3, 3, errorMissingDirective("keep-sorted-test", "end"), replacement(3, 3, "")),
 				finding(filename, 5, 7, errorUnordered, replacement(5, 7, "1\n2\n3\n")),
 				finding(filename, 10, 12, errorUnordered, replacement(10, 12, "bar\nbaz\nfoo\n")),
 			},
