@@ -180,7 +180,7 @@ foo
 			if gotAlreadyFixed != tc.wantAlreadyFixed {
 				t.Errorf("alreadyFixed diff: got %t want %t", gotAlreadyFixed, tc.wantAlreadyFixed)
 			}
-			if diff := cmp.Diff(tc.wantWarnings, messages(gotWarnings), cmpopts.EquateEmpty()); diff != "" {
+			if diff := cmp.Diff(tc.wantWarnings, messages(gotWarnings)); diff != "" {
 				t.Errorf("warnings diff (-want +got):\n%s", diff)
 			}
 		})
@@ -1548,9 +1548,9 @@ func TestLineGrouping(t *testing.T) {
 }
 
 func messages(fs []*Finding) []string {
-	ret := make([]string, len(fs))
-	for i, f := range fs {
-		ret[i] = f.Message
+	var ret []string
+	for _, f := range fs {
+		ret = append(ret, f.Message)
 	}
 	return ret
 }
