@@ -54,6 +54,7 @@ func TestFix(t *testing.T) {
 
 		want             string
 		wantAlreadyFixed bool
+		wantWarnings     []string
 	}{
 		{
 			name: "Empty",
@@ -108,43 +109,44 @@ func TestFix(t *testing.T) {
 			in: `
 // keep-sorted-test start
 // keep-sorted-test start
-1
 2
+1
 3
 // keep-sorted-test end`,
 
 			want: `
 // keep-sorted-test start
-1
+// keep-sorted-test start
 2
+1
 3
 // keep-sorted-test end`,
+			wantWarnings: []string{errorMissingDirective("keep-sorted-test", "end"), errorUnordered},
 		},
 		{
 			name: "UnmatchedEnd",
 
 			in: `
 // keep-sorted-test start
-1
 2
+1
 3
 // keep-sorted-test end
 // keep-sorted-test end`,
 
 			want: `
 // keep-sorted-test start
-1
 2
+1
 3
 // keep-sorted-test end
-`,
+// keep-sorted-test end`,
+			wantWarnings: []string{errorUnordered, errorMissingDirective("keep-sorted-test", "start")},
 		},
 		{
 			name: "MultipleFixes",
 
 			in: `
-// keep-sorted-test end
-// keep-sorted-test start
 // keep-sorted-test start
 2
 1
@@ -157,7 +159,6 @@ baz
 // keep-sorted-test end`,
 
 			want: `
-
 // keep-sorted-test start
 1
 2
@@ -179,8 +180,8 @@ foo
 			if gotAlreadyFixed != tc.wantAlreadyFixed {
 				t.Errorf("alreadyFixed diff: got %t want %t", gotAlreadyFixed, tc.wantAlreadyFixed)
 			}
-			if len(gotWarnings) != 0 {
-				t.Errorf("Fix returned warnings, expected none:\n%v", gotWarnings)
+			if diff := cmp.Diff(tc.wantWarnings, messages(gotWarnings)); diff != "" {
+				t.Errorf("warnings diff (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -218,7 +219,7 @@ func TestFindings(t *testing.T) {
 3
 // keep-sorted-test end`,
 
-			want: []*Finding{finding(filename, 3, 5, errorUnordered, replacement(3, 5, "1\n2\n3\n"))},
+			want: []*Finding{finding(filename, 3, 5, errorUnordered, automaticReplacement(3, 5, "1\n2\n3\n"))},
 		},
 		{
 			name: "SkipLines",
@@ -232,7 +233,7 @@ func TestFindings(t *testing.T) {
 1
 // keep-sorted-test end`,
 
-			want: []*Finding{finding(filename, 5, 7, errorUnordered, replacement(5, 7, "1\n2\n3\n"))},
+			want: []*Finding{finding(filename, 5, 7, errorUnordered, automaticReplacement(5, 7, "1\n2\n3\n"))},
 		},
 		{
 			name: "MismatchedStart",
@@ -240,7 +241,7 @@ func TestFindings(t *testing.T) {
 			in: `
 // keep-sorted-test start`,
 
-			want: []*Finding{finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test end' line", replacement(2, 2, ""))},
+			want: []*Finding{finding(filename, 2, 2, errorMissingDirective("keep-sorted-test", "end"), replacement(2, 2, ""))},
 		},
 		{
 			name: "MismatchedEnd",
@@ -248,7 +249,7 @@ func TestFindings(t *testing.T) {
 			in: `
 // keep-sorted-test end`,
 
-			want: []*Finding{finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test start' line", replacement(2, 2, ""))},
+			want: []*Finding{finding(filename, 2, 2, errorMissingDirective("keep-sorted-test", "start"), replacement(2, 2, ""))},
 		},
 		{
 			name: "MultipleFindings",
@@ -269,8 +270,8 @@ baz
 `,
 
 			want: []*Finding{
-				finding(filename, 2, 2, "This instruction doesn't have matching 'keep-sorted-test start' line", replacement(2, 2, "")),
-				finding(filename, 3, 3, "This instruction doesn't have matching 'keep-sorted-test end' line", replacement(3, 3, "")),
+				finding(filename, 2, 2, errorMissingDirective("keep-sorted-test", "start"), replacement(2, 2, "")),
+				finding(filename, 3, 3, errorMissingDirective("keep-sorted-test", "end"), replacement(3, 3, "")),
 				finding(filename, 5, 7, errorUnordered, replacement(5, 7, "1\n2\n3\n")),
 				finding(filename, 10, 12, errorUnordered, replacement(10, 12, "bar\nbaz\nfoo\n")),
 			},
@@ -291,7 +292,7 @@ baz
 // keep-sorted-test end`,
 			modifiedLines: []int{3},
 
-			want: []*Finding{finding(filename, 3, 5, errorUnordered, replacement(3, 5, "1\n2\n3\n"))},
+			want: []*Finding{finding(filename, 3, 5, errorUnordered, automaticReplacement(3, 5, "1\n2\n3\n"))},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -303,7 +304,7 @@ baz
 				}
 			}
 			got := New("keep-sorted-test", BlockOptions{}).findings(filename, strings.Split(tc.in, "\n"), mod)
-			if diff := cmp.Diff(tc.want, got); diff != "" {
+			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(Fix{})); diff != "" {
 				t.Errorf("Findings diff (-want +got):\n%s", diff)
 			}
 		})
@@ -1547,9 +1548,15 @@ func TestLineGrouping(t *testing.T) {
 }
 
 func messages(fs []*Finding) []string {
-	ret := make([]string, len(fs))
-	for i, f := range fs {
-		ret[i] = f.Message
+	var ret []string
+	for _, f := range fs {
+		ret = append(ret, f.Message)
 	}
 	return ret
+}
+
+func automaticReplacement(start, end int, s string) Fix {
+	repl := replacement(start, end, s)
+	repl.automatic = true
+	return repl
 }

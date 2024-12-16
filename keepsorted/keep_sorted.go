@@ -27,6 +27,10 @@ const (
 	errorUnordered = "These lines are out of order."
 )
 
+func errorMissingDirective(id, dir string) string {
+	return fmt.Sprintf("This instruction doesn't have matching '%s %s' line. %s will not attempt to sort anything until this is addressed.", id, dir, id)
+}
+
 // Fixer runs the business logic of keep-sorted.
 type Fixer struct {
 	ID string
@@ -47,31 +51,35 @@ func New(id string, defaultOptions BlockOptions) *Fixer {
 	}
 }
 
-func (f *Fixer) errorMissingStart() string {
-	return fmt.Sprintf("This instruction doesn't have matching '%s' line", f.startDirective)
-}
-
-func (f *Fixer) errorMissingEnd() string {
-	return fmt.Sprintf("This instruction doesn't have matching '%s' line", f.endDirective)
-}
-
 // Fix all of the findings on contents to make keep-sorted happy.
 func (f *Fixer) Fix(filename, contents string, modifiedLines []LineRange) (fixed string, alreadyCorrect bool, warnings []*Finding) {
 	lines := strings.Split(contents, "\n")
-	fs := f.findings(filename, lines, modifiedLines)
-	if len(fs) == 0 {
+	findings := f.findings(filename, lines, modifiedLines)
+	if len(findings) == 0 {
 		return contents, true, nil
 	}
 
 	var s strings.Builder
 	startLine := 1
-	for _, f := range fs {
-		if len(f.Fixes) == 0 {
-			warnings = append(warnings, f)
+	for _, finding := range findings {
+		var fix *Fix
+		for _, f := range finding.Fixes {
+			if !f.automatic {
+				continue
+			}
+			if fix == nil {
+				fix = &f
+			} else {
+				panic(fmt.Errorf("multiple automatic fixes in finding: %v", finding))
+			}
+		}
+
+		if fix == nil {
+			warnings = append(warnings, finding)
 			continue
 		}
 
-		repl := f.Fixes[0].Replacements[0]
+		repl := fix.Replacements[0]
 		endLine := repl.Lines.Start
 
 		// -1 to convert line number to index number.
@@ -105,6 +113,7 @@ type Finding struct {
 	// Possible fixes that could be applied to resolve the problem.
 	// Each fix in this slice would independently fix the problem, they do not
 	// and should not all be applied.
+	// At most one of these Fixes may have Fix.automatic set to true.
 	Fixes []Fix `json:"fixes"`
 }
 
@@ -121,6 +130,9 @@ type Fix struct {
 	// The changes that should be made to the file to resolve the Finding.
 	// All of these changes need to be made.
 	Replacements []Replacement `json:"replacements"`
+
+	// Whether this fix will be automatically applied in Fixer.Fix.
+	automatic bool
 }
 
 // Replacement is a single substitution to apply to a file.
@@ -134,23 +146,29 @@ func (f *Fixer) findings(filename string, contents []string, modifiedLines []Lin
 	blocks, incompleteBlocks, warns := f.newBlocks(filename, contents, 1, includeModifiedLines(modifiedLines))
 
 	var fs []*Finding
+
 	fs = append(fs, warns...)
-	for _, b := range blocks {
-		if s, alreadySorted := b.sorted(); !alreadySorted {
-			fs = append(fs, finding(filename, b.start+1, b.end-1, errorUnordered, replacement(b.start+1, b.end-1, linesToString(s))))
-		}
-	}
+
 	for _, ib := range incompleteBlocks {
 		var msg string
 		switch ib.dir {
 		case startDirective:
-			msg = f.errorMissingEnd()
+			msg = errorMissingDirective(f.ID, "end")
 		case endDirective:
-			msg = f.errorMissingStart()
+			msg = errorMissingDirective(f.ID, "start")
 		default:
 			panic(fmt.Errorf("unknown directive type: %v", ib.dir))
 		}
 		fs = append(fs, finding(filename, ib.line, ib.line, msg, replacement(ib.line, ib.line, "")))
+	}
+
+	for _, b := range blocks {
+		if s, alreadySorted := b.sorted(); !alreadySorted {
+			repl := replacement(b.start+1, b.end-1, linesToString(s))
+			// Only try to automatically sort things if there are no incomplete blocks.
+			repl.automatic = len(incompleteBlocks) == 0
+			fs = append(fs, finding(filename, b.start+1, b.end-1, errorUnordered, repl))
+		}
 	}
 
 	slices.SortFunc(fs, func(a, b *Finding) int {
