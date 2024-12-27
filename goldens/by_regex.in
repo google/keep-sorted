@@ -31,3 +31,10 @@ Multiple regexes
   bool bar
   int bar
   keep-sorted-test end
+
+Cannot combine with ignore_prefixes
+  keep-sorted-test start by_regex=.* ignore_prefixes=foo,bar
+  2
+  1
+  3
+  keep-sorted-test end

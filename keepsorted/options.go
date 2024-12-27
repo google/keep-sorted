@@ -267,6 +267,16 @@ func validate(opts *blockOptions) (warnings []error) {
 		opts.GroupPrefixes = nil
 	}
 
+	if len(opts.ByRegex) > 0 && len(opts.IgnorePrefixes) > 0 {
+		var pre []string
+		for _, p := range opts.IgnorePrefixes {
+			pre = append(pre, regexp.QuoteMeta(p))
+		}
+		suggestion := "(?:" + strings.Join(pre, "|") + ")"
+		warns = append(warns, fmt.Errorf("by_regex cannot be used with ignore_prefixes (consider adding a non-capturing group to the start of your regex instead of ignore_prefixes: %q)", suggestion))
+		opts.IgnorePrefixes = nil
+	}
+
 	return warns
 }
 
