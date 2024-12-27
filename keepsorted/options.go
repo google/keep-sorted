@@ -18,6 +18,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"iter"
 	"maps"
 	"math/big"
 	"reflect"
@@ -228,18 +229,10 @@ func formatList(vals []string) (string, error) {
 
 func guessCommentMarker(startLine string) string {
 	startLine = strings.TrimSpace(startLine)
-	if strings.HasPrefix(startLine, "//") {
-		return "//"
-	} else if strings.HasPrefix(startLine, "#") {
-		return "#"
-	} else if strings.HasPrefix(startLine, "/*") {
-		return "/*"
-	} else if strings.HasPrefix(startLine, "--") {
-		return "--"
-	} else if strings.HasPrefix(startLine, ";") {
-		return ";"
-	} else if strings.HasPrefix(startLine, "<!--") {
-		return "<!--"
+	for _, marker := range []string{"//", "#", "/*", "--", ";", "<!--"} {
+		if strings.HasPrefix(startLine, marker) {
+			return marker
+		}
 	}
 	return ""
 }
@@ -294,40 +287,58 @@ func (opts blockOptions) String() string {
 	return strings.Join(s, " ")
 }
 
-// hasPrefix determines if s has one of the prefixes.
-func hasPrefix(s string, prefixes map[string]bool) bool {
-	if len(prefixes) == 0 {
-		return false
+// hasPrefix returns the first prefix that s starts with.
+func (opts blockOptions) hasPrefix(s string, prefixes iter.Seq[string]) (string, bool) {
+	p, _, ok := opts.cutFirstPrefix(s, prefixes)
+	return p, ok
+}
+
+// cutFirstPrefix finds the first prefix that s starts with and returns both the prefix and s without the prefix.
+// If s does not start with any prefix, returns "", s, false.
+func (opts blockOptions) cutFirstPrefix(s string, prefixes iter.Seq[string]) (pre string, after string, ok bool) {
+	// Don't modify s since we want to return it exactly if it doesn't start with
+	// any of the prefixes.
+	t := strings.TrimLeftFunc(s, unicode.IsSpace)
+	if !opts.CaseSensitive {
+		t = strings.ToLower(t)
 	}
-	s = strings.TrimLeftFunc(s, unicode.IsSpace)
 	for p := range prefixes {
-		if strings.HasPrefix(s, p) {
-			return true
+		q := p
+		if !opts.CaseSensitive {
+			// Ditto: Don't modify the prefix since we'll want to return it exactly.
+			q = strings.ToLower(p)
+		}
+		if strings.HasPrefix(t, q) {
+			after = s
+			// Remove leading whitepace (t already has its leading whitespace removed).
+			after = strings.TrimLeftFunc(after, unicode.IsSpace)
+			// Remove the prefix.
+			after = after[len(p):]
+			// Check again for leading whitespace.
+			after = strings.TrimLeftFunc(after, unicode.IsSpace)
+			return p, after, true
 		}
 	}
-	return false
+	return "", s, false
 }
 
 // hasStickyPrefix determines if s has one of the StickyPrefixes.
 func (opts blockOptions) hasStickyPrefix(s string) bool {
-	return hasPrefix(s, opts.StickyPrefixes)
+	_, ok := opts.hasPrefix(s, maps.Keys(opts.StickyPrefixes))
+	return ok
 }
 
 // hasGroupPrefix determines if s has one of the GroupPrefixes.
 func (opts blockOptions) hasGroupPrefix(s string) bool {
-	return hasPrefix(s, opts.GroupPrefixes)
+	_, ok := opts.hasPrefix(s, maps.Keys(opts.GroupPrefixes))
+	return ok
 }
 
-// removeIgnorePrefix removes the first matching IgnorePrefixes from s, if s
+// trimIgnorePrefix removes the first matching IgnorePrefixes from s, if s
 // matches one of the IgnorePrefixes.
-func (opts blockOptions) removeIgnorePrefix(s string) (string, bool) {
-	t := strings.TrimLeftFunc(s, unicode.IsSpace)
-	for _, p := range opts.IgnorePrefixes {
-		if strings.HasPrefix(t, p) {
-			return strings.TrimLeftFunc(strings.Replace(s, p, "", 1), unicode.IsSpace), true
-		}
-	}
-	return "", false
+func (opts blockOptions) trimIgnorePrefix(s string) string {
+	_, s, _ = opts.cutFirstPrefix(s, slices.Values(opts.IgnorePrefixes))
+	return s
 }
 
 var (

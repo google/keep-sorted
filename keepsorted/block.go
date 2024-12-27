@@ -422,9 +422,7 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 	//   foo_123
 	transformOrder := comparingFunc(func(lg lineGroup) numericTokens {
 		l := lg.joinedLines()
-		if s, ok := b.metadata.opts.removeIgnorePrefix(l); ok {
-			l = s
-		}
+		l = b.metadata.opts.trimIgnorePrefix(l)
 		if !b.metadata.opts.CaseSensitive {
 			l = strings.ToLower(l)
 		}

@@ -16,9 +16,9 @@ Needs sorting:
 
 Case insensitive needs sorting:
   // keep-sorted-test start case=no ignore_prefixes=a,b
-  Aoo
   Bar
   Baz
+  Aoo
   zebra
   // keep-sorted-test end
 
