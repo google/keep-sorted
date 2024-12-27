@@ -1,0 +1,33 @@
+No capturing group
+  keep-sorted-test start by_regex=int|bool|long
+  int baz
+  bool foo
+  long bar
+  keep-sorted-test end
+
+Capturing group
+  keep-sorted-test start by_regex=['[^ ]+ (.*)']
+  int baz
+  bool foo
+  long bar
+  keep-sorted-test end
+
+Capturing group and non-capturing group
+  keep-sorted-test start by_regex=['(?:int|bool|long) (.*)']
+  int baz
+  bool foo
+  long bar
+  keep-sorted-test end
+
+Multiple regexes
+  keep-sorted-test start by_regex=['(?:int|bool|long) (.*)', 'int|bool|long']
+  int baz
+  long baz
+  bool baz
+  bool foo
+  long foo
+  int foo
+  long bar
+  bool bar
+  int bar
+  keep-sorted-test end

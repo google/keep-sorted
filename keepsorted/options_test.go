@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -167,6 +168,16 @@ func TestBlockOptions(t *testing.T) {
 			},
 			wantErr: `while parsing option "group": unrecognized bool value "nah"`,
 		},
+		{
+			name:           "Regex",
+			in:             `by_regex=['(?:abcd)', efg.*]`,
+			defaultOptions: blockOptions{AllowYAMLLists: true},
+
+			want: blockOptions{
+				AllowYAMLLists: true,
+				ByRegex:        []*regexp.Regexp{regexp.MustCompile("(?:abcd)"), regexp.MustCompile("efg.*")},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
@@ -178,7 +189,7 @@ func TestBlockOptions(t *testing.T) {
 					t.Errorf("parseBlockOptions(%q, %q) = %v, expected to contain %q", tc.commentMarker, tc.in, err, tc.wantErr)
 				}
 			}
-			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(blockOptions{})); diff != "" {
+			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(blockOptions{}), cmpRegexp); diff != "" {
 				t.Errorf("parseBlockOptions(%q, %q) mismatch (-want +got):\n%s", tc.commentMarker, tc.in, diff)
 			}
 
@@ -189,7 +200,7 @@ func TestBlockOptions(t *testing.T) {
 					if err := errors.Join(warns...); err != nil {
 						t.Errorf("parseBlockOptions(%q, %q) = %v", tc.commentMarker, s, err)
 					}
-					if diff := cmp.Diff(got, got2, cmp.AllowUnexported(blockOptions{})); diff != "" {
+					if diff := cmp.Diff(got, got2, cmp.AllowUnexported(blockOptions{}), cmpRegexp); diff != "" {
 						t.Errorf("parseBlockOptions(%q, %q) mismatch (-want +got):\n%s", tc.commentMarker, s, diff)
 					}
 				})
@@ -234,5 +245,53 @@ func TestBlockOptions_ClonesDefaultOptions_Reflection(t *testing.T) {
 	_, _ = parseBlockOptions("", strings.Join(s, " "), defaults)
 	if diff := cmp.Diff(blockOptions{}, defaults, cmp.AllowUnexported(blockOptions{}), cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("defaults appear to have been modified (-want +got):\n%s", diff)
+	}
+}
+
+func TestBlockOptions_regexTransform(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+
+		regexes []string
+		in      string
+
+		want []string
+	}{
+		{
+			name:    "NoCapturingGroups",
+			regexes: []string{".*"},
+			in:      "abcde",
+			want:    []string{"abcde"},
+		},
+		{
+			name:    "CapturingGroups",
+			regexes: []string{".(.).(.)."},
+			in:      "abcde",
+			want:    []string{"b", "d"},
+		},
+		{
+			name:    "NonCapturingGroups",
+			regexes: []string{".(.).(?:.)?."},
+			in:      "abcde",
+			want:    []string{"b"},
+		},
+		{
+			name:    "MultipleRegexps",
+			regexes: []string{".*", ".{3}(.)"},
+			in:      "abcde",
+			want:    []string{"abcde", "d"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var opts blockOptions
+			for _, regex := range tc.regexes {
+				opts.ByRegex = append(opts.ByRegex, regexp.MustCompile(regex))
+			}
+
+			got := opts.regexTransform(tc.in)
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("%q.regexTransform(%q) diff (-want +got)\n%s", opts, tc.in, diff)
+			}
+		})
 	}
 }

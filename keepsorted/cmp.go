@@ -2,6 +2,7 @@ package keepsorted
 
 import (
 	"cmp"
+	"slices"
 )
 
 type cmpFunc[T any] func(T, T) int
@@ -29,5 +30,11 @@ func comparingFunc[T, R any](f func(T) R, cmp cmpFunc[R]) cmpFunc[T] {
 	return func(a, b T) int {
 		r1, r2 := f(a), f(b)
 		return cmp(r1, r2)
+	}
+}
+
+func lexicographically[T any](fn cmpFunc[T]) cmpFunc[[]T] {
+	return func(a, b []T) int {
+		return slices.CompareFunc(a, b, fn)
 	}
 }

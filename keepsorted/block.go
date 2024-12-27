@@ -351,7 +351,6 @@ func handleTrailingComma(lgs []lineGroup) (trimTrailingComma func([]lineGroup)) 
 				}
 			}
 		}
-
 	}
 
 	return func([]lineGroup) {}
@@ -375,6 +374,11 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 		return 1
 	})
 
+	regexTransform := func(lg lineGroup) []string {
+		v := b.metadata.opts.regexTransform(lg.joinedLines())
+		return v
+	}
+
 	// Assign a weight to each prefix so that they will be sorted into their
 	// predetermined order.
 	// Weights are negative so that entries with matching prefixes are put before
@@ -390,8 +394,11 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 	longestFirst := comparing(func(s string) int { return len(s) }).reversed()
 	prefixes := slices.SortedFunc(slices.Values(b.metadata.opts.PrefixOrder), longestFirst)
 
-	prefixOrder := comparing(func(s string) int {
-		p, ok := b.metadata.opts.hasPrefix(s, slices.Values(prefixes))
+	prefixOrder := comparing(func(s []string) int {
+		if len(s) == 0 {
+			return 0
+		}
+		p, ok := b.metadata.opts.hasPrefix(s[0], slices.Values(prefixes))
 		if !ok {
 			return 0
 		}
@@ -425,6 +432,6 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 	}, numericTokens.compare)
 
 	return commentOnlyBlock.
-		andThen(comparingFunc(lineGroup.joinedLines, prefixOrder.andThen(transformOrder))).
+		andThen(comparingFunc(regexTransform, prefixOrder.andThen(lexicographically(transformOrder)))).
 		andThen(lineGroup.less)
 }

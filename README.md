@@ -240,7 +240,7 @@ allows for sorting data such as Go structs and JSON objects.
 
 #### Custom grouping
 
-Another way to group lines together is with the `group_prefixes` argument. This
+Another way to group lines together is with the `group_prefixes` option. This
 takes a comma-separated list of prefixes. Any line beginning with one of those
 prefixes will be treated as a continuation line.
 
@@ -323,7 +323,7 @@ username: ch3
 </tr>
 </table>
 
-More prefixes can be made to stick with their successor. The argument
+More prefixes can be made to stick with their successor. The option
 `sticky_prefixes` takes a comma-separated list of prefixes that will all be
 treated as sticky. These prefixes cannot contain space characters.
 
@@ -464,10 +464,77 @@ progress = (
 </tr>
 </table>
 
+#### Regular Expressions
+
+It can be useful to sort an entire group based on a non-prefix substring. The
+option `by_regex=…` takes a comma-separated list of [regular
+expressions][regex-sytax] that will be applied to the group, and then sorting
+will take place on just the results of the regular expressions.
+
+> [!TIP]
+> Regular expressions often need special characters. See [Syntax](#syntax) below
+> for how to include special characters in the `by_regex` option.
+
+By default, all characters that the regular expression matches will be
+considered for sorting. If the regular expression contains any capturing groups,
+only the characters matched by the capturing groups will be considered for
+sorting. The result from each regular expression will be concatenated into a
+list of results, and that list of results will be sorted [lexicographically].
+
+Regular expressions are applied **before** other sorting options, so
+[`prefix_order`](#prefix-sorting) will only apply to the characters matched by
+your regular expressions.
+
+[regex-syntax]: http://godoc/pkg/regexp/syntax/
+[lexicographically]: https://en.wikipedia.org/wiki/Lexicographic_order
+
+<table border="0">
+<tr>
+<td>
+
+```java
+# keep-sorted start
+List<String> foo;
+String bar;
+Object baz;
+# keep-sorted end
+```
+
+```java
+# keep-sorted start
+List<String> foo;
+String bar;
+Object baz;
+# keep-sorted end
+```
+
+</td>
+<td>
+
+```diff
++# keep-sorted start by_regex=\b.+;\b
+ String bar;
+ Object baz;
+ List<String> foo;
+ # keep-sorted end
+```
+
+```diff
++# keep-sorted start by_regex=\b.+;\b prefix_order=foo
+ List<String> foo;
+ String bar;
+ Object baz;
+ # keep-sorted end
+```
+
+</td>
+</tr>
+</table>
+
 #### Prefix sorting
 
 Sometimes, it is useful to specify a custom ordering for some elements. The
-argument `prefix_order=…` takes a comma-separated list of prefixes that is
+option `prefix_order=…` takes a comma-separated list of prefixes that is
 matched against the lines to be sorted: if the line starts with one of the
 specified values, it is put at the corresponding position. If an empty prefix is
 specified, any line not covered by other prefixes is matched.
@@ -532,7 +599,7 @@ droid_components = [
 #### Ignore prefixes
 
 For some use cases, there are prefix strings that would be best ignored when
-trying to keep items in an order. The argument `ignore_prefixes=…` takes a
+trying to keep items in an order. The option `ignore_prefixes=…` takes a
 comma-separated list of prefixes that are ignored for sorting purposes. If the
 line starts with any or no whitespace followed by one of the listed prefixes,
 the prefix is treated as the empty string for sorting purposes.
@@ -656,9 +723,9 @@ Pineapples
 
 ### Syntax
 
-If you find yourself wanting to include special characters in the value (spaces,
-commas, left brackets) of one of the options, you can do so with a YAML [flow
-sequence](https://yaml.org/spec/1.2.2/#flow-sequences).
+If you find yourself wanting to include special characters (spaces, commas, left
+brackets) in a comma-separated list of one of the options, you can do so with a
+YAML [flow sequence](https://yaml.org/spec/1.2.2/#flow-sequences).
 
 ```md
 <!-- keep-sorted start prefix_order=["* ", "* ["] -->
@@ -668,4 +735,4 @@ sequence](https://yaml.org/spec/1.2.2/#flow-sequences).
 <!-- keep-sorted end -->
 ```
 
-This works for any option that accepts more than one value.
+This works for all options that accept multiple values.

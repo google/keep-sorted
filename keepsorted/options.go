@@ -52,11 +52,12 @@ func (opts BlockOptions) String() string {
 
 // blockOptions enable/disable extra features that control how a block of lines is sorted.
 //
-// Currently, only four types are supported:
-//  1. bool:            key=yes, key=true, key=no, key=false
-//  2. []string:        key=a,b,c,d
-//  3. map[string]bool: key=a,b,c,d
-//  4. int:             key=123
+// Options support the following types:
+//   - bool:             key=yes, key=true, key=no, key=false
+//   - []string:         key=a,b,c,d
+//   - map[string]bool:  key=a,b,c,d
+//   - int:              key=123
+//   - []*regexp.Regexp: key=a,b,c,d
 type blockOptions struct {
 	// AllowYAMLLists determines whether list.set valued options are allowed to be specified by YAML.
 	AllowYAMLLists bool `key:"allow_yaml_lists"`
@@ -90,6 +91,8 @@ type blockOptions struct {
 	PrefixOrder []string `key:"prefix_order"`
 	// IgnorePrefixes is a slice of prefixes that we do not consider when sorting lines.
 	IgnorePrefixes []string `key:"ignore_prefixes"`
+	// ByRegex is a slice of regexes that are used to extract the pieces of the line group that keep-sorted should sort by.
+	ByRegex []*regexp.Regexp `key:"by_regex"`
 
 	////////////////////////////
 	//  Post-sorting options  //
@@ -170,11 +173,9 @@ func parseBlockOptions(commentMarker, options string, defaults blockOptions) (_ 
 	if cm := guessCommentMarker(commentMarker); cm != "" {
 		ret.setCommentMarker(cm)
 	}
-	if len(ret.IgnorePrefixes) > 1 {
-		// Look at longer prefixes first, in case one of these prefixes is a prefix of another.
-		longestFirst := comparing(func(s string) int { return len(s) }).reversed()
-		slices.SortFunc(ret.IgnorePrefixes, longestFirst)
-	}
+	// Look at longer prefixes first, in case one of these prefixes is a prefix of another.
+	longestFirst := comparing(func(s string) int { return len(s) }).reversed()
+	slices.SortFunc(ret.IgnorePrefixes, longestFirst)
 
 	if warn := validate(&ret); len(warn) > 0 {
 		warns = append(warns, warn...)
@@ -193,6 +194,13 @@ func formatValue(val reflect.Value) (string, error) {
 		return formatList(slices.Sorted(maps.Keys(val.Interface().(map[string]bool))))
 	case reflect.TypeFor[int]():
 		return strconv.Itoa(int(val.Int())), nil
+	case reflect.TypeFor[[]*regexp.Regexp]():
+		regexps := val.Interface().([]*regexp.Regexp)
+		vals := make([]string, len(regexps))
+		for i, regex := range regexps {
+			vals[i] = regex.String()
+		}
+		return formatList(vals)
 	}
 
 	panic(fmt.Errorf("unsupported blockOptions type: %v", val.Type()))
@@ -339,6 +347,35 @@ func (opts blockOptions) hasGroupPrefix(s string) bool {
 func (opts blockOptions) trimIgnorePrefix(s string) string {
 	_, s, _ = opts.cutFirstPrefix(s, slices.Values(opts.IgnorePrefixes))
 	return s
+}
+
+// regexTransform applies ByRegex to s.
+// If ByRegex is empty, returns a slice that contains just s.
+// Otherwise, applies each regex to s in sequence:
+// If a regex has capturing groups, the capturing groups will be added to the
+// resulting slice.
+// If a regex does not have capturing groups, all matched text will be added to
+// the resulting slice.
+func (opts blockOptions) regexTransform(s string) []string {
+	if len(opts.ByRegex) == 0 {
+		return []string{s}
+	}
+
+	var ret []string
+	for _, regex := range opts.ByRegex {
+		m := regex.FindStringSubmatch(s)
+		if m == nil {
+			continue
+		}
+		if len(m) == 1 {
+			// No capturing groups. Consider all matched text.
+			ret = append(ret, m[0])
+		} else {
+			// At least one capturing group. Only consider the capturing groups.
+			ret = append(ret, m[1:]...)
+		}
+	}
+	return ret
 }
 
 var (
