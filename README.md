@@ -495,16 +495,16 @@ your regular expressions.
 ```java
 # keep-sorted start
 List<String> foo;
-String bar;
 Object baz;
+String bar;
 # keep-sorted end
 ```
 
 ```java
 # keep-sorted start
 List<String> foo;
-String bar;
 Object baz;
+String bar;
 # keep-sorted end
 ```
 
@@ -512,7 +512,7 @@ Object baz;
 <td>
 
 ```diff
-+# keep-sorted start by_regex=\b.+;\b
++# keep-sorted start by_regex=\w+;
  String bar;
  Object baz;
  List<String> foo;
@@ -520,7 +520,7 @@ Object baz;
 ```
 
 ```diff
-+# keep-sorted start by_regex=\b.+;\b prefix_order=foo
++# keep-sorted start by_regex=\w+; prefix_order=foo
  List<String> foo;
  String bar;
  Object baz;

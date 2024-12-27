@@ -375,8 +375,7 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 	})
 
 	regexTransform := func(lg lineGroup) []string {
-		v := b.metadata.opts.regexTransform(lg.joinedLines())
-		return v
+		return b.metadata.opts.regexTransform(lg.joinedLines())
 	}
 
 	// Assign a weight to each prefix so that they will be sorted into their
