@@ -1,42 +1,52 @@
 preferred prefixes putting 'build_target' before 'branch_name':
-build_specs {
-  # keep-sorted-test start prefix_order=build_target,branch_name
-  build_target: "//foo/baz"
-  branch_name: "dev"
-  build_target: "//foo/bar"
-  branch_name: "prod"
-  # keep-sorted-test end
-}
+  build_specs {
+    # keep-sorted-test start prefix_order=build_target,branch_name
+    build_target: "//foo/baz"
+    branch_name: "dev"
+    build_target: "//foo/bar"
+    branch_name: "prod"
+    # keep-sorted-test end
+  }
 
 Put the specified prefixes at the end:
-items = [
-  # keep-sorted-test start prefix_order=,FOO,BAR
-  FOO,
-  DING,
-  BAR
-  BATS,
-  # keep-sorted-test end
-]
+  items = [
+    # keep-sorted-test start prefix_order=,FOO,BAR
+    FOO,
+    DING,
+    BAR
+    BATS,
+    # keep-sorted-test end
+  ]
+
+Case insensitive put the specified prefixes at the end:
+  items = [
+    # keep-sorted-test start case=no prefix_order=,foo,bar
+    FOO,
+    DING,
+    BAR
+    BATS,
+    # keep-sorted-test end
+  ]
 
 Put a group of items in the beginning, another group at the end:
-// keep-sorted-test start prefix_order=INIT_,,FINAL_
-INIT_FOO,
-FINAL_FOO,
-INIT_BAR,
-FINAL_BAR,
-DO_STUFF,
-DO_MORE_STUFF,
-ZAP_THINGS
-// keep-sorted-test end
+  // keep-sorted-test start prefix_order=INIT_,,FINAL_
+  INIT_FOO,
+  FINAL_FOO,
+  INIT_BAR,
+  FINAL_BAR,
+  DO_STUFF,
+  DO_MORE_STUFF,
+  ZAP_THINGS
+  // keep-sorted-test end
 
 preferred prefixes with comments:
-build_specs {
-  # keep-sorted-test start prefix_order=build_target,branch_name
-  build_target: "//foo/baz"
-  # required for development.
-  branch_name: "dev"
-  # raise the bar!
-  build_target: "//foo/bar"
-  branch_name: "prod"
-  # keep-sorted-test end
-}
+  build_specs {
+    # keep-sorted-test start prefix_order=build_target,branch_name
+    build_target: "//foo/baz"
+    # required for development.
+    branch_name: "dev"
+    # raise the bar!
+    build_target: "//foo/bar"
+    branch_name: "prod"
+    # keep-sorted-test end
+  }
