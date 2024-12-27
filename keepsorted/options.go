@@ -173,7 +173,8 @@ func parseBlockOptions(commentMarker, options string, defaults blockOptions) (_ 
 	}
 	if len(ret.IgnorePrefixes) > 1 {
 		// Look at longer prefixes first, in case one of these prefixes is a prefix of another.
-		slices.SortFunc(ret.IgnorePrefixes, func(a string, b string) int { return cmp.Compare(len(b), len(a)) })
+		longestFirst := comparing(func(s string) int { return len(s) }).reversed()
+		slices.SortFunc(ret.IgnorePrefixes, longestFirst)
 	}
 
 	if warn := validate(&ret); len(warn) > 0 {
