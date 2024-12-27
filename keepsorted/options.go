@@ -170,11 +170,9 @@ func parseBlockOptions(commentMarker, options string, defaults blockOptions) (_ 
 	if cm := guessCommentMarker(commentMarker); cm != "" {
 		ret.setCommentMarker(cm)
 	}
-	if len(ret.IgnorePrefixes) > 1 {
-		// Look at longer prefixes first, in case one of these prefixes is a prefix of another.
-		longestFirst := comparing(func(s string) int { return len(s) }).reversed()
-		slices.SortFunc(ret.IgnorePrefixes, longestFirst)
-	}
+	// Look at longer prefixes first, in case one of these prefixes is a prefix of another.
+	longestFirst := comparing(func(s string) int { return len(s) }).reversed()
+	slices.SortFunc(ret.IgnorePrefixes, longestFirst)
 
 	if warn := validate(&ret); len(warn) > 0 {
 		warns = append(warns, warn...)
