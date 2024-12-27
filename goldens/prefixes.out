@@ -21,10 +21,10 @@ Put the specified prefixes at the end:
 Case insensitive put the specified prefixes at the end:
   items = [
     # keep-sorted-test start case=no prefix_order=,foo,bar
-    BAR
     BATS,
     DING,
     FOO,
+    BAR
     # keep-sorted-test end
   ]
 

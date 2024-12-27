@@ -309,10 +309,6 @@ func (lg lineGroup) append(s string) {
 	lg.lines[len(lg.lines)-1] = lg.lines[len(lg.lines)-1] + s
 }
 
-func (lg lineGroup) hasPrefix(s string) bool {
-	return strings.HasPrefix(lg.joinedLines(), s)
-}
-
 func (lg lineGroup) hasSuffix(s string) bool {
 	return len(lg.lines) > 0 && strings.HasSuffix(lg.lines[len(lg.lines)-1], s)
 }
