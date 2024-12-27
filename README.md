@@ -468,7 +468,7 @@ progress = (
 
 It can be useful to sort an entire group based on a non-prefix substring. The
 option `by_regex=…` takes a comma-separated list of [regular
-expressions][regex-sytax] that will be applied to the group, and then sorting
+expressions] that will be applied to the group, and then sorting
 will take place on just the results of the regular expressions.
 
 > [!TIP]
@@ -485,7 +485,7 @@ Regular expressions are applied **before** other sorting options, so
 [`prefix_order`](#prefix-sorting) will only apply to the characters matched by
 your regular expressions.
 
-[regex-syntax]: http://godoc/pkg/regexp/syntax/
+[regular expressions]: http://godoc/pkg/regexp/syntax/
 [lexicographically]: https://en.wikipedia.org/wiki/Lexicographic_order
 
 <table border="0">
@@ -493,19 +493,19 @@ your regular expressions.
 <td>
 
 ```java
-# keep-sorted start
+// keep-sorted start
 List<String> foo;
 Object baz;
 String bar;
-# keep-sorted end
+// keep-sorted end
 ```
 
 ```java
-# keep-sorted start
+// keep-sorted start
 List<String> foo;
 Object baz;
 String bar;
-# keep-sorted end
+// keep-sorted end
 ```
 
 </td>
