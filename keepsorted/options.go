@@ -15,7 +15,6 @@
 package keepsorted
 
 import (
-	"cmp"
 	"errors"
 	"fmt"
 	"iter"
