@@ -15,7 +15,6 @@
 package keepsorted
 
 import (
-	"cmp"
 	"slices"
 	"strings"
 
@@ -367,31 +366,34 @@ func allHaveSuffix(lgs []lineGroup, s string) bool {
 	return true
 }
 
-func (b block) lessFn() func(a, b lineGroup) int {
+func (b block) lessFn() cmpFunc[lineGroup] {
 	// Always put groups that are only comments last.
-	commentOnlyBlock := comparingProperty(func(lg lineGroup) int {
+	commentOnlyBlock := comparing(func(lg lineGroup) int {
 		if len(lg.lines) > 0 {
 			return 0
 		}
 		return 1
 	})
 
-	// Check preferred prefixes from longest to shortest. The list of prefixes
-	// is reversed to assign weights in ascending order: they are multiplied by
-	// -1 to ensure that entries with matching prefixes are put before any
-	// non-matching lines (which assume the weight of 0).
+	// Assign a weight to each prefix so that they will be sorted into their
+	// predetermined order.
+	// Weights are negative so that entries with matching prefixes are put before
+	// any non-matching line (which will have a weight of 0).
 	//
-	// An empty prefix can be used to move all remaining entries to a position
+	// An empty prefix can be used to move "non-matching" entries to a position
 	// between other prefixes.
+	type prefixWeight struct {
+		prefix string
+		weight int
+	}
 	var prefixWeights []prefixWeight
 	for i, p := range b.metadata.opts.PrefixOrder {
 		prefixWeights = append(prefixWeights, prefixWeight{p, i - len(b.metadata.opts.PrefixOrder)})
 	}
-	slices.SortStableFunc(prefixWeights, func(a, b prefixWeight) int {
-		return cmp.Compare(b.prefix, a.prefix)
-	})
+	// Sort prefixes longest -> shortest to find the most appropriate weight.
+	slices.SortStableFunc(prefixWeights, comparing(func(pw prefixWeight) int { return len(pw.prefix) }).reversed())
 
-	prefixOrder := comparingProperty(func(lg lineGroup) int {
+	prefixOrder := comparing(func(lg lineGroup) int {
 		for _, w := range prefixWeights {
 			if lg.hasPrefix(w.prefix) {
 				return w.weight
@@ -418,7 +420,7 @@ func (b block) lessFn() func(a, b lineGroup) int {
 	//   foo_6
 	//   Foo_45
 	//   foo_123
-	transformOrder := comparingPropertyWith(func(lg lineGroup) numericTokens {
+	transformOrder := comparingFunc(func(lg lineGroup) numericTokens {
 		l := lg.joinedLines()
 		if s, ok := b.metadata.opts.removeIgnorePrefix(l); ok {
 			l = s
@@ -429,38 +431,8 @@ func (b block) lessFn() func(a, b lineGroup) int {
 		return b.metadata.opts.maybeParseNumeric(l)
 	}, numericTokens.compare)
 
-	return func(a, b lineGroup) int {
-		for _, cmp := range []func(a, b lineGroup) int{
-			commentOnlyBlock,
-			prefixOrder,
-			transformOrder,
-		} {
-			if c := cmp(a, b); c != 0 {
-				return c
-			}
-		}
-		return a.less(b)
-	}
-}
-
-func comparingProperty[T any, E cmp.Ordered](f func(T) E) func(a, b T) int {
-	return comparingPropertyWith(f, func(a, b E) int {
-		if a < b {
-			return -1
-		} else if a > b {
-			return 1
-		}
-		return 0
-	})
-}
-
-func comparingPropertyWith[T any, R any](f func(T) R, cmp func(R, R) int) func(a, b T) int {
-	return func(a, b T) int {
-		return cmp(f(a), f(b))
-	}
-}
-
-type prefixWeight struct {
-	prefix string
-	weight int
+	return commentOnlyBlock.
+		andThen(prefixOrder).
+		andThen(transformOrder).
+		andThen(lineGroup.less)
 }

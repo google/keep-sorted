@@ -387,11 +387,7 @@ func (t numericTokens) len() int {
 }
 
 func (t numericTokens) compare(o numericTokens) int {
-	l := t.len()
-	if k := o.len(); k < l {
-		l = k
-	}
-	for i := 0; i < l; i++ {
+	for i := 0; i < min(t.len(), o.len()); i++ {
 		if i%2 == 0 { // Start by comparing strings.
 			if c := strings.Compare(t.s[i/2], o.s[i/2]); c != 0 {
 				return c
