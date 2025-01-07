@@ -14,16 +14,8 @@ Needs sorting:
   Baz
   // keep-sorted-test end
 
-Indented already sorted:
-  // keep-sorted-test start ignore_prefixes=A,B
-  Bar
-  Baz
-  Aoo
-  zebra
-  // keep-sorted-test end
-
-Indented needs sorting:
-  // keep-sorted-test start ignore_prefixes=A,B
+Case insensitive needs sorting:
+  // keep-sorted-test start case=no ignore_prefixes=a,b
   zebra
   Aoo
   Bar
