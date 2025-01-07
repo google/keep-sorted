@@ -388,7 +388,7 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 	}
 	// Sort prefixes longest -> shortest to find the most appropriate weight.
 	longestFirst := comparing(func(s string) int { return len(s) }).reversed()
-	prefixes := slices.SortedFunc(slices.Values(b.metadata.opts.PrefixOrder), longestFirst)
+	prefixes := slices.SortedStableFunc(slices.Values(b.metadata.opts.PrefixOrder), longestFirst)
 
 	prefixOrder := comparing(func(lg lineGroup) int {
 		p, ok := b.metadata.opts.hasPrefix(lg.joinedLines(), slices.Values(prefixes))
