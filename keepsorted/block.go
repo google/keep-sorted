@@ -382,24 +382,20 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 	//
 	// An empty prefix can be used to move "non-matching" entries to a position
 	// between other prefixes.
-	type prefixWeight struct {
-		prefix string
-		weight int
-	}
-	var prefixWeights []prefixWeight
+	prefixWeights := make(map[string]int)
 	for i, p := range b.metadata.opts.PrefixOrder {
-		prefixWeights = append(prefixWeights, prefixWeight{p, i - len(b.metadata.opts.PrefixOrder)})
+		prefixWeights[p] = i - len(b.metadata.opts.PrefixOrder)
 	}
 	// Sort prefixes longest -> shortest to find the most appropriate weight.
-	slices.SortStableFunc(prefixWeights, comparing(func(pw prefixWeight) int { return len(pw.prefix) }).reversed())
+	longestFirst := comparing(func(s string) int { return len(s) }).reversed()
+	prefixes := slices.SortedStableFunc(slices.Values(b.metadata.opts.PrefixOrder), longestFirst)
 
 	prefixOrder := comparing(func(lg lineGroup) int {
-		for _, w := range prefixWeights {
-			if lg.hasPrefix(w.prefix) {
-				return w.weight
-			}
+		p, ok := b.metadata.opts.hasPrefix(lg.joinedLines(), slices.Values(prefixes))
+		if !ok {
+			return 0
 		}
-		return 0
+		return prefixWeights[p]
 	})
 
 	// Combinations of switches (for example, case-insensitive and numeric
