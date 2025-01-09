@@ -390,8 +390,8 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 	longestFirst := comparing(func(s string) int { return len(s) }).reversed()
 	prefixes := slices.SortedStableFunc(slices.Values(b.metadata.opts.PrefixOrder), longestFirst)
 
-	prefixOrder := comparing(func(lg lineGroup) int {
-		p, ok := b.metadata.opts.hasPrefix(lg.joinedLines(), slices.Values(prefixes))
+	prefixOrder := comparing(func(s string) int {
+		p, ok := b.metadata.opts.hasPrefix(s, slices.Values(prefixes))
 		if !ok {
 			return 0
 		}
@@ -416,17 +416,15 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 	//   foo_6
 	//   Foo_45
 	//   foo_123
-	transformOrder := comparingFunc(func(lg lineGroup) numericTokens {
-		l := lg.joinedLines()
-		l = b.metadata.opts.trimIgnorePrefix(l)
+	transformOrder := comparingFunc(func(s string) numericTokens {
+		s = b.metadata.opts.trimIgnorePrefix(s)
 		if !b.metadata.opts.CaseSensitive {
-			l = strings.ToLower(l)
+			s = strings.ToLower(s)
 		}
-		return b.metadata.opts.maybeParseNumeric(l)
+		return b.metadata.opts.maybeParseNumeric(s)
 	}, numericTokens.compare)
 
 	return commentOnlyBlock.
-		andThen(prefixOrder).
-		andThen(transformOrder).
+		andThen(comparingFunc(lineGroup.joinedLines, prefixOrder.andThen(transformOrder))).
 		andThen(lineGroup.less)
 }
