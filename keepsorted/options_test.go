@@ -255,31 +255,37 @@ func TestBlockOptions_regexTransform(t *testing.T) {
 		regexes []string
 		in      string
 
-		want []string
+		want [][]string
 	}{
 		{
 			name:    "NoCapturingGroups",
 			regexes: []string{".*"},
 			in:      "abcde",
-			want:    []string{"abcde"},
+			want:    [][]string{{"abcde"}},
 		},
 		{
 			name:    "CapturingGroups",
 			regexes: []string{".(.).(.)."},
 			in:      "abcde",
-			want:    []string{"b", "d"},
+			want:    [][]string{{"b", "d"}},
 		},
 		{
 			name:    "NonCapturingGroups",
 			regexes: []string{".(.).(?:.)?."},
 			in:      "abcde",
-			want:    []string{"b"},
+			want:    [][]string{{"b"}},
 		},
 		{
 			name:    "MultipleRegexps",
 			regexes: []string{".*", ".{3}(.)"},
 			in:      "abcde",
-			want:    []string{"abcde", "d"},
+			want:    [][]string{{"abcde"}, {"d"}},
+		},
+		{
+			name:    "RegexDoesNotMatch",
+			regexes: []string{`\d+`, `\w+`},
+			in:      "abcde",
+			want:    [][]string{nil, {"abcde"}},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -288,7 +294,11 @@ func TestBlockOptions_regexTransform(t *testing.T) {
 				opts.ByRegex = append(opts.ByRegex, regexp.MustCompile(regex))
 			}
 
-			got := opts.regexTransform(tc.in)
+			gotTokens := opts.regexTransform(tc.in)
+			got := make([][]string, len(gotTokens))
+			for i, t := range gotTokens {
+				got[i] = []string(t)
+			}
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("%q.regexTransform(%q) diff (-want +got)\n%s", opts, tc.in, diff)
 			}

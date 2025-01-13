@@ -366,26 +366,43 @@ func (opts blockOptions) trimIgnorePrefix(s string) string {
 // resulting slice.
 // If a regex does not have capturing groups, all matched text will be added to
 // the resulting slice.
-func (opts blockOptions) regexTransform(s string) []string {
+func (opts blockOptions) regexTransform(s string) []regexToken {
 	if len(opts.ByRegex) == 0 {
-		return []string{s}
+		return []regexToken{{s}}
 	}
 
-	var ret []string
+	var ret []regexToken
 	for _, regex := range opts.ByRegex {
 		m := regex.FindStringSubmatch(s)
 		if m == nil {
+			ret = append(ret, alwaysLast)
 			continue
 		}
 		if len(m) == 1 {
 			// No capturing groups. Consider all matched text.
-			ret = append(ret, m[0])
+			ret = append(ret, m)
 		} else {
 			// At least one capturing group. Only consider the capturing groups.
-			ret = append(ret, m[1:]...)
+			ret = append(ret, m[1:])
 		}
 	}
 	return ret
+}
+
+// regexToken is the result of matching a regex to a string. It has 3 forms:
+//  1. If the regex matched and the regex had capturing groups, it's the value
+//     of those capturing groups.
+//  2. If the regex matched and the regex didn't have capturing groups, it's the
+//     value of the matched string as a singleton slice.
+//  3. IF the regex didn't match, it's alwaysLast / nil.
+type regexToken []string
+
+var alwaysLast regexToken = nil
+
+func compareRegexTokens(fn cmpFunc[[]string]) cmpFunc[[]regexToken] {
+	alwaysLast := comparingFunc(func(t regexToken) bool { return t == nil }, falseFirst())
+	delegate := comparingFunc(func(t regexToken) []string { return []string(t) }, fn)
+	return lexicographically(alwaysLast.andThen(delegate))
 }
 
 var (

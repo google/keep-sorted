@@ -49,3 +49,16 @@ func lexicographically[T any](fn cmpFunc[T]) cmpFunc[[]T] {
 		return slices.CompareFunc(a, b, fn)
 	}
 }
+
+// falseFirst is a cmpFunc that orders false before true.
+func falseFirst() cmpFunc[bool] {
+	return func(a, b bool) int {
+		if a == b {
+			return 0
+		}
+		if a {
+			return 1
+		}
+		return -1
+	}
+}
