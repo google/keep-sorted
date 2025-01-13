@@ -1,2 +1,2 @@
-WRN by_regex cannot be used with ignore_prefixes (consider adding a non-capturing group to the start of your regex instead of ignore_prefixes: "(?:foo|bar)") line=36
-WRN while parsing option "by_regex": error parsing regexp: missing argument to repetition operator: `*` line=43
+WRN while parsing option "by_regex": error parsing regexp: missing argument to repetition operator: `*` line=75
+WRN by_regex cannot be used with ignore_prefixes (consider adding a non-capturing group to the start of your regex instead of ignore_prefixes: "(?:foo|bar)") line=82

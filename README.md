@@ -481,6 +481,10 @@ only the characters matched by the capturing groups will be considered for
 sorting. The result from each regular expression will be concatenated into a
 list of results, and that list of results will be sorted [lexicographically].
 
+Regular expressions are applied **after** pre-sorting options.
+[`group_prefixes`](#custom-grouping) will consider to the content of the file
+before any regular expression has been applied to it.
+
 Regular expressions are applied **before** other sorting options.
 [`case`](#case-sensitivity), [`numeric`](#numeric-sorting), and
 [`prefix_order`](#prefix-sorting) will only apply to the characters matched by
