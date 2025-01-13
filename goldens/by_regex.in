@@ -38,3 +38,11 @@ Cannot combine with ignore_prefixes
   1
   3
   keep-sorted-test end
+
+Invalid regex
+  keep-sorted-test start by_regex=*
+  2
+  1
+  3
+  keep-sorted-test end
+
