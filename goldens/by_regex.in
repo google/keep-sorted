@@ -74,11 +74,11 @@ Multiline blocks
 Regex doesn't match every line
   keep-sorted-test start by_regex=\d+
   3
-  2
-  1
-  foo
-  bar
   baz
+  2
+  foo
+  1
+  bar
   keep-sorted-test end
 
 Invalid regex
