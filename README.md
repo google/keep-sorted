@@ -481,9 +481,14 @@ only the characters matched by the capturing groups will be considered for
 sorting. The result from each regular expression will be concatenated into a
 list of results, and that list of results will be sorted [lexicographically].
 
-Regular expressions are applied **before** other sorting options, so
+Regular expressions are applied **before** other sorting options.
+[`case`](#case-sensitivity), [`numeric`](#numeric-sorting), and
 [`prefix_order`](#prefix-sorting) will only apply to the characters matched by
 your regular expressions.
+
+> [!TIP]
+> If you want your regular expression itself to be case insensitive, consider
+> setting the case-insensitive flag `(?i)` at the start of your expression.
 
 [regular expressions]: http://godoc/pkg/regexp/syntax/
 [lexicographically]: https://en.wikipedia.org/wiki/Lexicographic_order
@@ -536,8 +541,10 @@ String bar;
 Sometimes, it is useful to specify a custom ordering for some elements. The
 option `prefix_order=…` takes a comma-separated list of prefixes that is
 matched against the lines to be sorted: if the line starts with one of the
-specified values, it is put at the corresponding position. If an empty prefix is
-specified, any line not covered by other prefixes is matched.
+specified values, it is put at the corresponding position. Lines that don't
+match any of the prefixes are put after any lines that have a matching prefix.
+You can use an empty prefix to put unmatching lines in between non-empty
+prefixes.
 
 <table border="0">
 <tr>
