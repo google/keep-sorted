@@ -1,23 +1,31 @@
 Remove duplicates:
-// keep-sorted-test start remove_duplicates=yes
-foo
-bar
-foo
-// keep-sorted-test end
+  // keep-sorted-test start remove_duplicates=yes
+  foo
+  bar
+  foo
+  // keep-sorted-test end
+
+XXX: This behavior is incorrect.
+Remove duplicates, case insensitive:
+  // keep-sorted-test start remove_duplicates=yes case=no
+  foo
+  FoO
+  bar
+  // keep-sorted-test end
 
 Remove duplicates with comments:
-// keep-sorted-test start remove_duplicates=yes sticky_comments=yes
-foo
-bar
-// Foo again
-foo
-// Foo again
-foo
-// keep-sorted-test end
+  // keep-sorted-test start remove_duplicates=yes sticky_comments=yes
+  foo
+  bar
+  // Foo again
+  foo
+  // Foo again
+  foo
+  // keep-sorted-test end
 
 Preserve duplicates:
-// keep-sorted-test start remove_duplicates=no
-foo
-bar
-foo
-// keep-sorted-test end
+  // keep-sorted-test start remove_duplicates=no
+  foo
+  bar
+  foo
+  // keep-sorted-test end
