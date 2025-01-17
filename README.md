@@ -117,7 +117,7 @@ bar = [
 2. Install keep-sorted:
 
    ```sh
-   $ go install github.com/google/keep-sorted@v0.5.1
+   $ go install github.com/google/keep-sorted@v0.6.0
    ```
 
 3. Run keep-sorted:
@@ -135,7 +135,7 @@ You can run keep-sorted automatically by adding this repository to your
 
 ```yaml
 - repo: https://github.com/google/keep-sorted
-  rev: v0.5.1
+  rev: v0.6.0
   hooks:
     - id: keep-sorted
 ```
