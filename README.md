@@ -464,7 +464,7 @@ progress = (
 </tr>
 </table>
 
-#### Regular Expressions
+#### Regular expressions
 
 It can be useful to sort an entire group based on a non-prefix substring. The
 option `by_regex=…` takes a comma-separated list of [regular
@@ -521,19 +521,19 @@ String bar;
 <td>
 
 ```diff
-+# keep-sorted start by_regex=\w+;
++// keep-sorted start by_regex=\w+;
  String bar;
  Object baz;
  List<String> foo;
- # keep-sorted end
+ // keep-sorted end
 ```
 
 ```diff
-+# keep-sorted start by_regex=\w+; prefix_order=foo
++// keep-sorted start by_regex=\w+; prefix_order=foo
  List<String> foo;
  String bar;
  Object baz;
- # keep-sorted end
+ // keep-sorted end
 ```
 
 </td>
