@@ -2,6 +2,7 @@ package keepsorted
 
 import (
 	"cmp"
+	"slices"
 )
 
 type cmpFunc[T any] func(T, T) int
@@ -37,5 +38,27 @@ func comparingFunc[T, R any](f func(T) R, cmp cmpFunc[R]) cmpFunc[T] {
 	return func(a, b T) int {
 		r1, r2 := f(a), f(b)
 		return cmp(r1, r2)
+	}
+}
+
+// lexicographically creates a cmpFunc for slices that orders them
+// lexicographically, using the provided cmpFunc for the individual elements.
+// https://en.wikipedia.org/wiki/Lexicographic_order
+func lexicographically[T any](fn cmpFunc[T]) cmpFunc[[]T] {
+	return func(a, b []T) int {
+		return slices.CompareFunc(a, b, fn)
+	}
+}
+
+// falseFirst is a cmpFunc that orders false before true.
+func falseFirst() cmpFunc[bool] {
+	return func(a, b bool) int {
+		if a == b {
+			return 0
+		}
+		if a {
+			return 1
+		}
+		return -1
 	}
 }

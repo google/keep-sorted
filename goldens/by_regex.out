@@ -1,0 +1,98 @@
+No capturing group
+  keep-sorted-test start by_regex=int|bool|long
+  bool foo
+  int baz
+  long bar
+  keep-sorted-test end
+
+Capturing group
+  keep-sorted-test start by_regex=['[^ ]+ (.*)']
+  long bar
+  int baz
+  bool foo
+  keep-sorted-test end
+
+Capturing group and non-capturing group
+  keep-sorted-test start by_regex=['(?:int|bool|long) (.*)']
+  long bar
+  int baz
+  bool foo
+  keep-sorted-test end
+
+Numeric
+  keep-sorted-test start by_regex=\d+ numeric=yes
+  baz 01
+  foo 7
+  bar 40
+  keep-sorted-test end
+
+Case insensitive sorting
+  keep-sorted-test start by_regex=\D+ case=no
+  2 bar
+  3 bAz
+  1 FOO
+  keep-sorted-test end
+
+Prefix order
+  // keep-sorted-test start by_regex=\w+_(\w+) prefix_order=INIT,,FINAL
+  BAR_INIT,
+  FOO_INIT,
+  DO_MORE_STUFF,
+  DO_STUFF,
+  ZAP_THINGS,
+  BAR_FINAL,
+  FOO_FINAL
+  // keep-sorted-test end
+
+Multiple regexes
+  keep-sorted-test start by_regex=['(?:int|bool|long) (.*)', 'int|bool|long']
+  bool bar
+  int bar
+  long bar
+  bool baz
+  int baz
+  long baz
+  bool foo
+  int foo
+  long foo
+  keep-sorted-test end
+
+Multiline blocks
+  keep-sorted-test start block=yes newline_separated=yes by_regex=(\w+)\(\)\s+{
+  List<SomeReallyLongTypeParameterThatWouldForceTheFunctionNameOntoTheNextLine>
+      func0() {
+    return List.of(whatever);
+  }
+
+  int func1() {
+    return 1;
+  }
+
+  bool func2() {
+    return true;
+  }
+  keep-sorted-test end
+
+Regex doesn't match every line
+  keep-sorted-test start by_regex=\d+
+  1
+  2
+  3
+  bar
+  baz
+  foo
+  keep-sorted-test end
+
+Invalid regex
+  keep-sorted-test start by_regex=*
+  1
+  2
+  3
+  keep-sorted-test end
+
+Cannot combine with ignore_prefixes
+  keep-sorted-test start by_regex=.* ignore_prefixes=foo,bar
+  1
+  2
+  3
+  keep-sorted-test end

@@ -62,6 +62,28 @@ func (p *parser) popValue(typ reflect.Type) (reflect.Value, error) {
 	case reflect.TypeFor[map[string]bool]():
 		val, err := p.popSet()
 		return reflect.ValueOf(val), err
+	case reflect.TypeFor[[]*regexp.Regexp]():
+		val, err := p.popList()
+		if err != nil {
+			return reflect.Zero(typ), err
+		}
+
+		ret := make([]*regexp.Regexp, len(val))
+		var errs []error
+		for i, s := range val {
+			regex, err := regexp.Compile(s)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			ret[i] = regex
+		}
+
+		if err := errors.Join(errs...); err != nil {
+			return reflect.Zero(typ), err
+		}
+
+		return reflect.ValueOf(ret), nil
 	}
 
 	panic(fmt.Errorf("unhandled case in switch: %v", typ))

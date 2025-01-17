@@ -75,6 +75,9 @@ func TestGoldens(t *testing.T) {
 
 				wantOut, err := os.ReadFile(filepath.Join(dir, tc+".out"))
 				if err != nil {
+					if errors.Is(err, os.ErrNotExist) {
+						needsRegen <- inFile
+					}
 					t.Fatalf("Could not read .out file: %v", err)
 				}
 				wantErr, err := os.ReadFile(filepath.Join(dir, tc+".err"))

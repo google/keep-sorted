@@ -52,11 +52,12 @@ func (opts BlockOptions) String() string {
 
 // blockOptions enable/disable extra features that control how a block of lines is sorted.
 //
-// Currently, only four types are supported:
-//  1. bool:            key=yes, key=true, key=no, key=false
-//  2. []string:        key=a,b,c,d
-//  3. map[string]bool: key=a,b,c,d
-//  4. int:             key=123
+// Options support the following types:
+//   - bool:             key=yes, key=true, key=no, key=false
+//   - []string:         key=a,b,c,d
+//   - map[string]bool:  key=a,b,c,d
+//   - int:              key=123
+//   - []*regexp.Regexp: key=a,b,c,d
 type blockOptions struct {
 	// AllowYAMLLists determines whether list.set valued options are allowed to be specified by YAML.
 	AllowYAMLLists bool `key:"allow_yaml_lists"`
@@ -90,6 +91,8 @@ type blockOptions struct {
 	PrefixOrder []string `key:"prefix_order"`
 	// IgnorePrefixes is a slice of prefixes that we do not consider when sorting lines.
 	IgnorePrefixes []string `key:"ignore_prefixes"`
+	// ByRegex is a slice of regexes that are used to extract the pieces of the line group that keep-sorted should sort by.
+	ByRegex []*regexp.Regexp `key:"by_regex"`
 
 	////////////////////////////
 	//  Post-sorting options  //
@@ -191,6 +194,13 @@ func formatValue(val reflect.Value) (string, error) {
 		return formatList(slices.Sorted(maps.Keys(val.Interface().(map[string]bool))))
 	case reflect.TypeFor[int]():
 		return strconv.Itoa(int(val.Int())), nil
+	case reflect.TypeFor[[]*regexp.Regexp]():
+		regexps := val.Interface().([]*regexp.Regexp)
+		vals := make([]string, len(regexps))
+		for i, regex := range regexps {
+			vals[i] = regex.String()
+		}
+		return formatList(vals)
 	}
 
 	panic(fmt.Errorf("unsupported blockOptions type: %v", val.Type()))
@@ -255,6 +265,16 @@ func validate(opts *blockOptions) (warnings []error) {
 	if opts.GroupPrefixes != nil && !opts.Group {
 		warns = append(warns, fmt.Errorf("group_prefixes may not be used with group=no"))
 		opts.GroupPrefixes = nil
+	}
+
+	if len(opts.ByRegex) > 0 && len(opts.IgnorePrefixes) > 0 {
+		var pre []string
+		for _, p := range opts.IgnorePrefixes {
+			pre = append(pre, regexp.QuoteMeta(p))
+		}
+		suggestion := "(?:" + strings.Join(pre, "|") + ")"
+		warns = append(warns, fmt.Errorf("by_regex cannot be used with ignore_prefixes (consider adding a non-capturing group to the start of your regex instead of ignore_prefixes: %q)", suggestion))
+		opts.IgnorePrefixes = nil
 	}
 
 	return warns
@@ -337,6 +357,52 @@ func (opts blockOptions) hasGroupPrefix(s string) bool {
 func (opts blockOptions) trimIgnorePrefix(s string) string {
 	_, s, _ = opts.cutFirstPrefix(s, slices.Values(opts.IgnorePrefixes))
 	return s
+}
+
+// regexTransform applies ByRegex to s.
+// If ByRegex is empty, returns a slice that contains just s.
+// Otherwise, applies each regex to s in sequence:
+// If a regex has capturing groups, the capturing groups will be added to the
+// resulting slice.
+// If a regex does not have capturing groups, all matched text will be added to
+// the resulting slice.
+func (opts blockOptions) regexTransform(s string) []regexToken {
+	if len(opts.ByRegex) == 0 {
+		return []regexToken{{s}}
+	}
+
+	var ret []regexToken
+	for _, regex := range opts.ByRegex {
+		m := regex.FindStringSubmatch(s)
+		if m == nil {
+			ret = append(ret, alwaysLast)
+			continue
+		}
+		if len(m) == 1 {
+			// No capturing groups. Consider all matched text.
+			ret = append(ret, m)
+		} else {
+			// At least one capturing group. Only consider the capturing groups.
+			ret = append(ret, m[1:])
+		}
+	}
+	return ret
+}
+
+// regexToken is the result of matching a regex to a string. It has 3 forms:
+//  1. If the regex matched and the regex had capturing groups, it's the value
+//     of those capturing groups.
+//  2. If the regex matched and the regex didn't have capturing groups, it's the
+//     value of the matched string as a singleton slice.
+//  3. IF the regex didn't match, it's alwaysLast / nil.
+type regexToken []string
+
+var alwaysLast regexToken = nil
+
+func compareRegexTokens(fn cmpFunc[[]string]) cmpFunc[[]regexToken] {
+	alwaysLast := comparingFunc(func(t regexToken) bool { return t == nil }, falseFirst())
+	delegate := comparingFunc(func(t regexToken) []string { return []string(t) }, fn)
+	return lexicographically(alwaysLast.andThen(delegate))
 }
 
 var (

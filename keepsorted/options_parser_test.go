@@ -2,10 +2,15 @@ package keepsorted
 
 import (
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+var cmpRegexp = cmp.Comparer(func(a, b *regexp.Regexp) bool {
+	return a.String() == b.String()
+})
 
 func TestPopValue(t *testing.T) {
 	for _, tc := range []struct {
@@ -206,6 +211,19 @@ func TestPopValue(t *testing.T) {
 			input: "foo,bar,foo",
 			want:  map[string]bool{"foo": true, "bar": true},
 		},
+		{
+			name: "Regex",
+
+			input: ".*",
+			want:  []*regexp.Regexp{regexp.MustCompile(".*")},
+		},
+		{
+			name: "MultipleRegex",
+
+			input:         `[.*, abcd, '(?:efgh)ijkl']`,
+			allowYAMLList: true,
+			want:          []*regexp.Regexp{regexp.MustCompile(".*"), regexp.MustCompile("abcd"), regexp.MustCompile("(?:efgh)ijkl")},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			suffix := "trailing content..."
@@ -219,12 +237,12 @@ func TestPopValue(t *testing.T) {
 				t.Errorf("parser{%q}.popValue(%v) = _, %v; wantErr %t", in, typ, err, tc.wantErr)
 			}
 			if err == nil {
-				if diff := cmp.Diff(val.Interface(), tc.want); diff != "" {
+				if diff := cmp.Diff(val.Interface(), tc.want, cmpRegexp); diff != "" {
 					t.Errorf("parser{%q}.popValue(%v) = %v, _; want %v", in, typ, val.Interface(), tc.want)
 				}
 			} else {
 				want := reflect.Zero(typ).Interface()
-				if diff := cmp.Diff(val.Interface(), want); diff != "" {
+				if diff := cmp.Diff(val.Interface(), want, cmpRegexp); diff != "" {
 					t.Errorf("parser{%q}.popValue(%v) = %v, _; want zero value for %v (%v)", in, typ, val.Interface(), typ, want)
 				}
 			}
