@@ -517,6 +517,36 @@ String bar;
 // keep-sorted end
 ```
 
+```java
+// keep-sorted start block=yes newline_separated=yes case=no
+bool func2() {
+  return true;
+}
+
+int func1() {
+  return 1;
+}
+
+List<SomeReallyLongTypeParameterThatWouldForceTheFunctionNameOnlyTheNextLine>
+  func0() {
+    return List.of(whatever);
+}
+// keep-sorted end
+```
+
+```
+keep-sorted start skip_lines=1
+
+Daniel Bernoulli
+Emmy Noether
+Jacob Bernoulli
+Johann Bernoulli
+Max Noether
+Nicolaus Bernoulli
+
+keep-sorted end
+```
+
 </td>
 <td>
 
@@ -534,6 +564,36 @@ String bar;
  String bar;
  Object baz;
  // keep-sorted end
+```
+
+```diff
++// keep-sorted start block=yes newline_separated=yes case=no by_regex=(\w+)\(\)\s+{ numeric=yes
+ List<SomeReallyLongTypeParameterThatWouldForceTheFunctionNameOnlyTheNextLine>
+     func0() {
+   return List.of(whatever);
+ }
+ 
+ int func1() {
+   return 1;
+ }
+ 
+ bool func2() {
+   return true;
+ }
+ // keep-sorted end
+```
+
+``` {highlight="context:by_regex,1" .no-copy}
++keep-sorted start skip_lines=1 by_regex=['\w+ (\w+)', '(\w+) \w+']
+ 
+ Daniel Bernoulli
+ Jacob Bernoulli
+ Johann Bernoulli
+ Nicolaus Bernoulli
+ Emmy Noether
+ Max Noether
+ 
+ keep-sorted end
 ```
 
 </td>
