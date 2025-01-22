@@ -583,7 +583,7 @@ keep-sorted end
  // keep-sorted end
 ```
 
-``` {highlight="context:by_regex,1" .no-copy}
+```diff
 +keep-sorted start skip_lines=1 by_regex=['\w+ (\w+)', '(\w+) \w+']
  
  Daniel Bernoulli
