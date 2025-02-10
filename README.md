@@ -547,6 +547,17 @@ Nicolaus Bernoulli
 keep-sorted end
 ```
 
+```
+// keep-sorted start numeric=yes
+Data Size A 20M
+Data Size A 50K
+Data Size A 250M
+Data Size B 1B
+Data Size B 80M
+Data Size B 250K
+// keep-sorted end
+```
+
 </td>
 <td>
 
@@ -594,6 +605,17 @@ keep-sorted end
  Max Noether
  
  keep-sorted end
+```
+
+```diff
++// keep-sorted start numeric=yes by_regex=(?i)(.*?)(?:(\d+)b|(\d+)m|(\d+)k)
+Data Size A 50K
+Data Size A 20M
+Data Size A 250M
+Data Size B 250K
+Data Size B 80M
+Data Size B 1B
+// keep-sorted end
 ```
 
 </td>
