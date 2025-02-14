@@ -879,3 +879,36 @@ keep-sorted end
 </td>
 </tr>
 </table>
+
+### How does keep-sorted handle lists that aren't allowed to have trailing
+commas?
+
+Some languages allow trailing commas in lists and some don't. Luckily,
+keep-sorted tries to do the right thing and handle commas "correctly".
+
+<table border="0">
+<tr>
+<td>
+
+```
+                 
+3,
+1,
+2
+
+```
+
+</td>
+<td>
+
+```
+keep-sorted start
+1,
+2,
+3
+keep-sorted end
+```
+
+</td>
+</tr>
+</table>
