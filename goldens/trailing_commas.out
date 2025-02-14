@@ -1,0 +1,31 @@
+Trailing comma except for last
+  keep-sorted-test start
+  1,
+  2,
+  3
+  keep-sorted-test end
+
+
+Trailing comma and a comment
+TODO: https://github.com/google/keep-sorted/issues/33 - Fix this
+  keep-sorted-test start
+  1,
+  2
+  3, # three
+  keep-sorted-test end
+
+Trailing comma except for last, last has a comment
+TODO: https://github.com/google/keep-sorted/issues/33 - Fix this
+  keep-sorted-test start
+  1,
+  2  # two,
+  3
+  keep-sorted-test end
+
+Trailing comma and a comment, last has a comment
+TODO: https://github.com/google/keep-sorted/issues/33 - Fix this
+  keep-sorted-test start
+  1,
+  2  # two
+  3, # three
+  keep-sorted-test end
