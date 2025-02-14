@@ -18,7 +18,7 @@ jobs:
         - os: macos-latest
           suffix: darwin
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{matrix.os}}
 
     permissions:
       contents: write
@@ -40,7 +40,7 @@ jobs:
 
       - name: Upload Artifacts to Release
         run: |
-          echo Uploading ${{matrix.suffix}} artifact for ${{github.event.release.tag_name}}
+          echo Uploading ${{matrix.suffix}} artifact for ${{github.ref_name}}
           mv keep-sorted keep-sorted_${{matrix.suffix}}
           gh release upload ${{github.ref_name}} keep-sorted_${{matrix.suffix}} --clobber
         shell: bash
