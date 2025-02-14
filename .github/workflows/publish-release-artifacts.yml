@@ -3,6 +3,7 @@ name: Publish Release Artifacts
 on:
   release:
     types: [prereleased, released, published]
+  workflow_dispatch:
 
 jobs:
   build-and-upload:
@@ -41,7 +42,7 @@ jobs:
         run: |
           echo Uploading ${{matrix.suffix}} artifact for ${{github.event.release.tag_name}}
           mv keep-sorted keep-sorted_${{matrix.suffix}}
-          gh release upload ${{github.event.release.tag_name}} keep-sorted_${{matrix.suffix}} --clobber
+          gh release upload ${{github.ref_name}} keep-sorted_${{matrix.suffix}} --clobber
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
