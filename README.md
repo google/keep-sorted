@@ -235,6 +235,18 @@ allows for sorting data such as Go structs and JSON objects.
 > sorted as basic strings. e.g., "{\n" comes before "{Name:", so mixing the
 > line break and whitespace usage may cause unexpected sorting.
 
+> Note: Braces within things that look like string literals are **not** counted
+> when pairing braces. A string literal begins an ends with a matching pair of
+> quotes, where quotes can be any of the following:
+> ````
+> '
+> '''
+> "
+> """
+> `
+> ```
+> ````
+
 > Note: angle brackets (`<` and `>`) are not supported by block mode due to
 > being used for mathematical expressions in an unbalanced format.
 
@@ -467,7 +479,7 @@ progress = (
 #### Regular expressions
 
 It can be useful to sort an entire group based on a non-prefix substring. The
-option `by_regex=…` takes a comma-separated list of [regular
+option `by_regex=…` takes a comma-separated list of [re2 regular
 expressions] that will be applied to the group, and then sorting
 will take place on just the results of the regular expressions.
 
@@ -494,7 +506,7 @@ your regular expressions.
 > If you want your regular expression itself to be case insensitive, consider
 > setting the case-insensitive flag `(?i)` at the start of your expression.
 
-[regular expressions]: http://godoc/pkg/regexp/syntax/
+[regular expressions]: https://github.com/google/re2/wiki/Syntax
 [lexicographically]: https://en.wikipedia.org/wiki/Lexicographic_order
 
 <table border="0">
@@ -807,3 +819,63 @@ YAML [flow sequence](https://yaml.org/spec/1.2.2/#flow-sequences).
 ```
 
 This works for all options that accept multiple values.
+
+## FAQ
+
+### How does keep-sorted handle whitespace?
+
+The goal is for keep-sorted to handle whitespace the same way a human would. For
+instance, the default `group=yes` behavior groups lines of increasing
+indentation together for sorting, the way most people would. keep-sorted also
+doesn't consider leading whitespace when sorting strings.
+
+keep-sorted does fall short in a couple areas, however. Unlike humans, perhaps,
+keep-sorted preserves any number of trailing newlines.  For example, keep-sorted
+will not remove the 4 trailing newlines in the following block:
+
+```
+keep-sorted start
+1
+2
+3
+
+
+
+
+keep-sorted end
+```
+
+Additionally, keep-sorted does not preserve other linebreaks like a person
+might. All non-trailing linebreaks will be moved to the beginning of the content
+(and deduplicated if `remove_duplicates=yes`):
+
+<table border="0">
+<tr>
+<td>
+
+```
+                 
+1
+
+2
+
+3
+
+```
+
+</td>
+<td>
+
+```
+keep-sorted start
+
+1
+2
+3
+
+keep-sorted end
+```
+
+</td>
+</tr>
+</table>
