@@ -53,7 +53,7 @@ func New(id string, defaultOptions BlockOptions) *Fixer {
 
 // Fix all of the findings on contents to make keep-sorted happy.
 func (f *Fixer) Fix(filename, contents string, modifiedLines []LineRange) (fixed string, alreadyCorrect bool, warnings []*Finding) {
-	lines := strings.Split(contents, "\n")
+	lines := strings.Split(strings.ReplaceAll(contents, "\r\n", "\n"), "\n")
 	findings := f.findings(filename, lines, modifiedLines)
 	if len(findings) == 0 {
 		return contents, true, nil
