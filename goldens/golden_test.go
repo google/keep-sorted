@@ -86,16 +86,19 @@ func TestGoldens(t *testing.T) {
 						t.Fatalf("Could not read .err file: %v", err)
 					}
 				}
+				// stderr should only ever use "\n" for line endings.
+				wantErr = []byte(strings.ReplaceAll(string(wantErr), "\r\n", "\n"))
+				wantErr = []byte(strings.ReplaceAll(string(wantErr), "\r", "\n"))
 
 				gotOut, gotErr, err := runKeepSorted(in)
 				if err != nil {
 					t.Errorf("Had trouble running keep-sorted: %v", err)
 				}
-				if diff := cmp.Diff(strings.Split(string(wantOut), "\n"), strings.Split(gotOut, "\n")); diff != "" {
+				if diff := cmp.Diff(string(wantOut), gotOut); diff != "" {
 					t.Errorf("keep-sorted stdout diff (-want +got):\n%s", diff)
 					needsRegen <- inFile
 				}
-				if diff := cmp.Diff(strings.Split(string(wantErr), "\n"), strings.Split(gotErr, "\n")); diff != "" {
+				if diff := cmp.Diff(string(wantErr), gotErr); diff != "" {
 					t.Errorf("keep-sorted stderr diff (-want +got):\n%s", diff)
 					needsRegen <- inFile
 				}
