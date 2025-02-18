@@ -53,8 +53,8 @@ func New(id string, defaultOptions BlockOptions) *Fixer {
 
 // Fix all of the findings on contents to make keep-sorted happy.
 func (f *Fixer) Fix(filename, contents string, modifiedLines []LineRange) (fixed string, alreadyCorrect bool, warnings []*Finding) {
-	lines := strings.Split(strings.ReplaceAll(contents, "\r\n", "\n"), "\n")
-	findings := f.findings(filename, lines, modifiedLines)
+	lines, ending := lines(contents)
+	findings := f.findings(filename, lines, ending, modifiedLines)
 	if len(findings) == 0 {
 		return contents, true, nil
 	}
@@ -83,14 +83,24 @@ func (f *Fixer) Fix(filename, contents string, modifiedLines []LineRange) (fixed
 		endLine := repl.Lines.Start
 
 		// -1 to convert line number to index number.
-		s.WriteString(linesToString(lines[startLine-1 : endLine-1]))
+		s.WriteString(linesToString(lines[startLine-1:endLine-1], ending))
 		s.WriteString(repl.NewContent)
 
 		startLine = repl.Lines.End + 1
 	}
-	s.WriteString(strings.Join(lines[startLine-1:], "\n"))
+	s.WriteString(strings.Join(lines[startLine-1:], ending))
 
 	return s.String(), false, warnings
+}
+
+func lines(s string) (lines []string, ending string) {
+	for _, ending := range []string{"\r\n", "\r"} {
+		if strings.Contains(s, ending) {
+			return strings.Split(s, ending), ending
+		}
+	}
+
+	return strings.Split(s, "\n"), "\n"
 }
 
 // Findings returns a slice of things that need to be addressed in the file to
@@ -99,7 +109,8 @@ func (f *Fixer) Fix(filename, contents string, modifiedLines []LineRange) (fixed
 // If modifiedLines is non-nil, we only report findings for issues within the
 // modified lines. Otherwise, we report all findings.
 func (f *Fixer) Findings(filename, contents string, modifiedLines []LineRange) []*Finding {
-	return f.findings(filename, strings.Split(contents, "\n"), modifiedLines)
+	lines, ending := lines(contents)
+	return f.findings(filename, lines, ending, modifiedLines)
 }
 
 // Finding is something that keep-sorted thinks is wrong with a particular file.
@@ -142,7 +153,7 @@ type Replacement struct {
 	NewContent string    `json:"new_content"`
 }
 
-func (f *Fixer) findings(filename string, contents []string, modifiedLines []LineRange) []*Finding {
+func (f *Fixer) findings(filename string, contents []string, ending string, modifiedLines []LineRange) []*Finding {
 	blocks, incompleteBlocks, warns := f.newBlocks(filename, contents, 1, includeModifiedLines(modifiedLines))
 
 	var fs []*Finding
@@ -164,7 +175,7 @@ func (f *Fixer) findings(filename string, contents []string, modifiedLines []Lin
 
 	for _, b := range blocks {
 		if s, alreadySorted := b.sorted(); !alreadySorted {
-			repl := replacement(b.start+1, b.end-1, linesToString(s))
+			repl := replacement(b.start+1, b.end-1, linesToString(s, ending))
 			// Only try to automatically sort things if there are no incomplete blocks.
 			repl.automatic = len(incompleteBlocks) == 0
 			fs = append(fs, finding(filename, b.start+1, b.end-1, errorUnordered, repl))
@@ -195,8 +206,8 @@ func includeModifiedLines(modifiedLines []LineRange) func(start, end int) bool {
 // linesToString converts the string slice of lines into a single string.
 // This function assumes that every line should end with "\n", including the
 // last line.
-func linesToString(lines []string) string {
-	return strings.Join(lines, "\n") + "\n"
+func linesToString(lines []string, ending string) string {
+	return strings.Join(lines, ending) + ending
 }
 
 func finding(filename string, start, end int, msg string, fixes ...Fix) *Finding {
