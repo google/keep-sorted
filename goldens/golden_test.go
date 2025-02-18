@@ -86,7 +86,8 @@ func TestGoldens(t *testing.T) {
 						t.Fatalf("Could not read .err file: %v", err)
 					}
 				}
-				// stderr should only ever use "\n" for line endings.
+				// stderr should only ever use "\n" for line endings, but the golden
+				// file we read might have OS-specific line endings thanks to Git.
 				wantErr = []byte(strings.ReplaceAll(string(wantErr), "\r\n", "\n"))
 				wantErr = []byte(strings.ReplaceAll(string(wantErr), "\r", "\n"))
 
