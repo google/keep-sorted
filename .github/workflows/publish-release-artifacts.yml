@@ -1,0 +1,48 @@
+name: Publish Release Artifacts
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-upload:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            suffix: linux
+          - os: windows-latest
+            suffix: windows
+            extension: .exe
+          - os: macos-latest
+            suffix: darwin
+
+    runs-on: ${{matrix.os}}
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.21"
+
+      - name: Build
+        run: go build -v .
+
+      - name: Test
+        run: go test -v ./...
+
+      - name: Upload Artifacts to Release
+        run: |
+          echo Uploading ${{matrix.suffix}} artifact for ${{github.ref_name}}
+          mv keep-sorted${{matrix.extension}} keep-sorted_${{matrix.suffix}}${{matrix.extension}}
+          gh release upload ${{github.ref_name}} keep-sorted_${{matrix.suffix}}${{matrix.extension}} --clobber
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
