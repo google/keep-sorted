@@ -303,7 +303,7 @@ baz
 					mod = append(mod, LineRange{l, l})
 				}
 			}
-			got := New("keep-sorted-test", BlockOptions{}).findings(filename, strings.Split(tc.in, "\n"), mod)
+			got := New("keep-sorted-test", BlockOptions{}).findings(filename, strings.Split(tc.in, "\n"), "\n", mod)
 			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(Fix{})); diff != "" {
 				t.Errorf("Findings diff (-want +got):\n%s", diff)
 			}
