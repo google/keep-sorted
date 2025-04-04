@@ -91,7 +91,7 @@ func TestGoldens(t *testing.T) {
 				wantErr = []byte(strings.ReplaceAll(string(wantErr), "\r\n", "\n"))
 				wantErr = []byte(strings.ReplaceAll(string(wantErr), "\r", "\n"))
 
-				gotOut, gotErr, err := runKeepSorted(in)
+				gotOut, gotErr, exitCode, err := runKeepSorted(in)
 				if err != nil {
 					t.Errorf("Had trouble running keep-sorted: %v", err)
 				}
@@ -104,9 +104,12 @@ func TestGoldens(t *testing.T) {
 					needsRegen <- inFile
 				}
 
-				gotOut2, _, err := runKeepSorted(strings.NewReader(gotOut))
+				gotOut2, _, exitCode2, err := runKeepSorted(strings.NewReader(gotOut))
 				if err != nil {
 					t.Errorf("Had trouble running keep-sorted on keep-sorted output: %v", err)
+				}
+				if exitCode != exitCode2 {
+					t.Errorf("Running keep-sorted on keep-sorted output returned a different exit code (should be idempotent): got %d want %d", exitCode2, exitCode)
 				}
 				if diff := cmp.Diff(gotOut, gotOut2); diff != "" {
 					t.Errorf("keep-sorted diff on keep-sorted output (should be idempotent) (-want +got)\n%s", diff)
@@ -131,20 +134,20 @@ func showTopLevel(dir string) (string, error) {
 	return strings.TrimSpace(string(b)), err
 }
 
-func runKeepSorted(stdin io.Reader) (stdout, stderr string, err error) {
+func runKeepSorted(stdin io.Reader) (stdout, stderr string, exitCode int, err error) {
 	cmd := exec.Command("go", "run", gitDir, "--id=keep-sorted-test", "--omit-timestamps", "-")
 	cmd.Stdin = stdin
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", "", fmt.Errorf("could not create stdout pipe: %w", err)
+		return "", "", -1, fmt.Errorf("could not create stdout pipe: %w", err)
 	}
 	errPipe, err := cmd.StderrPipe()
 	if err != nil {
-		return "", "", fmt.Errorf("could not create stderr pipe: %w", err)
+		return "", "", -1, fmt.Errorf("could not create stderr pipe: %w", err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		return "", "", fmt.Errorf("could not start keep-sorted: %w", err)
+		return "", "", -1, fmt.Errorf("could not start keep-sorted: %w", err)
 	}
 
 	var errs []error
@@ -159,8 +162,13 @@ func runKeepSorted(stdin io.Reader) (stdout, stderr string, err error) {
 	}
 
 	if err := cmd.Wait(); err != nil {
-		errs = append(errs, fmt.Errorf("keep-sorted failed: %w", err))
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			exitCode = ee.ExitCode()
+		} else {
+			errs = append(errs, fmt.Errorf("keep-sorted failed: %w", err))
+		}
 	}
 
-	return string(gotOut), string(gotErr), errors.Join(errs...)
+	return string(gotOut), string(gotErr), exitCode, errors.Join(errs...)
 }

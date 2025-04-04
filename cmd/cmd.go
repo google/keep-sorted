@@ -214,30 +214,36 @@ func Run(c *Config, files []string) (ok bool, err error) {
 }
 
 func fix(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error) {
+	ok = true
+
 	for _, fn := range filenames {
 		contents, err := read(fn)
 		if err != nil {
 			return false, err
 		}
-		if want, alreadyFixed, warnings := fixer.Fix(fn, contents, modifiedLines); fn == stdin || !alreadyFixed {
+		want, alreadyFixed, warnings := fixer.Fix(fn, contents, modifiedLines)
+		if fn == stdin || !alreadyFixed {
 			if err := write(fn, want); err != nil {
 				return false, err
 			}
-			for _, warn := range warnings {
-				log := log.Warn()
-				if warn.Path != stdin {
-					log = log.Str("file", warn.Path)
-				}
-				if warn.Lines.Start == warn.Lines.End {
-					log = log.Int("line", warn.Lines.Start)
-				} else {
-					log = log.Int("start", warn.Lines.Start).Int("end", warn.Lines.End)
-				}
-				log.Msg(warn.Message)
+		}
+
+		for _, warn := range warnings {
+			ok = false
+			log := log.Warn()
+			if warn.Path != stdin {
+				log = log.Str("file", warn.Path)
 			}
+			if warn.Lines.Start == warn.Lines.End {
+				log = log.Int("line", warn.Lines.Start)
+			} else {
+				log = log.Int("start", warn.Lines.Start).Int("end", warn.Lines.End)
+			}
+			log.Msg(warn.Message)
 		}
 	}
-	return true, nil
+
+	return ok, nil
 }
 
 func lint(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error) {
