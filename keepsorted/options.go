@@ -273,7 +273,7 @@ func validate(opts *blockOptions) (warnings []error) {
 	}
 
 	if opts.NewlineSeparated < 0 {
-		warns = append(warns, fmt.Errorf("newline_separated has invalid value: %v", opts.SkipLines))
+		warns = append(warns, fmt.Errorf("newline_separated has invalid value: %v", opts.NewlineSeparated))
 		opts.NewlineSeparated = 0
 	}
 

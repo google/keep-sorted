@@ -225,22 +225,23 @@ func TestPopValue(t *testing.T) {
 			want:          []*regexp.Regexp{regexp.MustCompile(".*"), regexp.MustCompile("abcd"), regexp.MustCompile("(?:efgh)ijkl")},
 		},
 		{
-			name: "Newlines",
+			name: "IntOrBool_Int",
 
 			input: "5",
 			want:  IntOrBool(5),
 		},
 		{
-			name:  "Newlines_BoolTrue",
+			name:  "IntOrBool_True",
 			input: "yes",
 			want:  IntOrBool(1),
 		},
 		{
-			name:  "Newlines_BoolFalse",
+			name:  "IntOrBool_False",
 			input: "no",
 			want:  IntOrBool(0),
-		},		{
-			name: "Newlines_Invalid",
+		},
+		{
+			name: "IntOrBool_Invalid",
 
 			input:   "foo",
 			want:    IntOrBool(0),

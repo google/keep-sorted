@@ -82,6 +82,18 @@ func TestBlockOptions(t *testing.T) {
 			want: blockOptions{NewlineSeparated: 1},
 		},
 		{
+			name: "NewlineSeparated_Int",
+			in:   "newline_separated=10",
+
+			want: blockOptions{NewlineSeparated: 10},
+		},
+		{
+			name: "NewlineSeparated_Invalid",
+			in:   "newline_separated=-1",
+
+			wantErr: "newline_separated has invalid value: -1",
+		},
+		{
 			name: "ErrorSkipLinesIsNegative",
 			in:   "skip_lines=-1",
 
