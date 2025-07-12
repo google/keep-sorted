@@ -53,6 +53,9 @@ func (p *parser) popValue(typ reflect.Type) (reflect.Value, error) {
 	case reflect.TypeFor[bool]():
 		val, err := p.popBool()
 		return reflect.ValueOf(val), err
+	case reflect.TypeFor[IntOrBool]():
+		val, err := p.popIntOrBool()
+		return reflect.ValueOf(val), err
 	case reflect.TypeFor[int]():
 		val, err := p.popInt()
 		return reflect.ValueOf(val), err
@@ -107,6 +110,23 @@ func (p *parser) popInt() (int, error) {
 		return 0, err
 	}
 	return i, nil
+}
+
+func (p *parser) popIntOrBool() (IntOrBool, error) {
+	val, rest, _ := strings.Cut(p.line, " ")
+	p.line = rest
+	i, err := strconv.Atoi(val)
+	if err != nil {
+		b, ok := boolValues[val]
+		if ok {
+			if b {
+				return 1, nil
+			}
+			return 0, nil
+		}
+		return 0, err
+	}
+	return IntOrBool(i), nil
 }
 
 func (p *parser) popList() ([]string, error) {

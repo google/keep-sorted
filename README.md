@@ -826,6 +826,47 @@ Pineapples
 </tr>
 </table>
 
+Set newline_separated=yes for a single blank line, or
+newline_separated=N to separate items with N blank lines.
+
+<table border="0">
+<tr>
+<td>
+
+```
+# keep-sorted start
+Apples
+Bananas
+Oranges
+Pineapples
+# keep-sorted end
+
+
+
+```
+
+</td>
+<td>
+
+```diff
++# keep-sorted start newline_separated=2
+ Apples
+ 
+ 
+ Bananas
+ 
+ 
+ Oranges
+ 
+ 
+ Pineapples
+ # keep-sorted end
+```
+
+</td>
+</tr>
+</table>
+
 ### Syntax
 
 If you find yourself wanting to include special characters (spaces, commas, left

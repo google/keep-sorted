@@ -76,6 +76,12 @@ func TestBlockOptions(t *testing.T) {
 			want: blockOptions{SkipLines: 10},
 		},
 		{
+			name: "NewlineSeparated_Bool",
+			in:   "newline_separated=yes",
+
+			want: blockOptions{NewlineSeparated: 1},
+		},
+		{
 			name: "ErrorSkipLinesIsNegative",
 			in:   "skip_lines=-1",
 

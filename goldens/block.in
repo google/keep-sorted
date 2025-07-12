@@ -138,6 +138,24 @@ some_build_rule(
 )
 // keep-sorted-test end
 
+// BUILD rule style with newlines=2
+// keep-sorted-test start block=yes newline_separated=2
+some_build_rule(
+    name = "def",
+    src = "some-source",
+)
+
+some_build_rule(
+    name = "xyz",
+    src = "another-source",
+)
+
+some_build_rule(
+    name = "abc",
+    src = "one-more-source",
+)
+// keep-sorted-test end
+
 // Nix multi line string
 // keep-sorted-test start block=yes newline_separated=yes
 foo = throw ''

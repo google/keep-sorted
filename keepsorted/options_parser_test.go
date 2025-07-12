@@ -224,6 +224,28 @@ func TestPopValue(t *testing.T) {
 			allowYAMLList: true,
 			want:          []*regexp.Regexp{regexp.MustCompile(".*"), regexp.MustCompile("abcd"), regexp.MustCompile("(?:efgh)ijkl")},
 		},
+		{
+			name: "Newlines",
+
+			input: "5",
+			want:  IntOrBool(5),
+		},
+		{
+			name:  "Newlines_BoolTrue",
+			input: "yes",
+			want:  IntOrBool(1),
+		},
+		{
+			name:  "Newlines_BoolFalse",
+			input: "no",
+			want:  IntOrBool(0),
+		},		{
+			name: "Newlines_Invalid",
+
+			input:   "foo",
+			want:    IntOrBool(0),
+			wantErr: true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			suffix := "trailing content..."
