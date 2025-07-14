@@ -1190,14 +1190,14 @@ func TestLineGrouping(t *testing.T) {
 		opts blockOptions
 
 		// We set the input to be the concatenation of all the lineGroups.
-		want []lineGroup
+		want []lineGroupContent
 	}{
 		{
 			name: "Simple",
 
-			want: []lineGroup{
-				{nil, []string{"foo"}},
-				{nil, []string{"bar"}},
+			want: []lineGroupContent{
+				{lines: []string{"foo"}},
+				{lines: []string{"bar"}},
 			},
 		},
 		{
@@ -1210,20 +1210,21 @@ func TestLineGrouping(t *testing.T) {
 				return opts
 			}(),
 
-			want: []lineGroup{
+			want: []lineGroupContent{
 				{
-					[]string{
+					comment: []string{
 						"// comment 1",
 						"// comment 2",
 					},
-					[]string{
+					lines: []string{
 						"foo",
 					},
 				},
 				{
-					[]string{
+					comment: []string{
 						"// comment 3",
-					}, []string{
+					},
+					lines: []string{
 						"bar",
 					},
 				},
@@ -1239,20 +1240,19 @@ func TestLineGrouping(t *testing.T) {
 				return opts
 			}(),
 
-			want: []lineGroup{
+			want: []lineGroupContent{
 				{
-					[]string{
+					comment: []string{
 						"// comment 1",
 					},
-					[]string{
+					lines: []string{
 						"foo",
 					},
 				},
 				{
-					[]string{
+					comment: []string{
 						"// trailing comment",
 					},
-					nil,
 				},
 			},
 		},
@@ -1262,12 +1262,12 @@ func TestLineGrouping(t *testing.T) {
 				Group: true,
 			},
 
-			want: []lineGroup{
-				{nil, []string{
+			want: []lineGroupContent{
+				{lines: []string{
 					"  foo",
 					"    bar",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"  baz",
 				}},
 			},
@@ -1279,22 +1279,22 @@ func TestLineGrouping(t *testing.T) {
 				GroupPrefixes: map[string]bool{"and": true, "with": true},
 			},
 
-			want: []lineGroup{
-				{nil, []string{
+			want: []lineGroupContent{
+				{lines: []string{
 					"peanut butter",
 					"and jelly",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"spaghetti",
 					"with meatballs",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"hamburger",
 					"  with lettuce",
 					" and tomatoes",
 					"and cheese",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"dogs and cats",
 				}},
 			},
@@ -1305,19 +1305,19 @@ func TestLineGrouping(t *testing.T) {
 				Group: true,
 			},
 
-			want: []lineGroup{
-				{nil, []string{
+			want: []lineGroupContent{
+				{lines: []string{
 					"  foo",
 					"", // Since the next non-empty line has the correct indent.
 					"    bar",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"", // Next non-empty line has the wrong indent.
 				}},
-				{nil, []string{
+				{lines: []string{
 					"  baz",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"", // There is no next non-empty line.
 				}},
 			},
@@ -1333,20 +1333,20 @@ func TestLineGrouping(t *testing.T) {
 				return opts
 			}(),
 
-			want: []lineGroup{
-				{[]string{
+			want: []lineGroupContent{
+				{comment: []string{
 					"// def",
 					"// keep-sorted-test start",
-				}, []string{
+				}, lines: []string{
 					"3",
 					"1",
 					"2",
 					"// keep-sorted-test end",
 				}},
-				{[]string{
+				{comment: []string{
 					"// abc",
 					"// keep-sorted-test start",
-				}, []string{
+				}, lines: []string{
 					"b",
 					"c",
 					"a",
@@ -1360,17 +1360,17 @@ func TestLineGrouping(t *testing.T) {
 				Block: true,
 			},
 
-			want: []lineGroup{
-				{nil, []string{
+			want: []lineGroupContent{
+				{lines: []string{
 					"foo(",
 					"abcd",
 					"efgh",
 					")",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"bar()",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"baz",
 				}},
 			},
@@ -1381,17 +1381,17 @@ func TestLineGrouping(t *testing.T) {
 				Block: true,
 			},
 
-			want: []lineGroup{
-				{nil, []string{
+			want: []lineGroupContent{
+				{lines: []string{
 					`foo"`,
 					"abcd",
 					"efgh",
 					`"`,
 				}},
-				{nil, []string{
+				{lines: []string{
 					`bar""`,
 				}},
-				{nil, []string{
+				{lines: []string{
 					"baz",
 				}},
 			},
@@ -1402,17 +1402,17 @@ func TestLineGrouping(t *testing.T) {
 				Block: true,
 			},
 
-			want: []lineGroup{
-				{nil, []string{
+			want: []lineGroupContent{
+				{lines: []string{
 					`foo"`,
 					`\"abcd`,
 					`efgh\"`,
 					`"`,
 				}},
-				{nil, []string{
+				{lines: []string{
 					`bar""`,
 				}},
-				{nil, []string{
+				{lines: []string{
 					"baz",
 				}},
 			},
@@ -1423,17 +1423,17 @@ func TestLineGrouping(t *testing.T) {
 				Block: true,
 			},
 
-			want: []lineGroup{
-				{nil, []string{
+			want: []lineGroupContent{
+				{lines: []string{
 					`foo"`,
 					`ab'cd`,
 					`efgh`,
 					`"`,
 				}},
-				{nil, []string{
+				{lines: []string{
 					"bar'`'",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"baz",
 				}},
 			},
@@ -1444,14 +1444,14 @@ func TestLineGrouping(t *testing.T) {
 				Block: true,
 			},
 
-			want: []lineGroup{
-				{nil, []string{
+			want: []lineGroupContent{
+				{lines: []string{
 					`foo"`,
 					`ab(cd`,
 					`ef[gh`,
 					`"`,
 				}},
-				{nil, []string{
+				{lines: []string{
 					`foo"`,
 					`ab)cd`,
 					`ef]gh`,
@@ -1469,19 +1469,19 @@ func TestLineGrouping(t *testing.T) {
 				return opts
 			}(),
 
-			want: []lineGroup{
-				{nil, []string{
+			want: []lineGroupContent{
+				{lines: []string{
 					"foo(",
 					"// ignores quotes in a comment '",
 					"// ignores parenthesis in a comment )",
 					"abcd",
 					")",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"'string literal",
 					"// does not ignore quotes here '",
 				}},
-				{nil, []string{
+				{lines: []string{
 					"abcd'",
 				}},
 			},
@@ -1496,23 +1496,31 @@ func TestLineGrouping(t *testing.T) {
 				return opts
 			}(),
 
-			want: []lineGroup{
-				{nil, []string{
-					"foo(// ignores quotes in a comment '",
-					"abcd // ignores parenthesis in a comment )",
-					")",
-				}},
-				{nil, []string{
-					"'string literal",
-					"with line break // does not ignore quotes here '",
-				}},
-				{nil, []string{
-					`"another string literal`,
-					`with line break // does not ignore quote " here`,
-				}},
-				{nil, []string{
-					`"abcd"`,
-				}},
+			want: []lineGroupContent{
+				{
+					lines: []string{
+						"foo(// ignores quotes in a comment '",
+						"abcd // ignores parenthesis in a comment )",
+						")",
+					},
+				},
+				{
+					lines: []string{
+						"'string literal",
+						"with line break // does not ignore quotes here '",
+					},
+				},
+				{
+					lines: []string{
+						`"another string literal`,
+						`with line break // does not ignore quote " here`,
+					},
+				},
+				{
+					lines: []string{
+						`"abcd"`,
+					},
+				},
 			},
 		},
 		{
@@ -1521,8 +1529,8 @@ func TestLineGrouping(t *testing.T) {
 				Block: true,
 			},
 
-			want: []lineGroup{
-				{nil, []string{
+			want: []lineGroupContent{
+				{lines: []string{
 					`"""documentation`,
 					"ab'cd",
 					"efgh",
@@ -1539,8 +1547,12 @@ func TestLineGrouping(t *testing.T) {
 				in = append(in, lg.lines...)
 			}
 
-			got := groupLines(in, defaultMetadataWith(tc.opts))
-			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(lineGroup{})); diff != "" {
+			gotLineGroups := groupLines(in, defaultMetadataWith(tc.opts))
+			got := make([]lineGroupContent, len(gotLineGroups))
+			for i, lg := range gotLineGroups {
+				got[i] = lg.lineGroupContent
+			}
+			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(lineGroupContent{})); diff != "" {
 				t.Errorf("groupLines mismatch (-want +got):\n%s", diff)
 			}
 		})

@@ -15,25 +15,94 @@
 package keepsorted
 
 import (
-	"cmp"
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/rs/zerolog/log"
 )
 
-// lineGroup is a logical unit of source code. It's one or more lines combines
+// lineGroup is a logical unit of source code. It's one or more lines combined
 // with zero or more comment lines about the source code lines.
 type lineGroup struct {
+	opts        blockOptions
+	prefixOrder func() *prefixOrder
+
+	// The actual content of the lineGroup.
+	lineGroupContent
+
+	// Bits of information that we use while comparing two line groups together.
+	// These bits of information are calculated lazily, and are invalidated when
+	// the lineGroup is mutated. You should prefer to access them via their
+	// getters.
+	calculated lineGroupCalculations
+}
+
+var compareLineGroups = comparingFunc((*lineGroup).commentOnly, falseFirst()).
+	andThen(comparingFunc((*lineGroup).regexTokens, lexicographically(compareRegexTokens))).
+	andThen(comparing((*lineGroup).joinedLines)).
+	andThen(comparing((*lineGroup).joinedComment))
+
+var compareRegexTokens = comparingFunc(func(t regexToken) []*captureGroupToken { return t }, lexicographically(compareCaptureGroupTokens))
+
+var compareCaptureGroupTokens = comparingFunc((*captureGroupToken).prefix, orderedPrefix.compare).
+	andThen(comparingFunc((*captureGroupToken).transform, numericTokens.compare))
+
+type lineGroupContent struct {
 	comment []string
 	lines   []string
 }
 
+type lineGroupCalculations struct {
+	commentOnly *bool
+	regexes     []regexToken
+	lines       string
+	comment     string
+}
+
+type regexToken []*captureGroupToken
+
+type captureGroupToken struct {
+	opts        blockOptions
+	prefixOrder func() *prefixOrder
+
+	raw    string
+	pre    *orderedPrefix
+	tokens *numericTokens
+}
+
+func (t *captureGroupToken) prefix() orderedPrefix {
+	if t.pre != nil {
+		return *t.pre
+	}
+	if t.prefixOrder == nil {
+		return orderedPrefix{}
+	}
+
+	ret := t.prefixOrder().match(t.raw)
+	t.pre = &ret
+	return ret
+}
+
+func (t *captureGroupToken) transform() numericTokens {
+	if t.tokens != nil {
+		return *t.tokens
+	}
+
+	s := t.opts.trimIgnorePrefix(t.raw)
+	if !t.opts.CaseSensitive {
+		s = strings.ToLower(s)
+	}
+	ret := t.opts.maybeParseNumeric(s)
+	t.tokens = &ret
+	return ret
+}
+
 // groupLines splits lines into one or more lineGroups based on the provided options.
-func groupLines(lines []string, metadata blockMetadata) []lineGroup {
-	var groups []lineGroup
+func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
+	var groups []*lineGroup
 	// Tracks which subsection of lines contains the comments for the current lineGroup.
 	var commentRange indexRange
 	// Tracks which subsection of lines contains the content for the current lineGroup.
@@ -54,6 +123,8 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 
 	// block=yes: The code block that we're constructing until we have matched braces and quotations.
 	var block codeBlock
+
+	prefixOrder := sync.OnceValue(func() *prefixOrder { return newPrefixOrder(metadata.opts) })
 
 	if metadata.opts.Group {
 		indents = calculateIndents(lines)
@@ -84,7 +155,11 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 	}
 	// finish an outstanding lineGroup and reset our state to prepare for a new lineGroup.
 	finishGroup := func() {
-		groups = append(groups, lineGroup{comment: slice(lines, commentRange), lines: slice(lines, lineRange)})
+		groups = append(groups, &lineGroup{
+			opts:             metadata.opts,
+			prefixOrder:      prefixOrder,
+			lineGroupContent: lineGroupContent{comment: slice(lines, commentRange), lines: slice(lines, lineRange)},
+		})
 		commentRange = indexRange{}
 		lineRange = indexRange{}
 		block = codeBlock{}
@@ -305,24 +380,64 @@ func findQuote(s string, i int) string {
 	return ""
 }
 
-func (lg lineGroup) append(s string) {
+func (lg *lineGroup) append(s string) {
+	lg.calculated = lineGroupCalculations{}
 	lg.lines[len(lg.lines)-1] = lg.lines[len(lg.lines)-1] + s
 }
 
-func (lg lineGroup) hasSuffix(s string) bool {
+func (lg *lineGroup) hasSuffix(s string) bool {
 	return len(lg.lines) > 0 && strings.HasSuffix(lg.lines[len(lg.lines)-1], s)
 }
 
-func (lg lineGroup) trimSuffix(s string) {
+func (lg *lineGroup) trimSuffix(s string) {
+	lg.calculated = lineGroupCalculations{}
 	lg.lines[len(lg.lines)-1] = strings.TrimSuffix(lg.lines[len(lg.lines)-1], s)
 }
 
-func (lg lineGroup) joinedLines() string {
-	// TODO(jfalgout): This is a good candidate for caching. Make sure we
-	// invalidate it if this line group gets modified, though (like it does when
-	// we handle trailing commas correctly).
+func (lg *lineGroup) commentOnly() bool {
+	if lg.calculated.commentOnly != nil {
+		return *lg.calculated.commentOnly
+	}
+
+	ret := len(lg.lines) == 0
+	lg.calculated.commentOnly = &ret
+	return ret
+}
+
+func (lg *lineGroup) regexTokens() []regexToken {
+	if lg.calculated.regexes != nil {
+		return lg.calculated.regexes
+	}
+
+	// TODO: jfaer - Should we match regexes on the original content?
+	regexMatches := lg.opts.matchRegexes(lg.joinedLines())
+	lg.calculated.regexes = make([]regexToken, len(regexMatches))
+	for i, match := range regexMatches {
+		captureGroupTokens := make([]*captureGroupToken, len(match))
+		lg.calculated.regexes[i] = captureGroupTokens
+		for j, s := range match {
+			prefixOrder := lg.prefixOrder
+			if j != 0 {
+				// Only try to match PrefixOrder on the first capture group in a regex.
+				// TODO: jfaer - Should this just be the first capture group in the first regex match?
+				prefixOrder = nil
+			}
+			captureGroupTokens[j] = &captureGroupToken{
+				opts:        lg.opts,
+				prefixOrder: prefixOrder,
+				raw:         s,
+			}
+		}
+	}
+	return lg.calculated.regexes
+}
+
+func (lg *lineGroup) joinedLines() string {
 	if len(lg.lines) == 0 {
 		return ""
+	}
+	if lg.calculated.lines != "" {
+		return lg.calculated.lines
 	}
 
 	endsWithWordChar := regexp.MustCompile(`\w$`)
@@ -337,17 +452,23 @@ func (lg lineGroup) joinedLines() string {
 		s.WriteString(l)
 		last = l
 	}
-	return s.String()
+	lg.calculated.lines = s.String()
+	return lg.calculated.lines
 }
 
-func (lg lineGroup) less(other lineGroup) int {
-	if c := strings.Compare(lg.joinedLines(), other.joinedLines()); c != 0 {
-		return c
+func (lg *lineGroup) joinedComment() string {
+	if len(lg.comment) == 0 {
+		return ""
 	}
-	return cmp.Compare(strings.Join(lg.comment, "\n"), strings.Join(other.comment, "\n"))
+	if lg.calculated.comment != "" {
+		return lg.calculated.comment
+	}
+
+	lg.calculated.comment = strings.Join(lg.comment, "\n")
+	return lg.calculated.comment
 }
 
-func (lg lineGroup) GoString() string {
+func (lg *lineGroup) GoString() string {
 	var comment strings.Builder
 	for _, c := range lg.comment {
 		comment.WriteString(fmt.Sprintf("  %#v\n", c))
@@ -359,13 +480,13 @@ func (lg lineGroup) GoString() string {
 	return fmt.Sprintf("LineGroup{\ncomment=\n%slines=\n%s}", comment.String(), lines.String())
 }
 
-func (lg lineGroup) allLines() []string {
+func (lg *lineGroup) allLines() []string {
 	var all []string
 	all = append(all, lg.comment...)
 	all = append(all, lg.lines...)
 	return all
 }
 
-func (lg lineGroup) String() string {
+func (lg *lineGroup) String() string {
 	return strings.Join(lg.allLines(), "\n")
 }
