@@ -57,13 +57,45 @@ type lineGroupContent struct {
 }
 
 type lineGroupCalculations struct {
-	commentOnly *bool
-	regexes     []regexToken
-	lines       string
-	comment     string
+	commentOnly   *bool
+	regexes       []regexToken
+	internalLines string
+	lines         string
+	comment       string
 }
 
 type regexToken []*captureGroupToken
+
+func (t regexToken) wasUsed() bool {
+	if t == nil {
+		// Report that the regex didn't match.
+		return true
+	}
+	for _, cg := range t {
+		if cg.wasUsed() {
+			return true
+		}
+	}
+	return false
+}
+
+func (t regexToken) GoString() string {
+	if t == nil {
+		return "<did not match>"
+	}
+	captureGroups := make([]string, len(t))
+	for i, cg := range t {
+		if cg.wasUsed() {
+			captureGroups[i] = fmt.Sprintf("%#v", cg)
+		} else {
+			captureGroups[i] = "<unused>"
+		}
+	}
+	if len(captureGroups) == 1 {
+		return captureGroups[0]
+	}
+	return fmt.Sprintf("%v", captureGroups)
+}
 
 type captureGroupToken struct {
 	opts        blockOptions
@@ -74,11 +106,35 @@ type captureGroupToken struct {
 	tokens *numericTokens
 }
 
+func (t *captureGroupToken) GoString() string {
+	var s []string
+	if t.pre != nil {
+		s = append(s, fmt.Sprintf("prefix:%q", t.pre.prefix))
+	}
+	if t.tokens != nil {
+		var tokens strings.Builder
+		if len(s) > 0 {
+			tokens.WriteString("tokens:")
+		}
+		fmt.Fprintf(&tokens, "%#v", *t.tokens)
+		s = append(s, tokens.String())
+	}
+	ret := strings.Join(s, " ")
+	if len(s) > 1 {
+		ret = "[" + ret + "]"
+	}
+	return ret
+}
+
+func (t *captureGroupToken) wasUsed() bool {
+	return t.pre != nil || t.tokens != nil
+}
+
 func (t *captureGroupToken) prefix() orderedPrefix {
 	if t.pre != nil {
 		return *t.pre
 	}
-	if t.prefixOrder == nil {
+	if t.prefixOrder() == nil {
 		return orderedPrefix{}
 	}
 
@@ -164,7 +220,6 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 		commentRange = indexRange{}
 		lineRange = indexRange{}
 		block = codeBlock{}
-		log.Printf("%#v", groups[len(groups)-1])
 	}
 	for i, l := range lines {
 		if metadata.opts.Block && !lineRange.empty() && block.expectsContinuation() {
@@ -411,7 +466,7 @@ func (lg *lineGroup) regexTokens() []regexToken {
 	}
 
 	// TODO: jfaer - Should we match regexes on the original content?
-	regexMatches := lg.opts.matchRegexes(lg.joinedLines())
+	regexMatches := lg.opts.matchRegexes(lg.internalJoinedLines())
 	lg.calculated.regexes = make([]regexToken, len(regexMatches))
 	for i, match := range regexMatches {
 		if match == nil {
@@ -422,15 +477,15 @@ func (lg *lineGroup) regexTokens() []regexToken {
 		captureGroupTokens := make(regexToken, len(match))
 		lg.calculated.regexes[i] = captureGroupTokens
 		for j, s := range match {
-			prefixOrder := lg.prefixOrder
+			order := lg.prefixOrder
 			if j != 0 {
 				// Only try to match PrefixOrder on the first capture group in a regex.
 				// TODO: jfaer - Should this just be the first capture group in the first regex match?
-				prefixOrder = nil
+				order = func() *prefixOrder { return nil }
 			}
 			captureGroupTokens[j] = &captureGroupToken{
 				opts:        lg.opts,
-				prefixOrder: prefixOrder,
+				prefixOrder: order,
 				raw:         s,
 			}
 		}
@@ -438,12 +493,14 @@ func (lg *lineGroup) regexTokens() []regexToken {
 	return lg.calculated.regexes
 }
 
-func (lg *lineGroup) joinedLines() string {
+// internalJoinedLines calculates the same thing as joinedLines, except it
+// doesn't indicate that it was used in the comparison of this lineGroup.
+func (lg *lineGroup) internalJoinedLines() string {
 	if len(lg.lines) == 0 {
 		return ""
 	}
-	if lg.calculated.lines != "" {
-		return lg.calculated.lines
+	if lg.calculated.internalLines != "" {
+		return lg.calculated.internalLines
 	}
 
 	endsWithWordChar := regexp.MustCompile(`\w$`)
@@ -458,7 +515,19 @@ func (lg *lineGroup) joinedLines() string {
 		s.WriteString(l)
 		last = l
 	}
-	lg.calculated.lines = s.String()
+	lg.calculated.internalLines = s.String()
+	return lg.calculated.internalLines
+}
+
+func (lg *lineGroup) joinedLines() string {
+	if len(lg.lines) == 0 {
+		return ""
+	}
+	if lg.calculated.lines != "" {
+		return lg.calculated.lines
+	}
+
+	lg.calculated.lines = lg.internalJoinedLines()
 	return lg.calculated.lines
 }
 
@@ -475,15 +544,38 @@ func (lg *lineGroup) joinedComment() string {
 }
 
 func (lg *lineGroup) GoString() string {
-	var comment strings.Builder
-	for _, c := range lg.comment {
-		comment.WriteString(fmt.Sprintf("  %#v\n", c))
+	var s strings.Builder
+	s.WriteString("LineGroup{\n")
+	if len(lg.comment) > 0 {
+		s.WriteString("comment=\n")
+		for _, c := range lg.comment {
+			s.WriteString(fmt.Sprintf("  %#v\n", c))
+		}
 	}
-	var lines strings.Builder
-	for _, l := range lg.lines {
-		lines.WriteString(fmt.Sprintf("  %#v\n", l))
+	if len(lg.lines) > 0 {
+		s.WriteString("lines=\n")
+		for _, c := range lg.lines {
+			fmt.Fprintf(&s, "  %#v\n", c)
+		}
 	}
-	return fmt.Sprintf("LineGroup{\ncomment=\n%slines=\n%s}", comment.String(), lines.String())
+	if lg.calculated.commentOnly != nil {
+		fmt.Fprintf(&s, "commentOnly=%t\n", *lg.calculated.commentOnly)
+	}
+	if lg.calculated.regexes != nil {
+		for i, regex := range lg.calculated.regexes {
+			if regex.wasUsed() {
+				fmt.Fprintf(&s, "regex[%d]=%#v\n", i, regex)
+			}
+		}
+	}
+	if lg.calculated.lines != "" {
+		fmt.Fprintf(&s, "lines=%#v\n", lg.calculated.lines)
+	}
+	if lg.calculated.comment != "" {
+		fmt.Fprintf(&s, "comment=%#v\n", lg.calculated.comment)
+	}
+	s.WriteString("}")
+	return s.String()
 }
 
 func (lg *lineGroup) allLines() []string {

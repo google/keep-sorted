@@ -458,6 +458,25 @@ type numericTokens struct {
 	i []*big.Int
 }
 
+func (t numericTokens) GoString() string {
+	s := make([]string, 0, t.len())
+	for i := 0; i < t.len(); i++ {
+		if i%2 == 0 {
+			val := t.s[i/2]
+			if i == 0 && val == "" {
+				continue
+			}
+			s = append(s, fmt.Sprintf("%#v", t.s[i/2]))
+		} else {
+			s = append(s, fmt.Sprintf("%#v", t.i[i/2]))
+		}
+	}
+	if len(s) == 1 {
+		return s[0]
+	}
+	return fmt.Sprintf("%v", s)
+}
+
 func (t numericTokens) len() int {
 	return len(t.s) + len(t.i)
 }
@@ -487,6 +506,10 @@ type prefixOrder struct {
 }
 
 func newPrefixOrder(opts blockOptions) *prefixOrder {
+	if len(opts.PrefixOrder) == 0 {
+		return nil
+	}
+
 	// Assign a weight to each prefix so that they will be sorted into their
 	// predetermined order.
 	// Weights are negative so that entries with matching prefixes are put before
@@ -505,7 +528,11 @@ func newPrefixOrder(opts blockOptions) *prefixOrder {
 	return &prefixOrder{opts, prefixWeights, prefixes}
 }
 
-func (o prefixOrder) match(s string) orderedPrefix {
+func (o *prefixOrder) match(s string) orderedPrefix {
+	if o == nil {
+		return orderedPrefix{}
+	}
+
 	pre, _ := o.opts.hasPrefix(s, slices.Values(o.prefixes))
 	return orderedPrefix{pre, o.prefixWeights[pre]}
 }

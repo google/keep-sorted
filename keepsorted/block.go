@@ -235,8 +235,8 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 		}
 	}
 
+	log.Printf("Creating line groups for block at index %d (options %v)", b.start, b.metadata.opts)
 	groups := groupLines(lines, b.metadata)
-	log.Printf("Previous %d groups were for block at index %d are (options %v)", len(groups), b.start, b.metadata.opts)
 	trimTrailingComma := handleTrailingComma(groups)
 
 	wasNewlineSeparated := true
@@ -257,7 +257,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 		seen := map[string]bool{}
 		var deduped []*lineGroup
 		for _, lg := range groups {
-			if s := lg.joinedLines() + "\n" + strings.Join(lg.comment, "\n"); !seen[s] {
+			if s := lg.String(); !seen[s] {
 				seen[s] = true
 				deduped = append(deduped, lg)
 			} else {
@@ -268,11 +268,18 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	}
 
 	if alreadySorted && wasNewlineSeparated && !removedDuplicate && slices.IsSortedFunc(groups, compareLineGroups) {
+		log.Printf("It was already sorted!")
+		for _, lg := range groups {
+			log.Printf("%#v", lg)
+		}
 		trimTrailingComma(groups)
 		return lines, true
 	}
 
 	slices.SortStableFunc(groups, compareLineGroups)
+	for _, lg := range groups {
+		log.Printf("%#v", lg)
+	}
 
 	trimTrailingComma(groups)
 
