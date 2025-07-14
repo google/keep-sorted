@@ -45,7 +45,8 @@ var compareLineGroups = comparingFunc((*lineGroup).commentOnly, falseFirst()).
 	andThen(comparing((*lineGroup).joinedLines)).
 	andThen(comparing((*lineGroup).joinedComment))
 
-var compareRegexTokens = comparingFunc(func(t regexToken) []*captureGroupToken { return t }, lexicographically(compareCaptureGroupTokens))
+var compareRegexTokens = comparingFunc(func(t regexToken) bool { return t == nil }, falseFirst()).
+	andThen(comparingFunc(func(t regexToken) []*captureGroupToken { return t }, lexicographically(compareCaptureGroupTokens)))
 
 var compareCaptureGroupTokens = comparingFunc((*captureGroupToken).prefix, orderedPrefix.compare).
 	andThen(comparingFunc((*captureGroupToken).transform, numericTokens.compare))
@@ -413,6 +414,11 @@ func (lg *lineGroup) regexTokens() []regexToken {
 	regexMatches := lg.opts.matchRegexes(lg.joinedLines())
 	lg.calculated.regexes = make([]regexToken, len(regexMatches))
 	for i, match := range regexMatches {
+		if match == nil {
+			// Regex did not match.
+			continue
+		}
+
 		captureGroupTokens := make([]*captureGroupToken, len(match))
 		lg.calculated.regexes[i] = captureGroupTokens
 		for j, s := range match {
