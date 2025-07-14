@@ -374,8 +374,8 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 		return 1
 	})
 
-	regexTransform := func(lg lineGroup) []regexToken {
-		return b.metadata.opts.regexTransform(lg.joinedLines())
+	regexTransform := func(lg lineGroup) []regexMatch {
+		return b.metadata.opts.matchRegexes(lg.joinedLines())
 	}
 
 	ord := newPrefixOrder(b.metadata.opts)
@@ -413,6 +413,6 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 	}, numericTokens.compare)
 
 	return commentOnlyBlock.
-		andThen(comparingFunc(regexTransform, compareRegexTokens(prefixOrder.andThen(lexicographically(transformOrder))))).
+		andThen(comparingFunc(regexTransform, compareRegexMatches(prefixOrder.andThen(lexicographically(transformOrder))))).
 		andThen(lineGroup.less)
 }

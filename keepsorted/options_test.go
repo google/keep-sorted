@@ -294,13 +294,13 @@ func TestBlockOptions_regexTransform(t *testing.T) {
 				opts.ByRegex = append(opts.ByRegex, regexp.MustCompile(regex))
 			}
 
-			gotTokens := opts.regexTransform(tc.in)
+			gotTokens := opts.matchRegexes(tc.in)
 			got := make([][]string, len(gotTokens))
 			for i, t := range gotTokens {
 				got[i] = []string(t)
 			}
 			if diff := cmp.Diff(tc.want, got); diff != "" {
-				t.Errorf("%q.regexTransform(%q) diff (-want +got)\n%s", opts, tc.in, diff)
+				t.Errorf("%q.matchRegexes(%q) diff (-want +got)\n%s", opts, tc.in, diff)
 			}
 		})
 	}

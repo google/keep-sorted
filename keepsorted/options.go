@@ -360,23 +360,23 @@ func (opts blockOptions) trimIgnorePrefix(s string) string {
 	return s
 }
 
-// regexTransform applies ByRegex to s.
+// matchRegexes applies ByRegex to s.
 // If ByRegex is empty, returns a slice that contains just s.
 // Otherwise, applies each regex to s in sequence:
 // If a regex has capturing groups, the capturing groups will be added to the
 // resulting slice.
 // If a regex does not have capturing groups, all matched text will be added to
 // the resulting slice.
-func (opts blockOptions) regexTransform(s string) []regexToken {
+func (opts blockOptions) matchRegexes(s string) []regexMatch {
 	if len(opts.ByRegex) == 0 {
-		return []regexToken{{s}}
+		return []regexMatch{{s}}
 	}
 
-	var ret []regexToken
+	var ret []regexMatch
 	for _, regex := range opts.ByRegex {
 		m := regex.FindStringSubmatch(s)
 		if m == nil {
-			ret = append(ret, alwaysLast)
+			ret = append(ret, regexDidNotMatch)
 			continue
 		}
 		if len(m) == 1 {
@@ -390,19 +390,19 @@ func (opts blockOptions) regexTransform(s string) []regexToken {
 	return ret
 }
 
-// regexToken is the result of matching a regex to a string. It has 3 forms:
+// regexMatch is the result of matching a regex to a string. It has 3 forms:
 //  1. If the regex matched and the regex had capturing groups, it's the value
 //     of those capturing groups.
 //  2. If the regex matched and the regex didn't have capturing groups, it's the
 //     value of the matched string as a singleton slice.
-//  3. IF the regex didn't match, it's alwaysLast / nil.
-type regexToken []string
+//  3. If the regex didn't match, it's regexDidNotMatch / nil.
+type regexMatch []string
 
-var alwaysLast regexToken = nil
+var regexDidNotMatch regexMatch = nil
 
-func compareRegexTokens(fn cmpFunc[[]string]) cmpFunc[[]regexToken] {
-	alwaysLast := comparingFunc(func(t regexToken) bool { return t == nil }, falseFirst())
-	delegate := comparingFunc(func(t regexToken) []string { return []string(t) }, fn)
+func compareRegexMatches(fn cmpFunc[[]string]) cmpFunc[[]regexMatch] {
+	alwaysLast := comparingFunc(func(t regexMatch) bool { return t == nil }, falseFirst())
+	delegate := comparingFunc(func(t regexMatch) []string { return t }, fn)
 	return lexicographically(alwaysLast.andThen(delegate))
 }
 
