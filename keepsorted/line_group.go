@@ -419,7 +419,7 @@ func (lg *lineGroup) regexTokens() []regexToken {
 			continue
 		}
 
-		captureGroupTokens := make([]*captureGroupToken, len(match))
+		captureGroupTokens := make(regexToken, len(match))
 		lg.calculated.regexes[i] = captureGroupTokens
 		for j, s := range match {
 			prefixOrder := lg.prefixOrder
