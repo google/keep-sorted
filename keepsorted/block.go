@@ -378,31 +378,13 @@ func (b block) lessFn() cmpFunc[lineGroup] {
 		return b.metadata.opts.regexTransform(lg.joinedLines())
 	}
 
-	// Assign a weight to each prefix so that they will be sorted into their
-	// predetermined order.
-	// Weights are negative so that entries with matching prefixes are put before
-	// any non-matching line (which will have a weight of 0).
-	//
-	// An empty prefix can be used to move "non-matching" entries to a position
-	// between other prefixes.
-	prefixWeights := make(map[string]int)
-	for i, p := range b.metadata.opts.PrefixOrder {
-		prefixWeights[p] = i - len(b.metadata.opts.PrefixOrder)
-	}
-	// Sort prefixes longest -> shortest to find the most appropriate weight.
-	longestFirst := comparing(func(s string) int { return len(s) }).reversed()
-	prefixes := slices.SortedStableFunc(slices.Values(b.metadata.opts.PrefixOrder), longestFirst)
-
-	prefixOrder := comparing(func(s []string) int {
+	ord := newPrefixOrder(b.metadata.opts)
+	prefixOrder := comparingFunc(func(s []string) orderedPrefix {
 		if len(s) == 0 {
-			return 0
+			return orderedPrefix{}
 		}
-		p, ok := b.metadata.opts.hasPrefix(s[0], slices.Values(prefixes))
-		if !ok {
-			return 0
-		}
-		return prefixWeights[p]
-	})
+		return ord.match(s[0])
+	}, orderedPrefix.compare)
 
 	// Combinations of switches (for example, case-insensitive and numeric
 	// ordering) which must be applied to create a single comparison key,
