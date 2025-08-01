@@ -417,18 +417,15 @@ func (lg *lineGroup) internalJoinedLines() string {
 }
 
 func (lg *lineGroup) joinedLines() string {
-	if len(lg.lines) == 0 {
-		return ""
-	}
 	lg.access.joinedLines = true
 	return lg.internalJoinedLines()
 }
 
 func (lg *lineGroup) joinedComment() string {
+	lg.access.joinedComment = true
 	if len(lg.comment) == 0 {
 		return ""
 	}
-	lg.access.joinedComment = true
 	return strings.Join(lg.comment, "\n")
 }
 
@@ -436,13 +433,13 @@ func (lg *lineGroup) DebugString() string {
 	var s strings.Builder
 	s.WriteString("LineGroup{\n")
 	if len(lg.comment) > 0 {
-		s.WriteString("rawComment=\n")
+		s.WriteString("comment=\n")
 		for _, c := range lg.comment {
 			fmt.Fprintf(&s, "  %#v\n", c)
 		}
 	}
 	if len(lg.lines) > 0 {
-		s.WriteString("rawLines=\n")
+		s.WriteString("lines=\n")
 		for _, l := range lg.lines {
 			fmt.Fprintf(&s, "  %#v\n", l)
 		}
@@ -458,10 +455,16 @@ func (lg *lineGroup) DebugString() string {
 		}
 	}
 	if lg.access.joinedLines {
-		fmt.Fprintf(&s, "joinedLines=%#v\n", lg.joinedLines())
+		if len(lg.lines) > 1 {
+			// Only print the joinedLines when they're meaningfully different from the
+			// raw lines above.
+			fmt.Fprintf(&s, "joinedLines=%#v\n", lg.joinedLines())
+		} else if !lg.access.joinedComment {
+			s.WriteString("linesTiebreaker=true\n")
+		}
 	}
 	if lg.access.joinedComment {
-		fmt.Fprintf(&s, "joinedComment=%#v\n", lg.joinedComment())
+		s.WriteString("commentTiebreaker=true\n")
 	}
 	s.WriteString("}")
 	return s.String()
