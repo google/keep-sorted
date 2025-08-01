@@ -56,107 +56,6 @@ type lineGroupContent struct {
 	lines   []string
 }
 
-type lineGroupCalculations struct {
-	commentOnly   *bool
-	regexes       []regexToken
-	internalLines string
-	lines         string
-	comment       string
-}
-
-type regexToken []*captureGroupToken
-
-func (t regexToken) wasUsed() bool {
-	if t == nil {
-		// Report that the regex didn't match.
-		return true
-	}
-	for _, cg := range t {
-		if cg.wasUsed() {
-			return true
-		}
-	}
-	return false
-}
-
-func (t regexToken) GoString() string {
-	if t == nil {
-		return "<did not match>"
-	}
-	captureGroups := make([]string, len(t))
-	for i, cg := range t {
-		if cg.wasUsed() {
-			captureGroups[i] = fmt.Sprintf("%#v", cg)
-		} else {
-			captureGroups[i] = "<unused>"
-		}
-	}
-	if len(captureGroups) == 1 {
-		return captureGroups[0]
-	}
-	return fmt.Sprintf("%v", captureGroups)
-}
-
-type captureGroupToken struct {
-	opts        blockOptions
-	prefixOrder func() *prefixOrder
-
-	raw    string
-	pre    *orderedPrefix
-	tokens *numericTokens
-}
-
-func (t *captureGroupToken) GoString() string {
-	var s []string
-	if t.pre != nil {
-		s = append(s, fmt.Sprintf("prefix:%q", t.pre.prefix))
-	}
-	if t.tokens != nil {
-		var tokens strings.Builder
-		if len(s) > 0 {
-			tokens.WriteString("tokens:")
-		}
-		fmt.Fprintf(&tokens, "%#v", *t.tokens)
-		s = append(s, tokens.String())
-	}
-	ret := strings.Join(s, " ")
-	if len(s) > 1 {
-		ret = "[" + ret + "]"
-	}
-	return ret
-}
-
-func (t *captureGroupToken) wasUsed() bool {
-	return t.pre != nil || t.tokens != nil
-}
-
-func (t *captureGroupToken) prefix() orderedPrefix {
-	if t.pre != nil {
-		return *t.pre
-	}
-	if t.prefixOrder() == nil {
-		return orderedPrefix{}
-	}
-
-	ret := t.prefixOrder().match(t.raw)
-	t.pre = &ret
-	return ret
-}
-
-func (t *captureGroupToken) transform() numericTokens {
-	if t.tokens != nil {
-		return *t.tokens
-	}
-
-	s := t.opts.trimIgnorePrefix(t.raw)
-	if !t.opts.CaseSensitive {
-		s = strings.ToLower(s)
-	}
-	ret := t.opts.maybeParseNumeric(s)
-	t.tokens = &ret
-	return ret
-}
-
 // groupLines splits lines into one or more lineGroups based on the provided options.
 func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 	var groups []*lineGroup
@@ -437,7 +336,6 @@ func findQuote(s string, i int) string {
 }
 
 func (lg *lineGroup) append(s string) {
-	lg.calculated = lineGroupCalculations{}
 	lg.lines[len(lg.lines)-1] = lg.lines[len(lg.lines)-1] + s
 }
 
@@ -446,51 +344,39 @@ func (lg *lineGroup) hasSuffix(s string) bool {
 }
 
 func (lg *lineGroup) trimSuffix(s string) {
-	lg.calculated = lineGroupCalculations{}
 	lg.lines[len(lg.lines)-1] = strings.TrimSuffix(lg.lines[len(lg.lines)-1], s)
 }
 
 func (lg *lineGroup) commentOnly() bool {
-	if lg.calculated.commentOnly != nil {
-		return *lg.calculated.commentOnly
-	}
-
-	ret := len(lg.lines) == 0
-	lg.calculated.commentOnly = &ret
-	return ret
+	return len(lg.lines) == 0
 }
 
 func (lg *lineGroup) regexTokens() []regexToken {
-	if lg.calculated.regexes != nil {
-		return lg.calculated.regexes
-	}
-
 	// TODO: jfaer - Should we match regexes on the original content?
 	regexMatches := lg.opts.matchRegexes(lg.internalJoinedLines())
-	lg.calculated.regexes = make([]regexToken, len(regexMatches))
+	ret := make([]regexToken, len(regexMatches))
 	for i, match := range regexMatches {
 		if match == nil {
 			// Regex did not match.
 			continue
 		}
 
-		captureGroupTokens := make(regexToken, len(match))
-		lg.calculated.regexes[i] = captureGroupTokens
+		ret[i] = make(regexToken, len(match))
 		for j, s := range match {
-			order := lg.prefixOrder
+			prefixOrder := lg.prefixOrder
 			if j != 0 {
 				// Only try to match PrefixOrder on the first capture group in a regex.
 				// TODO: jfaer - Should this just be the first capture group in the first regex match?
-				order = func() *prefixOrder { return nil }
+				prefixOrder = nil
 			}
 			captureGroupTokens[j] = &captureGroupToken{
 				opts:        lg.opts,
-				prefixOrder: order,
+				prefixOrder: prefixOrder,
 				raw:         s,
 			}
 		}
 	}
-	return lg.calculated.regexes
+	return ret
 }
 
 // internalJoinedLines calculates the same thing as joinedLines, except it
@@ -498,9 +384,6 @@ func (lg *lineGroup) regexTokens() []regexToken {
 func (lg *lineGroup) internalJoinedLines() string {
 	if len(lg.lines) == 0 {
 		return ""
-	}
-	if lg.calculated.internalLines != "" {
-		return lg.calculated.internalLines
 	}
 
 	endsWithWordChar := regexp.MustCompile(`\w$`)
@@ -515,32 +398,18 @@ func (lg *lineGroup) internalJoinedLines() string {
 		s.WriteString(l)
 		last = l
 	}
-	lg.calculated.internalLines = s.String()
-	return lg.calculated.internalLines
+	return s.String()
 }
 
 func (lg *lineGroup) joinedLines() string {
-	if len(lg.lines) == 0 {
-		return ""
-	}
-	if lg.calculated.lines != "" {
-		return lg.calculated.lines
-	}
-
-	lg.calculated.lines = lg.internalJoinedLines()
-	return lg.calculated.lines
+	return lg.internalJoinedLines()
 }
 
 func (lg *lineGroup) joinedComment() string {
 	if len(lg.comment) == 0 {
 		return ""
 	}
-	if lg.calculated.comment != "" {
-		return lg.calculated.comment
-	}
-
-	lg.calculated.comment = strings.Join(lg.comment, "\n")
-	return lg.calculated.comment
+	return strings.Join(lg.comment, "\n")
 }
 
 func (lg *lineGroup) GoString() string {
@@ -587,4 +456,104 @@ func (lg *lineGroup) allLines() []string {
 
 func (lg *lineGroup) String() string {
 	return strings.Join(lg.allLines(), "\n")
+}
+
+type regexToken []*captureGroupToken
+
+func (t regexToken) wasUsed() bool {
+	if t == nil {
+		// Report that the regex didn't match.
+		return true
+	}
+	for _, cg := range t {
+		if cg.wasUsed() {
+			return true
+		}
+	}
+	return false
+}
+
+func (t regexToken) GoString() string {
+	if t == nil {
+		return "<did not match>"
+	}
+	captureGroups := make([]string, len(t))
+	for i, cg := range t {
+		if cg.wasUsed() {
+			captureGroups[i] = fmt.Sprintf("%#v", cg)
+		} else {
+			captureGroups[i] = "<unused>"
+		}
+	}
+	if len(captureGroups) == 1 {
+		return captureGroups[0]
+	}
+	return fmt.Sprintf("%v", captureGroups)
+}
+
+type captureGroupToken struct {
+	opts        blockOptions
+	prefixOrder func() *prefixOrder
+
+	raw    string
+	pre    *orderedPrefix
+	tokens *numericTokens
+}
+
+func (t *captureGroupToken) wasUsed() bool {
+	return t.pre != nil || t.tokens != nil
+}
+
+func (t *captureGroupToken) GoString() string {
+	var s []string
+	if t.pre != nil {
+		s = append(s, fmt.Sprintf("prefix:%q", t.pre.prefix))
+	}
+	if t.tokens != nil {
+		var tokens strings.Builder
+		if len(s) > 0 {
+			tokens.WriteString("tokens:")
+		}
+		fmt.Fprintf(&tokens, "%#v", *t.tokens)
+		s = append(s, tokens.String())
+	}
+	ret := strings.Join(s, " ")
+	if len(s) > 1 {
+		ret = "[" + ret + "]"
+	}
+	return ret
+}
+
+func (t *captureGroupToken) prefix() orderedPrefix {
+	if t.prefixOrder == nil {
+		return orderedPrefix{}
+	}
+
+	return t.prefixOrder().match(t.raw)
+}
+
+func (t *captureGroupToken) transform() numericTokens {
+	// Combinations of switches (for example, case-insensitive and numeric
+	// ordering) which must be applied to create a single comparison key,
+	// otherwise a sub-ordering can preempt a total ordering:
+	//   Foo_45
+	//   foo_123
+	//   foo_6
+	// would be sorted as either (numeric but not case-insensitive)
+	//   Foo_45
+	//   foo_6
+	//   foo_123
+	// or (case-insensitive but not numeric)
+	//   foo_123
+	//   Foo_45
+	//   foo_6
+	// but should be (case-insensitive and numeric)
+	//   foo_6
+	//   Foo_45
+	//   foo_123
+	s := t.opts.trimIgnorePrefix(t.raw)
+	if !t.opts.CaseSensitive {
+		s = strings.ToLower(s)
+	}
+	return t.opts.maybeParseNumeric(s)
 }
