@@ -442,6 +442,24 @@ func (t *captureGroupToken) prefix() orderedPrefix {
 }
 
 func (t *captureGroupToken) transform() numericTokens {
+	// Combinations of switches (for example, case-insensitive and numeric
+	// ordering) which must be applied to create a single comparison key,
+	// otherwise a sub-ordering can preempt a total ordering:
+	//   Foo_45
+	//   foo_123
+	//   foo_6
+	// would be sorted as either (numeric but not case-insensitive)
+	//   Foo_45
+	//   foo_6
+	//   foo_123
+	// or (case-insensitive but not numeric)
+	//   foo_123
+	//   Foo_45
+	//   foo_6
+	// but should be (case-insensitive and numeric)
+	//   foo_6
+	//   Foo_45
+	//   foo_123
 	s := t.opts.trimIgnorePrefix(t.raw)
 	if !t.opts.CaseSensitive {
 		s = strings.ToLower(s)
