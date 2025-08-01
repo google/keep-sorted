@@ -365,7 +365,7 @@ func (lg *lineGroup) regexTokens() []regexToken {
 				prefixOrder = nil
 			}
 			ret[i][j] = &captureGroupToken{
-				opts:        lg.opts,
+				opts:        &lg.opts,
 				prefixOrder: prefixOrder,
 				raw:         s,
 			}
@@ -427,7 +427,7 @@ func (lg *lineGroup) String() string {
 type regexToken []*captureGroupToken
 
 type captureGroupToken struct {
-	opts        blockOptions
+	opts        *blockOptions
 	prefixOrder func() *prefixOrder
 
 	raw string
