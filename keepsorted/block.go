@@ -270,7 +270,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	if alreadySorted && wasNewlineSeparated && !removedDuplicate && slices.IsSortedFunc(groups, compareLineGroups) {
 		log.Printf("It was already sorted!")
 		for _, lg := range groups {
-			log.Printf("%#v", lg)
+			log.Print(lg.DebugString())
 		}
 		trimTrailingComma(groups)
 		return lines, true
@@ -278,7 +278,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 
 	slices.SortStableFunc(groups, compareLineGroups)
 	for _, lg := range groups {
-		log.Printf("%#v", lg)
+		log.Print(lg.DebugString())
 	}
 
 	trimTrailingComma(groups)

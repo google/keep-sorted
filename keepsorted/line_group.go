@@ -432,7 +432,7 @@ func (lg *lineGroup) joinedComment() string {
 	return strings.Join(lg.comment, "\n")
 }
 
-func (lg *lineGroup) GoString() string {
+func (lg *lineGroup) DebugString() string {
 	var s strings.Builder
 	s.WriteString("LineGroup{\n")
 	if len(lg.comment) > 0 {
@@ -453,7 +453,7 @@ func (lg *lineGroup) GoString() string {
 	if lg.access.regexTokens != nil {
 		for i, regex := range lg.regexTokens() {
 			if regex.wasUsed() {
-				fmt.Fprintf(&s, "regex[%d]=%#v\n", i, regex)
+				fmt.Fprintf(&s, "regex[%d]=%s\n", i, regex.DebugString())
 			}
 		}
 	}
@@ -495,7 +495,7 @@ func (t regexToken) wasUsed() bool {
 	return false
 }
 
-func (t regexToken) GoString() string {
+func (t regexToken) DebugString() string {
 	if t == nil {
 		return "<did not match>"
 	}
@@ -503,7 +503,7 @@ func (t regexToken) GoString() string {
 	captureGroups := make([]string, len(t))
 	for i, cg := range t {
 		if cg.wasUsed() {
-			captureGroups[i] = fmt.Sprintf("%#v", cg)
+			captureGroups[i] = cg.DebugString()
 		} else {
 			captureGroups[i] = "<unused>"
 		}
@@ -569,7 +569,7 @@ func (t captureGroupToken) wasUsed() bool {
 	return t.access.prefix || t.access.transform
 }
 
-func (t captureGroupToken) GoString() string {
+func (t captureGroupToken) DebugString() string {
 	var s []string
 	if t.access.prefix {
 		s = append(s, fmt.Sprintf("prefix:%q", t.prefix().prefix))
@@ -579,7 +579,7 @@ func (t captureGroupToken) GoString() string {
 		if len(s) > 0 {
 			tokens.WriteString("tokens:")
 		}
-		fmt.Fprintf(&tokens, "%#v", t.transform())
+		fmt.Fprintf(&tokens, "%s", t.transform().DebugString())
 		s = append(s, tokens.String())
 	}
 

@@ -458,7 +458,7 @@ type numericTokens struct {
 	i []*big.Int
 }
 
-func (t numericTokens) GoString() string {
+func (t numericTokens) DebugString() string {
 	s := make([]string, 0, t.len())
 	for i := 0; i < t.len(); i++ {
 		if i%2 == 0 {
