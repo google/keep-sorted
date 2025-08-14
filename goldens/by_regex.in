@@ -71,6 +71,20 @@ Multiline blocks
   }
   keep-sorted-test end
 
+Multiline blocks with newlines=2
+  keep-sorted-test start block=yes newline_separated=2 by_regex=(\w+)\(\)\s+{
+  bool func2() {
+    return true;
+  }
+  int func1() {
+    return 1;
+  }
+  List<SomeReallyLongTypeParameterThatWouldForceTheFunctionNameOntoTheNextLine>
+      func0() {
+    return List.of(whatever);
+  }
+  keep-sorted-test end
+
 Regex doesn't match every line
   keep-sorted-test start by_regex=\d+
   3

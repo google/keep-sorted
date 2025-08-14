@@ -239,15 +239,15 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	log.Printf("Previous %d groups were for block at index %d are (options %v)", len(groups), b.start, b.metadata.opts)
 	trimTrailingComma := handleTrailingComma(groups)
 
+	numNewlines := int(b.metadata.opts.NewlineSeparated)
 	wasNewlineSeparated := true
-	if b.metadata.opts.NewlineSeparated {
-		wasNewlineSeparated = isNewlineSeparated(groups)
+	if b.metadata.opts.NewlineSeparated > 0 {
+		wasNewlineSeparated = isNewlineSeparated(groups, numNewlines)
 		var withoutNewlines []*lineGroup
 		for _, lg := range groups {
-			if isNewline(lg) {
-				continue
+			if !isAllEmpty(lg) {
+				withoutNewlines = append(withoutNewlines, lg)
 			}
-			withoutNewlines = append(withoutNewlines, lg)
 		}
 		groups = withoutNewlines
 	}
@@ -276,9 +276,9 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 
 	trimTrailingComma(groups)
 
-	if b.metadata.opts.NewlineSeparated {
+	if b.metadata.opts.NewlineSeparated > 0 {
 		var separated []*lineGroup
-		newline := &lineGroup{lineGroupContent: lineGroupContent{lines: []string{""}}}
+		newline := &lineGroup{lineGroupContent: lineGroupContent{lines: make([]string, numNewlines)}}
 		for _, lg := range groups {
 			if separated != nil {
 				separated = append(separated, newline)
@@ -295,36 +295,65 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	return l, false
 }
 
-// isNewlineSeparated determines if the given lineGroups are already NewlineSeparated.
+// isNewlineSeparated determines if the given lineGroups are already NewlineSeparated,
+// and are separated by groups containing exactly numNewlines empty lines.
 //
 // e.g.
 // non-empty group
-// newline group
+// newline group (repeated numNewlines times)
 // non-empty group
-// newline group
+// newline group (repeated numNewlines times)
 // .
 // .
 // .
 // non-empty group
-func isNewlineSeparated(gs []*lineGroup) bool {
+func isNewlineSeparated(gs []*lineGroup, numNewlines int) bool {
 	if len(gs) == 0 {
 		return true
 	}
-	// There should be an odd number of groups.
-	if len(gs)%2 != 1 {
+	if isAllEmpty(gs[len(gs)-1]) {
 		return false
 	}
-	for i := 0; i < (len(gs)-1)/2; i++ {
-		if isNewline(gs[2*i]) || !isNewline(gs[2*i+1]) {
+
+	i := 0
+	for i < len(gs) {
+		// Expect a data group (a group with at least one non-empty line or a comment)
+		if isAllEmpty(gs[i]) {
+			return false // Expected data group, found an empty group without comments
+		}
+		i++
+
+		// If this is the last group, we are done.
+		if i == len(gs) {
+			break
+		}
+
+		// Expect a separator of numNewlines empty lines.
+		emptyLinesCount := 0
+		// Sum up consecutive empty line groups
+		for i < len(gs) && isAllEmpty(gs[i]) {
+			emptyLinesCount += len(gs[i].lines)
+			i++
+		}
+
+		if emptyLinesCount != numNewlines {
+			return false // Incorrect number of newlines in the separator
+		}
+	}
+
+	return true
+}
+
+func isAllEmpty(lg *lineGroup) bool {
+	if len(lg.comment) > 0 {
+		return false
+	}
+	for _, line := range lg.lines {
+		if strings.TrimSpace(line) != "" {
 			return false
 		}
 	}
-	return !isNewline(gs[len(gs)-1])
-}
-
-// isNewline determines if lg is just an empty line.
-func isNewline(lg *lineGroup) bool {
-	return len(lg.comment) == 0 && len(lg.lines) == 1 && strings.TrimSpace(lg.lines[0]) == ""
+	return true
 }
 
 // handleTrailingComma handles the special case that all lines of a sorted segment are terminated

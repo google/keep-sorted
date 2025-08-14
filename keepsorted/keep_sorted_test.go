@@ -814,7 +814,7 @@ func TestLineSorting(t *testing.T) {
 			name: "AlreadySorted_NewlineSeparated",
 
 			opts: blockOptions{
-				NewlineSeparated: true,
+				NewlineSeparated: 1,
 			},
 			in: []string{
 				"Bar",
@@ -837,7 +837,7 @@ func TestLineSorting(t *testing.T) {
 			name: "AlreadySorted_ExceptForNewlineSorted",
 
 			opts: blockOptions{
-				NewlineSeparated: true,
+				NewlineSeparated: 1,
 			},
 			in: []string{
 				"Bar",
@@ -1142,7 +1142,7 @@ func TestLineSorting(t *testing.T) {
 			name: "NewlineSeparated",
 
 			opts: blockOptions{
-				NewlineSeparated: true,
+				NewlineSeparated: 1,
 			},
 			in: []string{
 				"B",
@@ -1163,11 +1163,105 @@ func TestLineSorting(t *testing.T) {
 			name: "NewlineSeparated_Empty",
 
 			opts: blockOptions{
-				NewlineSeparated: true,
+				NewlineSeparated: 1,
 			},
 			in: []string{},
 
 			want:              []string{},
+			wantAlreadySorted: true,
+		},
+		{
+			name: "NewlineSeparated_Count=1",
+
+			opts: blockOptions{
+				NewlineSeparated: 1,
+			},
+			in: []string{
+				"C",
+				"A",
+				"B",
+			},
+
+			want: []string{
+				"A",
+				"",
+				"B",
+				"",
+				"C",
+			},
+			wantAlreadySorted: false,
+		},
+		{
+			name: "NewlineSeparated_Count=2",
+
+			opts: blockOptions{
+				NewlineSeparated: 2,
+			},
+			in: []string{
+				"C",
+				"A",
+				"B",
+			},
+
+			want: []string{
+				"A",
+				"",
+				"",
+				"B",
+				"",
+				"",
+				"C",
+			},
+			wantAlreadySorted: false,
+		},
+		{
+			name: "NewlineSeparated_AlreadySorted_Count=1",
+
+			opts: blockOptions{
+				NewlineSeparated: 1,
+			},
+			in: []string{
+				"A",
+				"",
+				"B",
+				"",
+				"C",
+			},
+
+			want: []string{
+				"A",
+				"",
+				"B",
+				"",
+				"C",
+			},
+			wantAlreadySorted: true,
+		},
+		{
+			name: "NewlineSeparated_AlreadySorted_Count=2",
+
+			opts: blockOptions{
+				NewlineSeparated: 2,
+			},
+			in: []string{
+				"A",
+				"",
+				"",
+				"B",
+				"",
+				"",
+				"C",
+			},
+
+			want: []string{
+				"A",
+				"",
+				"",
+				"B",
+				"",
+				"",
+				"C",
+			},
 			wantAlreadySorted: true,
 		},
 	} {
