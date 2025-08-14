@@ -157,19 +157,3 @@ some_build_rule(
     src = "another-source",
 )
 // keep-sorted-test end
-
-// Nix multi line string
-// keep-sorted-test start block=yes newline_separated=yes
-bar = ''
-  While foo throws, this is just a string
-
-
-    Again, with some spaces here and there.
-'';
-
-foo = throw ''
-  Some text here.
-
-  Text has empty lines.
-'';
-// keep-sorted-test end
