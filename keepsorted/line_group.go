@@ -15,25 +15,44 @@
 package keepsorted
 
 import (
-	"cmp"
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/rs/zerolog/log"
 )
 
-// lineGroup is a logical unit of source code. It's one or more lines combines
+// lineGroup is a logical unit of source code. It's one or more lines combined
 // with zero or more comment lines about the source code lines.
 type lineGroup struct {
+	opts        blockOptions
+	prefixOrder func() *prefixOrder
+
+	// The actual content of the lineGroup.
+	lineGroupContent
+}
+
+var compareLineGroups = comparingFunc((*lineGroup).commentOnly, falseFirst()).
+	andThen(comparingFunc((*lineGroup).regexTokens, lexicographically(compareRegexTokens))).
+	andThen(comparing((*lineGroup).joinedLines)).
+	andThen(comparing((*lineGroup).joinedComment))
+
+var compareRegexTokens = comparingFunc(func(t regexToken) bool { return t == nil }, falseFirst()).
+	andThen(comparingFunc(func(t regexToken) []*captureGroupToken { return t }, lexicographically(compareCaptureGroupTokens)))
+
+var compareCaptureGroupTokens = comparingFunc((*captureGroupToken).prefix, orderedPrefix.compare).
+	andThen(comparingFunc((*captureGroupToken).transform, numericTokens.compare))
+
+type lineGroupContent struct {
 	comment []string
 	lines   []string
 }
 
 // groupLines splits lines into one or more lineGroups based on the provided options.
-func groupLines(lines []string, metadata blockMetadata) []lineGroup {
-	var groups []lineGroup
+func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
+	var groups []*lineGroup
 	// Tracks which subsection of lines contains the comments for the current lineGroup.
 	var commentRange indexRange
 	// Tracks which subsection of lines contains the content for the current lineGroup.
@@ -54,6 +73,8 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 
 	// block=yes: The code block that we're constructing until we have matched braces and quotations.
 	var block codeBlock
+
+	prefixOrder := sync.OnceValue(func() *prefixOrder { return newPrefixOrder(metadata.opts) })
 
 	if metadata.opts.Group {
 		indents = calculateIndents(lines)
@@ -84,7 +105,11 @@ func groupLines(lines []string, metadata blockMetadata) []lineGroup {
 	}
 	// finish an outstanding lineGroup and reset our state to prepare for a new lineGroup.
 	finishGroup := func() {
-		groups = append(groups, lineGroup{comment: slice(lines, commentRange), lines: slice(lines, lineRange)})
+		groups = append(groups, &lineGroup{
+			opts:             metadata.opts,
+			prefixOrder:      prefixOrder,
+			lineGroupContent: lineGroupContent{comment: slice(lines, commentRange), lines: slice(lines, lineRange)},
+		})
 		commentRange = indexRange{}
 		lineRange = indexRange{}
 		block = codeBlock{}
@@ -305,22 +330,51 @@ func findQuote(s string, i int) string {
 	return ""
 }
 
-func (lg lineGroup) append(s string) {
+func (lg *lineGroup) append(s string) {
 	lg.lines[len(lg.lines)-1] = lg.lines[len(lg.lines)-1] + s
 }
 
-func (lg lineGroup) hasSuffix(s string) bool {
+func (lg *lineGroup) hasSuffix(s string) bool {
 	return len(lg.lines) > 0 && strings.HasSuffix(lg.lines[len(lg.lines)-1], s)
 }
 
-func (lg lineGroup) trimSuffix(s string) {
+func (lg *lineGroup) trimSuffix(s string) {
 	lg.lines[len(lg.lines)-1] = strings.TrimSuffix(lg.lines[len(lg.lines)-1], s)
 }
 
-func (lg lineGroup) joinedLines() string {
-	// TODO(jfalgout): This is a good candidate for caching. Make sure we
-	// invalidate it if this line group gets modified, though (like it does when
-	// we handle trailing commas correctly).
+func (lg *lineGroup) commentOnly() bool {
+	return len(lg.lines) == 0
+}
+
+func (lg *lineGroup) regexTokens() []regexToken {
+	// TODO: jfaer - Should we match regexes on the original content?
+	regexMatches := lg.opts.matchRegexes(lg.joinedLines())
+	ret := make([]regexToken, len(regexMatches))
+	for i, match := range regexMatches {
+		if match == nil {
+			// Regex did not match.
+			continue
+		}
+
+		ret[i] = make(regexToken, len(match))
+		for j, s := range match {
+			prefixOrder := lg.prefixOrder
+			if j != 0 {
+				// Only try to match PrefixOrder on the first capture group in a regex.
+				// TODO: jfaer - Should this just be the first capture group in the first regex match?
+				prefixOrder = nil
+			}
+			ret[i][j] = &captureGroupToken{
+				opts:        &lg.opts,
+				prefixOrder: prefixOrder,
+				raw:         s,
+			}
+		}
+	}
+	return ret
+}
+
+func (lg *lineGroup) joinedLines() string {
 	if len(lg.lines) == 0 {
 		return ""
 	}
@@ -340,14 +394,14 @@ func (lg lineGroup) joinedLines() string {
 	return s.String()
 }
 
-func (lg lineGroup) less(other lineGroup) int {
-	if c := strings.Compare(lg.joinedLines(), other.joinedLines()); c != 0 {
-		return c
+func (lg *lineGroup) joinedComment() string {
+	if len(lg.comment) == 0 {
+		return ""
 	}
-	return cmp.Compare(strings.Join(lg.comment, "\n"), strings.Join(other.comment, "\n"))
+	return strings.Join(lg.comment, "\n")
 }
 
-func (lg lineGroup) GoString() string {
+func (lg *lineGroup) GoString() string {
 	var comment strings.Builder
 	for _, c := range lg.comment {
 		comment.WriteString(fmt.Sprintf("  %#v\n", c))
@@ -359,13 +413,56 @@ func (lg lineGroup) GoString() string {
 	return fmt.Sprintf("LineGroup{\ncomment=\n%slines=\n%s}", comment.String(), lines.String())
 }
 
-func (lg lineGroup) allLines() []string {
+func (lg *lineGroup) allLines() []string {
 	var all []string
 	all = append(all, lg.comment...)
 	all = append(all, lg.lines...)
 	return all
 }
 
-func (lg lineGroup) String() string {
+func (lg *lineGroup) String() string {
 	return strings.Join(lg.allLines(), "\n")
+}
+
+type regexToken []*captureGroupToken
+
+type captureGroupToken struct {
+	opts        *blockOptions
+	prefixOrder func() *prefixOrder
+
+	raw string
+}
+
+func (t *captureGroupToken) prefix() orderedPrefix {
+	if t.prefixOrder == nil {
+		return orderedPrefix{}
+	}
+
+	return t.prefixOrder().match(t.raw)
+}
+
+func (t *captureGroupToken) transform() numericTokens {
+	// Combinations of switches (for example, case-insensitive and numeric
+	// ordering) which must be applied to create a single comparison key,
+	// otherwise a sub-ordering can preempt a total ordering:
+	//   Foo_45
+	//   foo_123
+	//   foo_6
+	// would be sorted as either (numeric but not case-insensitive)
+	//   Foo_45
+	//   foo_6
+	//   foo_123
+	// or (case-insensitive but not numeric)
+	//   foo_123
+	//   Foo_45
+	//   foo_6
+	// but should be (case-insensitive and numeric)
+	//   foo_6
+	//   Foo_45
+	//   foo_123
+	s := t.opts.trimIgnorePrefix(t.raw)
+	if !t.opts.CaseSensitive {
+		s = strings.ToLower(s)
+	}
+	return t.opts.maybeParseNumeric(s)
 }

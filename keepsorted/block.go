@@ -243,7 +243,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	wasNewlineSeparated := true
 	if b.metadata.opts.NewlineSeparated > 0 {
 		wasNewlineSeparated = isNewlineSeparated(groups, numNewlines)
-		var withoutNewlines []lineGroup
+		var withoutNewlines []*lineGroup
 		for _, lg := range groups {
 			if !isAllEmpty(lg) {
 				withoutNewlines = append(withoutNewlines, lg)
@@ -255,7 +255,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	removedDuplicate := false
 	if b.metadata.opts.RemoveDuplicates {
 		seen := map[string]bool{}
-		var deduped []lineGroup
+		var deduped []*lineGroup
 		for _, lg := range groups {
 			if s := lg.joinedLines() + "\n" + strings.Join(lg.comment, "\n"); !seen[s] {
 				seen[s] = true
@@ -267,20 +267,18 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 		groups = deduped
 	}
 
-	less := b.lessFn()
-
-	if alreadySorted && wasNewlineSeparated && !removedDuplicate && slices.IsSortedFunc(groups, less) {
+	if alreadySorted && wasNewlineSeparated && !removedDuplicate && slices.IsSortedFunc(groups, compareLineGroups) {
 		trimTrailingComma(groups)
 		return lines, true
 	}
 
-	slices.SortStableFunc(groups, less)
+	slices.SortStableFunc(groups, compareLineGroups)
 
 	trimTrailingComma(groups)
 
 	if b.metadata.opts.NewlineSeparated > 0 {
-		var separated []lineGroup
-		newline := lineGroup{lines: make([]string, numNewlines)}
+		var separated []*lineGroup
+		newline := &lineGroup{lineGroupContent: lineGroupContent{lines: make([]string, numNewlines)}}
 		for _, lg := range groups {
 			if separated != nil {
 				separated = append(separated, newline)
@@ -309,7 +307,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 // .
 // .
 // non-empty group
-func isNewlineSeparated(gs []lineGroup, numNewlines int) bool {
+func isNewlineSeparated(gs []*lineGroup, numNewlines int) bool {
 	if len(gs) == 0 {
 		return true
 	}
@@ -346,7 +344,7 @@ func isNewlineSeparated(gs []lineGroup, numNewlines int) bool {
 	return true
 }
 
-func isAllEmpty(lg lineGroup) bool {
+func isAllEmpty(lg *lineGroup) bool {
 	if len(lg.comment) > 0 {
 		return false
 	}
@@ -361,8 +359,8 @@ func isAllEmpty(lg lineGroup) bool {
 // handleTrailingComma handles the special case that all lines of a sorted segment are terminated
 // by a comma except for the final element; in this case, we add a ',' to the
 // last linegroup and strip it again after sorting.
-func handleTrailingComma(lgs []lineGroup) (trimTrailingComma func([]lineGroup)) {
-	var dataGroups []lineGroup
+func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)) {
+	var dataGroups []*lineGroup
 	for _, lg := range lgs {
 		if len(lg.lines) > 0 {
 			dataGroups = append(dataGroups, lg)
@@ -372,7 +370,7 @@ func handleTrailingComma(lgs []lineGroup) (trimTrailingComma func([]lineGroup)) 
 	if n := len(dataGroups); n > 1 && allHaveSuffix(dataGroups[0:n-1], ",") && !dataGroups[n-1].hasSuffix(",") {
 		dataGroups[n-1].append(",")
 
-		return func(lgs []lineGroup) {
+		return func(lgs []*lineGroup) {
 			for i := len(lgs) - 1; i >= 0; i-- {
 				if len(lgs[i].lines) > 0 {
 					lgs[i].trimSuffix(",")
@@ -382,66 +380,14 @@ func handleTrailingComma(lgs []lineGroup) (trimTrailingComma func([]lineGroup)) 
 		}
 	}
 
-	return func([]lineGroup) {}
+	return func([]*lineGroup) {}
 }
 
-func allHaveSuffix(lgs []lineGroup, s string) bool {
+func allHaveSuffix(lgs []*lineGroup, s string) bool {
 	for _, lg := range lgs {
 		if !lg.hasSuffix(s) {
 			return false
 		}
 	}
 	return true
-}
-
-func (b block) lessFn() cmpFunc[lineGroup] {
-	// Always put groups that are only comments last.
-	commentOnlyBlock := comparing(func(lg lineGroup) int {
-		if len(lg.lines) > 0 {
-			return 0
-		}
-		return 1
-	})
-
-	regexTransform := func(lg lineGroup) []regexMatch {
-		return b.metadata.opts.matchRegexes(lg.joinedLines())
-	}
-
-	ord := newPrefixOrder(b.metadata.opts)
-	prefixOrder := comparingFunc(func(s []string) orderedPrefix {
-		if len(s) == 0 {
-			return orderedPrefix{}
-		}
-		return ord.match(s[0])
-	}, orderedPrefix.compare)
-
-	// Combinations of switches (for example, case-insensitive and numeric
-	// ordering) which must be applied to create a single comparison key,
-	// otherwise a sub-ordering can preempt a total ordering:
-	//   Foo_45
-	//   foo_123
-	//   foo_6
-	// would be sorted as either (numeric but not case-insensitive)
-	//   Foo_45
-	//   foo_6
-	//   foo_123
-	// or (case-insensitive but not numeric)
-	//   foo_123
-	//   Foo_45
-	//   foo_6
-	// but should be (case-insensitive and numeric)
-	//   foo_6
-	//   Foo_45
-	//   foo_123
-	transformOrder := comparingFunc(func(s string) numericTokens {
-		s = b.metadata.opts.trimIgnorePrefix(s)
-		if !b.metadata.opts.CaseSensitive {
-			s = strings.ToLower(s)
-		}
-		return b.metadata.opts.maybeParseNumeric(s)
-	}, numericTokens.compare)
-
-	return commentOnlyBlock.
-		andThen(comparingFunc(regexTransform, compareRegexMatches(prefixOrder.andThen(lexicographically(transformOrder))))).
-		andThen(lineGroup.less)
 }
