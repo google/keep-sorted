@@ -32,6 +32,10 @@ type lineGroup struct {
 
 	// The actual content of the lineGroup.
 	lineGroupContent
+
+	// Track which methods are used during sorting so we can filter debugging
+	// output to just the parts that are relevant.
+	access accessRecorder
 }
 
 var compareLineGroups = comparingFunc((*lineGroup).commentOnly, falseFirst()).
@@ -48,6 +52,13 @@ var compareCaptureGroupTokens = comparingFunc((*captureGroupToken).prefix, order
 type lineGroupContent struct {
 	comment []string
 	lines   []string
+}
+
+type accessRecorder struct {
+	commentOnly   bool
+	regexTokens   []regexTokenAccessRecorder
+	joinedLines   bool
+	joinedComment bool
 }
 
 // groupLines splits lines into one or more lineGroups based on the provided options.
@@ -113,7 +124,6 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 		commentRange = indexRange{}
 		lineRange = indexRange{}
 		block = codeBlock{}
-		log.Printf("%#v", groups[len(groups)-1])
 	}
 	for i, l := range lines {
 		if metadata.opts.Block && !lineRange.empty() && block.expectsContinuation() {
@@ -331,6 +341,7 @@ func findQuote(s string, i int) string {
 }
 
 func (lg *lineGroup) append(s string) {
+	lg.access = accessRecorder{}
 	lg.lines[len(lg.lines)-1] = lg.lines[len(lg.lines)-1] + s
 }
 
@@ -339,17 +350,22 @@ func (lg *lineGroup) hasSuffix(s string) bool {
 }
 
 func (lg *lineGroup) trimSuffix(s string) {
+	lg.access = accessRecorder{}
 	lg.lines[len(lg.lines)-1] = strings.TrimSuffix(lg.lines[len(lg.lines)-1], s)
 }
 
 func (lg *lineGroup) commentOnly() bool {
+	lg.access.commentOnly = true
 	return len(lg.lines) == 0
 }
 
 func (lg *lineGroup) regexTokens() []regexToken {
 	// TODO: jfaer - Should we match regexes on the original content?
-	regexMatches := lg.opts.matchRegexes(lg.joinedLines())
+	regexMatches := lg.opts.matchRegexes(lg.internalJoinedLines())
 	ret := make([]regexToken, len(regexMatches))
+	if lg.access.regexTokens == nil {
+		lg.access.regexTokens = make([]regexTokenAccessRecorder, len(regexMatches))
+	}
 	for i, match := range regexMatches {
 		if match == nil {
 			// Regex did not match.
@@ -357,24 +373,30 @@ func (lg *lineGroup) regexTokens() []regexToken {
 		}
 
 		ret[i] = make(regexToken, len(match))
+		if lg.access.regexTokens[i] == nil {
+			lg.access.regexTokens[i] = make(regexTokenAccessRecorder, len(match))
+		}
 		for j, s := range match {
-			prefixOrder := lg.prefixOrder
+			order := lg.prefixOrder
 			if j != 0 {
 				// Only try to match PrefixOrder on the first capture group in a regex.
 				// TODO: jfaer - Should this just be the first capture group in the first regex match?
-				prefixOrder = nil
+				order = func() *prefixOrder { return nil }
 			}
 			ret[i][j] = &captureGroupToken{
 				opts:        &lg.opts,
-				prefixOrder: prefixOrder,
+				prefixOrder: order,
 				raw:         s,
+				access:      &lg.access.regexTokens[i][j],
 			}
 		}
 	}
 	return ret
 }
 
-func (lg *lineGroup) joinedLines() string {
+// internalJoinedLines calculates the same thing as joinedLines, except it
+// doesn't record that it was used in the accessRecorder.
+func (lg *lineGroup) internalJoinedLines() string {
 	if len(lg.lines) == 0 {
 		return ""
 	}
@@ -394,23 +416,58 @@ func (lg *lineGroup) joinedLines() string {
 	return s.String()
 }
 
+func (lg *lineGroup) joinedLines() string {
+	lg.access.joinedLines = true
+	return lg.internalJoinedLines()
+}
+
 func (lg *lineGroup) joinedComment() string {
+	lg.access.joinedComment = true
 	if len(lg.comment) == 0 {
 		return ""
 	}
 	return strings.Join(lg.comment, "\n")
 }
 
-func (lg *lineGroup) GoString() string {
-	var comment strings.Builder
-	for _, c := range lg.comment {
-		comment.WriteString(fmt.Sprintf("  %#v\n", c))
+func (lg *lineGroup) DebugString() string {
+	var s strings.Builder
+	s.WriteString("LineGroup{\n")
+	if len(lg.comment) > 0 {
+		s.WriteString("comment=\n")
+		for _, c := range lg.comment {
+			fmt.Fprintf(&s, "  %#v\n", c)
+		}
 	}
-	var lines strings.Builder
-	for _, l := range lg.lines {
-		lines.WriteString(fmt.Sprintf("  %#v\n", l))
+	if len(lg.lines) > 0 {
+		s.WriteString("lines=\n")
+		for _, l := range lg.lines {
+			fmt.Fprintf(&s, "  %#v\n", l)
+		}
 	}
-	return fmt.Sprintf("LineGroup{\ncomment=\n%slines=\n%s}", comment.String(), lines.String())
+	if lg.access.commentOnly {
+		fmt.Fprintf(&s, "commentOnly=%t\n", lg.commentOnly())
+	}
+	if lg.access.regexTokens != nil {
+		for i, regex := range lg.regexTokens() {
+			if regex.wasUsed() {
+				fmt.Fprintf(&s, "regex[%d]=%s\n", i, regex.DebugString())
+			}
+		}
+	}
+	if lg.access.joinedLines {
+		if len(lg.lines) > 1 {
+			// Only print the joinedLines when they're meaningfully different from the
+			// raw lines above.
+			fmt.Fprintf(&s, "joinedLines=%#v\n", lg.joinedLines())
+		} else if !lg.access.joinedComment {
+			s.WriteString("linesTiebreaker=true\n")
+		}
+	}
+	if lg.access.joinedComment {
+		s.WriteString("commentTiebreaker=true\n")
+	}
+	s.WriteString("}")
+	return s.String()
 }
 
 func (lg *lineGroup) allLines() []string {
@@ -426,22 +483,66 @@ func (lg *lineGroup) String() string {
 
 type regexToken []*captureGroupToken
 
+type regexTokenAccessRecorder []captureGroupTokenAccessRecorder
+
+func (t regexToken) wasUsed() bool {
+	if t == nil {
+		// Report that the regex didn't match.
+		return true
+	}
+	for _, cg := range t {
+		if cg.wasUsed() {
+			return true
+		}
+	}
+	return false
+}
+
+func (t regexToken) DebugString() string {
+	if t == nil {
+		return "<did not match>"
+	}
+
+	captureGroups := make([]string, len(t))
+	for i, cg := range t {
+		if cg.wasUsed() {
+			captureGroups[i] = cg.DebugString()
+		} else {
+			captureGroups[i] = "<unused>"
+		}
+	}
+
+	if len(captureGroups) == 1 {
+		return captureGroups[0]
+	}
+	return fmt.Sprintf("%v", captureGroups)
+}
+
 type captureGroupToken struct {
 	opts        *blockOptions
 	prefixOrder func() *prefixOrder
 
 	raw string
+
+	access *captureGroupTokenAccessRecorder
+}
+
+type captureGroupTokenAccessRecorder struct {
+	prefix    bool
+	transform bool
 }
 
 func (t *captureGroupToken) prefix() orderedPrefix {
-	if t.prefixOrder == nil {
+	ord := t.prefixOrder()
+	if ord == nil {
 		return orderedPrefix{}
 	}
-
-	return t.prefixOrder().match(t.raw)
+	t.access.prefix = true
+	return ord.match(t.raw)
 }
 
 func (t *captureGroupToken) transform() numericTokens {
+	t.access.transform = true
 	// Combinations of switches (for example, case-insensitive and numeric
 	// ordering) which must be applied to create a single comparison key,
 	// otherwise a sub-ordering can preempt a total ordering:
@@ -465,4 +566,29 @@ func (t *captureGroupToken) transform() numericTokens {
 		s = strings.ToLower(s)
 	}
 	return t.opts.maybeParseNumeric(s)
+}
+
+func (t captureGroupToken) wasUsed() bool {
+	return t.access.prefix || t.access.transform
+}
+
+func (t captureGroupToken) DebugString() string {
+	var s []string
+	if t.access.prefix {
+		s = append(s, fmt.Sprintf("prefix:%q", t.prefix().prefix))
+	}
+	if t.access.transform {
+		var tokens strings.Builder
+		if len(s) > 0 {
+			tokens.WriteString("tokens:")
+		}
+		fmt.Fprintf(&tokens, "%s", t.transform().DebugString())
+		s = append(s, tokens.String())
+	}
+
+	ret := strings.Join(s, " ")
+	if len(s) > 1 {
+		ret = "[" + ret + "]"
+	}
+	return ret
 }

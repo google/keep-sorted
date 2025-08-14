@@ -57,6 +57,14 @@ Multiple regexes
   int bar
   keep-sorted-test end
 
+One regex, multiple capturing groups
+  keep-sorted-test start by_regex=(.*)_(.*)
+  foo_bar
+  foo_baz
+  bar_baz
+  baz_qux
+  keep-sorted-test end
+
 Multiline blocks
   keep-sorted-test start block=yes newline_separated=yes by_regex=(\w+)\(\)\s+{
   bool func2() {

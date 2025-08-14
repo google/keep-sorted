@@ -57,6 +57,14 @@ Multiple regexes
   long foo
   keep-sorted-test end
 
+One regex, multiple capturing groups
+  keep-sorted-test start by_regex=(.*)_(.*)
+  bar_baz
+  baz_qux
+  foo_bar
+  foo_baz
+  keep-sorted-test end
+
 Multiline blocks
   keep-sorted-test start block=yes newline_separated=yes by_regex=(\w+)\(\)\s+{
   List<SomeReallyLongTypeParameterThatWouldForceTheFunctionNameOntoTheNextLine>
