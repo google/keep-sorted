@@ -30,6 +30,10 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
+// IntOrBool can be unmarshaled from a boolean or an integer value.
+// true is unmarshaled as 1, false as 0.
+type IntOrBool int
+
 type BlockOptions struct {
 	opts blockOptions
 }
@@ -99,7 +103,11 @@ type blockOptions struct {
 	////////////////////////////
 
 	// NewlineSeparated indicates that the groups should be separated with newlines.
-	NewlineSeparated bool `key:"newline_separated"`
+	// User can specify either an integer, or a boolean (to be backward compatible).
+	// 'no' or '0', it means no newlines should be added;
+	// 'yes' or '1', it means one newline should be added;
+	// Any other positive integer specifies the number of newlines to separate the groups.
+	NewlineSeparated IntOrBool `key:"newline_separated"`
 	// RemoveDuplicates determines whether we drop lines that are an exact duplicate.
 	RemoveDuplicates bool `key:"remove_duplicates"`
 
@@ -192,6 +200,8 @@ func formatValue(val reflect.Value) (string, error) {
 		return formatList(val.Interface().([]string))
 	case reflect.TypeFor[map[string]bool]():
 		return formatList(slices.Sorted(maps.Keys(val.Interface().(map[string]bool))))
+	case reflect.TypeFor[IntOrBool]():
+		return strconv.Itoa(int(val.Int())), nil
 	case reflect.TypeFor[int]():
 		return strconv.Itoa(int(val.Int())), nil
 	case reflect.TypeFor[[]*regexp.Regexp]():
@@ -260,6 +270,11 @@ func validate(opts *blockOptions) (warnings []error) {
 	if opts.SkipLines < 0 {
 		warns = append(warns, fmt.Errorf("skip_lines has invalid value: %v", opts.SkipLines))
 		opts.SkipLines = 0
+	}
+
+	if opts.NewlineSeparated < 0 {
+		warns = append(warns, fmt.Errorf("newline_separated has invalid value: %v", opts.NewlineSeparated))
+		opts.NewlineSeparated = 0
 	}
 
 	if opts.GroupPrefixes != nil && !opts.Group {
