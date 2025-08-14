@@ -138,8 +138,46 @@ Nested keep-sorted, nested blocks change their number of lines.
     ];
   // keep-sorted-test end
 
+Nested keep-sorted, nested blocks with newlines=2.
+  // keep-sorted-test start group=yes
+  private static final List<String> b = [
+    // keep-sorted-test start
+    "x",
+    "x",
+    "y"
+    // keep-sorted-test end
+    ];
+  private static final List<String> a = [
+    // keep-sorted-test start newline_separated=2
+    "3",
+    "2",
+    "1"
+    // keep-sorted-test end
+    ];
+  // keep-sorted-test end
+
+
 Nested keep-sorted without indentation
   // keep-sorted-test start group=yes newline_separated=yes
+  
+  // def
+  // keep-sorted-test start
+  3
+  1
+  2
+  // keep-sorted-test end
+  
+  // abc
+  // keep-sorted-test start
+  b
+  c
+  a
+  // keep-sorted-test end
+  
+  // keep-sorted-test end
+
+Nested keep-sorted without indentation, with newlines=3:
+  // keep-sorted-test start group=yes newline_separated=3
   
   // def
   // keep-sorted-test start

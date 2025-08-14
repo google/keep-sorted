@@ -100,6 +100,16 @@ B
 C
 // keep-sorted-test end
 
+// keep-sorted-test start newline_separated=2
+A
+
+
+B
+
+
+C
+// keep-sorted-test end
+
 Invalid option
   keep-sorted-test start group=yes skip_lines=-1 foo=bar
   1

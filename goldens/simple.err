@@ -1,4 +1,4 @@
-WRN skip_lines has invalid value: -1 line=105
-WRN unrecognized option "foo" line=105
-WRN while parsing option "ignore_prefixes": content appears to be an unterminated YAML list: "[abc, foo" line=112
+WRN skip_lines has invalid value: -1 line=113
+WRN unrecognized option "foo" line=113
+WRN while parsing option "ignore_prefixes": content appears to be an unterminated YAML list: "[abc, foo" line=120
 exit status 1
