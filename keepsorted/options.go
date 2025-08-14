@@ -15,6 +15,7 @@
 package keepsorted
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"iter"
@@ -492,4 +493,43 @@ func (t numericTokens) compare(o numericTokens) int {
 	// If the numericTokens are all the same, whichever numericTokens that's
 	// smaller is less than the other.
 	return t.len() - o.len()
+}
+
+type prefixOrder struct {
+	opts          blockOptions
+	prefixWeights map[string]int
+	prefixes      []string
+}
+
+func newPrefixOrder(opts blockOptions) *prefixOrder {
+	// Assign a weight to each prefix so that they will be sorted into their
+	// predetermined order.
+	// Weights are negative so that entries with matching prefixes are put before
+	// any non-matching line (which will have a weight of 0).
+	//
+	// An empty prefix can be used to move "non-matching" entries to a position
+	// between other prefixes.
+	prefixWeights := make(map[string]int)
+	for i, p := range opts.PrefixOrder {
+		prefixWeights[p] = i - len(opts.PrefixOrder)
+	}
+	// Sort prefixes longest -> shortest to find the most appropriate weight.
+	longestFirst := comparing(func(s string) int { return len(s) }).reversed()
+	prefixes := slices.SortedStableFunc(slices.Values(opts.PrefixOrder), longestFirst)
+
+	return &prefixOrder{opts, prefixWeights, prefixes}
+}
+
+func (o prefixOrder) match(s string) orderedPrefix {
+	pre, _ := o.opts.hasPrefix(s, slices.Values(o.prefixes))
+	return orderedPrefix{pre, o.prefixWeights[pre]}
+}
+
+type orderedPrefix struct {
+	prefix string
+	weight int
+}
+
+func (pre orderedPrefix) compare(other orderedPrefix) int {
+	return cmp.Compare(pre.weight, other.weight)
 }
