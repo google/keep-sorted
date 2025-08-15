@@ -114,7 +114,7 @@ func (f *Fixer) newBlocks(filename string, lines []string, offset int, include f
 			}
 
 			start.index += opts.SkipLines
-			if start.index > endIndex {
+			if start.index >= endIndex {
 				continue
 			}
 
