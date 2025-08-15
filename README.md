@@ -479,7 +479,7 @@ progress = (
 #### Regular expressions
 
 It can be useful to sort an entire group based on a non-prefix substring. The
-option `by_regex=…` takes a comma-separated list of [re2 regular
+option `by_regex=…` takes a comma-separated list of [RE2 regular
 expressions] that will be applied to the group, and then sorting
 will take place on just the results of the regular expressions.
 
@@ -506,7 +506,7 @@ your regular expressions.
 > If you want your regular expression itself to be case insensitive, consider
 > setting the case-insensitive flag `(?i)` at the start of your expression.
 
-[regular expressions]: https://github.com/google/re2/wiki/Syntax
+[RE2 regular expressions]: https://github.com/google/re2/wiki/Syntax
 [lexicographically]: https://en.wikipedia.org/wiki/Lexicographic_order
 
 <table border="0">
