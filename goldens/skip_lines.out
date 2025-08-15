@@ -1,3 +1,7 @@
+Skip lines with an empty block:
+keep-sorted-test start skip_lines=1
+keep-sorted-test end
+
 Skip two lines:
 // keep-sorted-test start skip_lines=2
 foo
