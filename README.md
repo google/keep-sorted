@@ -943,8 +943,7 @@ keep-sorted end
 </tr>
 </table>
 
-### How does keep-sorted handle lists that aren't allowed to have trailing
-commas?
+### How does keep-sorted handle lists that aren't allowed to have trailing commas?
 
 Some languages allow trailing commas in lists and some don't. Luckily,
 keep-sorted tries to do the right thing and handle commas "correctly".
