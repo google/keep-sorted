@@ -48,6 +48,11 @@ func (p *parser) popKey() (string, bool) {
 	return key, true
 }
 
+type regexpTemplatePair struct {
+	Regexp   *regexp.Regexp
+	Template *string
+}
+
 func (p *parser) popValue(typ reflect.Type) (reflect.Value, error) {
 	switch typ {
 	case reflect.TypeFor[bool]():
@@ -65,28 +70,11 @@ func (p *parser) popValue(typ reflect.Type) (reflect.Value, error) {
 	case reflect.TypeFor[map[string]bool]():
 		val, err := p.popSet()
 		return reflect.ValueOf(val), err
-	case reflect.TypeFor[[]*regexp.Regexp]():
-		val, err := p.popList()
-		if err != nil {
-			return reflect.Zero(typ), err
-		}
 
-		ret := make([]*regexp.Regexp, len(val))
-		var errs []error
-		for i, s := range val {
-			regex, err := regexp.Compile(s)
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-			ret[i] = regex
-		}
+	case reflect.TypeFor[[]*regexpTemplatePair]():
+		val, err := p.popListOfRegexpTemplatePair()
+		return reflect.ValueOf(val), err
 
-		if err := errors.Join(errs...); err != nil {
-			return reflect.Zero(typ), err
-		}
-
-		return reflect.ValueOf(ret), nil
 	}
 
 	panic(fmt.Errorf("unhandled case in switch: %v", typ))
@@ -127,6 +115,69 @@ func (p *parser) popIntOrBool() (IntOrBool, error) {
 		return 0, err
 	}
 	return IntOrBool(i), nil
+}
+
+func (p *parser) popListOfRegexpTemplatePair() ([]*regexpTemplatePair, error) {
+	if p.allowYAMLLists {
+		val, rest, err := tryFindYAMLListAtStart(p.line)
+		if err == nil {
+			p.line = rest
+
+			var items []any
+			if err := yaml.Unmarshal([]byte(val), &items); err != nil {
+				return nil, fmt.Errorf("pLORTP giving up: %v", err)
+			}
+
+			var rv []*regexpTemplatePair
+			for _, item := range items {
+				switch v := item.(type) {
+				case string:
+					rv = append(rv, &regexpTemplatePair{Regexp: regexp.MustCompile(v)})
+				case map[string]any:
+					if len(v) != 1 {
+						return nil, fmt.Errorf("pLORTP too many values: %v", v)
+					}
+					for s, t := range v {
+						if ts, ok := t.(string); ok {
+							rv = append(rv, &regexpTemplatePair{
+								Regexp:   regexp.MustCompile(s),
+								Template: &ts,
+							})
+						} else {
+							return nil, fmt.Errorf("pLORTP expected string value in map, but got: %v", v)
+						}
+						break
+					}
+				default:
+					return nil, fmt.Errorf("pLORTP unexpected type: %v", v)
+				}
+			}
+			return rv, nil
+		}
+		if !errors.Is(err, errNotYAMLList) {
+			return nil, err
+		}
+	}
+
+	val, rest, _ := strings.Cut(p.line, " ")
+	p.line = rest
+	if val == "" {
+		return []*regexpTemplatePair{}, nil
+	}
+	var rv []*regexpTemplatePair
+	var errs []error
+	for _, item := range strings.Split(val, ",") {
+		pattern, err := regexp.Compile(item)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		rv = append(rv, &regexpTemplatePair{Regexp: pattern})
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return rv, nil
 }
 
 func (p *parser) popList() ([]string, error) {
@@ -213,8 +264,9 @@ loop:
 func parseYAMLList(list string) ([]string, error) {
 	var val []string
 	if err := yaml.Unmarshal([]byte(list), &val); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parseYAMLList giving up: %v", err)
 	}
+
 	return val, nil
 }
 
