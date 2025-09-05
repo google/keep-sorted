@@ -193,7 +193,10 @@ func TestBlockOptions(t *testing.T) {
 
 			want: blockOptions{
 				AllowYAMLLists: true,
-				ByRegex:        []*regexp.Regexp{regexp.MustCompile("(?:abcd)"), regexp.MustCompile("efg.*")},
+				ByRegex: []*regexpTemplatePair{
+					{Regexp: regexp.MustCompile("(?:abcd)")},
+					{Regexp: regexp.MustCompile("efg.*")},
+				},
 			},
 		},
 	} {
@@ -309,7 +312,7 @@ func TestBlockOptions_regexTransform(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var opts blockOptions
 			for _, regex := range tc.regexes {
-				opts.ByRegex = append(opts.ByRegex, regexp.MustCompile(regex))
+				opts.ByRegex = append(opts.ByRegex, &regexpTemplatePair{Regexp: regexp.MustCompile(regex)})
 			}
 
 			gotTokens := opts.matchRegexes(tc.in)

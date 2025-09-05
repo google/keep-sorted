@@ -8,8 +8,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-var cmpRegexp = cmp.Comparer(func(a, b *regexp.Regexp) bool {
-	return a.String() == b.String()
+var cmpRegexp = cmp.Comparer(func(a, b *regexpTemplatePair) bool {
+	if a.Regexp.String() != b.Regexp.String() {
+		return false
+	}
+	if a.Template == nil || b.Template == nil {
+		return a.Template == b.Template
+	}
+	return *a.Template == *b.Template
 })
 
 func TestPopValue(t *testing.T) {
@@ -215,14 +221,29 @@ func TestPopValue(t *testing.T) {
 			name: "Regex",
 
 			input: ".*",
-			want:  []*regexp.Regexp{regexp.MustCompile(".*")},
+			want:  []*regexpTemplatePair{{Regexp: regexp.MustCompile(".*")}},
 		},
 		{
 			name: "MultipleRegex",
 
 			input:         `[.*, abcd, '(?:efgh)ijkl']`,
 			allowYAMLList: true,
-			want:          []*regexp.Regexp{regexp.MustCompile(".*"), regexp.MustCompile("abcd"), regexp.MustCompile("(?:efgh)ijkl")},
+			want: []*regexpTemplatePair{
+				{Regexp: regexp.MustCompile(".*")},
+				{Regexp: regexp.MustCompile("abcd")},
+				{Regexp: regexp.MustCompile("(?:efgh)ijkl")}},
+		},
+		{
+			name: "MultipleRegex_Template",
+
+			input:         `[.*, abcd, '(?:efgh)ijkl', '\b(\d+)\.(\d+)\.(\d+)\.(\d+)/(\d+);': '${5} ${4}${3}${2}${1}']`,
+			allowYAMLList: true,
+			want: []*regexpTemplatePair{
+				{Regexp: regexp.MustCompile(".*")},
+				{Regexp: regexp.MustCompile("abcd")},
+				{Regexp: regexp.MustCompile("(?:efgh)ijkl")},
+				{Regexp: regexp.MustCompile(`\b(\d+)\.(\d+)\.(\d+)\.(\d+)/(\d+);`), Template: &[]string{`${5} ${4}${3}${2}${1}`}[0]},
+			},
 		},
 		{
 			name: "IntOrBool_Int",

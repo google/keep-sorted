@@ -97,7 +97,7 @@ type blockOptions struct {
 	// IgnorePrefixes is a slice of prefixes that we do not consider when sorting lines.
 	IgnorePrefixes []string `key:"ignore_prefixes"`
 	// ByRegex is a slice of regexes that are used to extract the pieces of the line group that keep-sorted should sort by.
-	ByRegex []*regexp.Regexp `key:"by_regex"`
+	ByRegex []*regexpTemplatePair `key:"by_regex"`
 
 	////////////////////////////
 	//  Post-sorting options  //
@@ -205,11 +205,12 @@ func formatValue(val reflect.Value) (string, error) {
 		return strconv.Itoa(int(val.Int())), nil
 	case reflect.TypeFor[int]():
 		return strconv.Itoa(int(val.Int())), nil
-	case reflect.TypeFor[[]*regexp.Regexp]():
-		regexps := val.Interface().([]*regexp.Regexp)
+
+	case reflect.TypeFor[[]*regexpTemplatePair]():
+		regexps := val.Interface().([]*regexpTemplatePair)
 		vals := make([]string, len(regexps))
 		for i, regex := range regexps {
-			vals[i] = regex.String()
+			vals[i] = regex.Regexp.String()
 		}
 		return formatList(vals)
 	}
@@ -344,7 +345,7 @@ func (opts blockOptions) cutFirstPrefix(s string, prefixes iter.Seq[string]) (pr
 		}
 		if strings.HasPrefix(t, q) {
 			after = s
-			// Remove leading whitepace (t already has its leading whitespace removed).
+			// Remove leading whitespace (t already has its leading whitespace removed).
 			after = strings.TrimLeftFunc(after, unicode.IsSpace)
 			// Remove the prefix.
 			after = after[len(p):]
@@ -389,17 +390,22 @@ func (opts blockOptions) matchRegexes(s string) []regexMatch {
 
 	var ret []regexMatch
 	for _, regex := range opts.ByRegex {
-		m := regex.FindStringSubmatch(s)
-		if m == nil {
-			ret = append(ret, regexDidNotMatch)
-			continue
-		}
-		if len(m) == 1 {
-			// No capturing groups. Consider all matched text.
-			ret = append(ret, m)
+		if regex.Template != nil {
+			var result []byte
+			for _, submatches := range regex.Regexp.FindAllStringSubmatchIndex(s, -1) {
+				result = regex.Regexp.ExpandString(result, *regex.Template, s, submatches)
+			}
+			ret = append(ret, regexMatch{string(result)})
 		} else {
-			// At least one capturing group. Only consider the capturing groups.
-			ret = append(ret, m[1:])
+			m := regex.Regexp.FindStringSubmatch(s)
+			switch {
+			case m == nil:
+				ret = append(ret, regexDidNotMatch)
+			case len(m) == 1:
+				ret = append(ret, m)
+			default:
+				ret = append(ret, m[1:])
+			}
 		}
 	}
 	return ret
