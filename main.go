@@ -16,7 +16,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -31,8 +30,6 @@ import (
 )
 
 func main() {
-	flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
-
 	c := &cmd.Config{}
 	c.FromFlags(nil)
 	logLevel := flag.CountP("verbose", "v", "Log more verbosely")
@@ -51,12 +48,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
-		if !errors.Is(err, flag.ErrHelp) {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		os.Exit(2)
-	}
+	flag.Parse()
 
 	if *version {
 		fmt.Fprintln(os.Stdout, readVersion())
