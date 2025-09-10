@@ -391,11 +391,20 @@ func (opts blockOptions) matchRegexes(s string) []regexMatch {
 	var ret []regexMatch
 	for _, regex := range opts.ByRegex {
 		if regex.Template != nil {
-			var result []byte
-			for _, submatches := range regex.Regexp.FindAllStringSubmatchIndex(s, -1) {
-				result = regex.Regexp.ExpandString(result, *regex.Template, s, submatches)
+
+			// using n == -1 to return all found matches
+			matches := regex.Regexp.FindAllStringSubmatchIndex(s, -1)
+
+			if matches == nil {
+				ret = append(ret, regexDidNotMatch)
+			} else {
+				// expand the supplied template against the matches
+				var result []byte
+				for _, submatches := range matches {
+					result = regex.Regexp.ExpandString(result, *regex.Template, s, submatches)
+				}
+				ret = append(ret, regexMatch{string(result)})
 			}
-			ret = append(ret, regexMatch{string(result)})
 		} else {
 			m := regex.Regexp.FindStringSubmatch(s)
 			switch {
