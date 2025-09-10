@@ -345,7 +345,7 @@ func (opts blockOptions) cutFirstPrefix(s string, prefixes iter.Seq[string]) (pr
 		}
 		if strings.HasPrefix(t, q) {
 			after = s
-			// Remove leading whitespace (t already has its leading whitespace removed).
+			// Remove leading whitespace (it already has its leading whitespace removed).
 			after = strings.TrimLeftFunc(after, unicode.IsSpace)
 			// Remove the prefix.
 			after = after[len(p):]
