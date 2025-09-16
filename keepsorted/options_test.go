@@ -193,7 +193,23 @@ func TestBlockOptions(t *testing.T) {
 
 			want: blockOptions{
 				AllowYAMLLists: true,
-				ByRegex:        []*regexp.Regexp{regexp.MustCompile("(?:abcd)"), regexp.MustCompile("efg.*")},
+				ByRegex: []ByRegexOption{
+					{regexp.MustCompile("(?:abcd)"), nil}, {regexp.MustCompile("efg.*"), nil},
+				},
+			},
+		},
+		{
+			name:           "RegexWithTemplate",
+			in:             `by_regex=['.*', '\b(\d{2})/(\d{2})/(\d{4})\b': '${3}-${1}-${2}']`,
+			defaultOptions: blockOptions{AllowYAMLLists: true},
+
+			want: blockOptions{
+				AllowYAMLLists: true,
+				ByRegex: []ByRegexOption{
+					{Pattern: regexp.MustCompile(`.*`)},
+					{Pattern: regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`),
+						Template: &[]string{"${3}-${1}-${2}"}[0]},
+				},
 			},
 		},
 	} {
@@ -309,7 +325,7 @@ func TestBlockOptions_regexTransform(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var opts blockOptions
 			for _, regex := range tc.regexes {
-				opts.ByRegex = append(opts.ByRegex, regexp.MustCompile(regex))
+				opts.ByRegex = append(opts.ByRegex, ByRegexOption{regexp.MustCompile(regex), nil})
 			}
 
 			gotTokens := opts.matchRegexes(tc.in)

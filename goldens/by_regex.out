@@ -122,3 +122,12 @@ Cannot combine with ignore_prefixes
   2
   3
   keep-sorted-test end
+
+Template rewrites
+  keep-sorted-test start by_regex=['^(Jan|(Feb|Mar|(Apr|May|(Jun|(Jul|(Aug|Sep|(Oct|(Nov|(Dec))))))))) (?<t_d>\d\d) (?<t_R>\d\d:\d\d) (?<t_Y>\d\d\d\d) ': '${t_Y} ${9}A${8}A${7}A${6}A${5}A${4}A${3}A${2}A${1} ${t_d} ${t_R}']
+  Aug 26 09:00 2024 | nobody
+  Sep 02 09:00 2024 | nobody
+  Apr 14 09:00 2025 | nobody
+  Jun 23 09:00 2025 | nobody
+  Jul 28 09:00 2025 | nobody
+  keep-sorted-test end

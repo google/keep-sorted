@@ -35,6 +35,11 @@ import (
 // true is unmarshaled as 1, false as 0.
 type IntOrBool int
 
+type ByRegexOption struct {
+	Pattern  *regexp.Regexp
+	Template *string
+}
+
 type BlockOptions struct {
 	opts blockOptions
 }
@@ -62,7 +67,7 @@ func (opts BlockOptions) String() string {
 //   - []string:         key=a,b,c,d
 //   - map[string]bool:  key=a,b,c,d
 //   - int:              key=123
-//   - []*regexp.Regexp: key=a,b,c,d
+//   - ByRegexOptions    key=a,b,c,d, key=[yaml_list]
 type blockOptions struct {
 	// AllowYAMLLists determines whether list.set valued options are allowed to be specified by YAML.
 	AllowYAMLLists bool `key:"allow_yaml_lists"`
@@ -97,7 +102,7 @@ type blockOptions struct {
 	// IgnorePrefixes is a slice of prefixes that we do not consider when sorting lines.
 	IgnorePrefixes []string `key:"ignore_prefixes"`
 	// ByRegex is a slice of regexes that are used to extract the pieces of the line group that keep-sorted should sort by.
-	ByRegex []*regexp.Regexp `key:"by_regex"`
+	ByRegex []ByRegexOption `key:"by_regex"`
 
 	////////////////////////////
 	//  Post-sorting options  //
@@ -205,11 +210,21 @@ func formatValue(val reflect.Value) (string, error) {
 		return strconv.Itoa(int(val.Int())), nil
 	case reflect.TypeFor[int]():
 		return strconv.Itoa(int(val.Int())), nil
-	case reflect.TypeFor[[]*regexp.Regexp]():
-		regexps := val.Interface().([]*regexp.Regexp)
-		vals := make([]string, len(regexps))
-		for i, regex := range regexps {
-			vals[i] = regex.String()
+	case reflect.TypeFor[[]ByRegexOption]():
+		opts := val.Interface().([]ByRegexOption)
+		vals := make([]string, 0, len(opts))
+		seenTemplate := false
+		for _, opt := range opts {
+			if opt.Template != nil {
+				seenTemplate = true
+				vals = append(vals, fmt.Sprintf(`%q: %q`, opt.Pattern.String(), *opt.Template))
+				continue
+			}
+			vals = append(vals, opt.Pattern.String())
+		}
+		if seenTemplate {
+			// always presented as a yaml sequence to preserve any `k:v` items
+			return fmt.Sprintf("[%s]", strings.Join(vals, ", ")), nil
 		}
 		return formatList(vals)
 	}
@@ -388,7 +403,23 @@ func (opts blockOptions) matchRegexes(s string) []regexMatch {
 	}
 
 	var ret []regexMatch
-	for _, regex := range opts.ByRegex {
+	for _, p := range opts.ByRegex {
+		regex := p.Pattern
+
+		if p.Template != nil {
+			var result []byte
+			m := regex.FindAllStringSubmatchIndex(s, -1)
+			if m == nil {
+				ret = append(ret, regexDidNotMatch)
+				continue
+			}
+			for _, submatches := range m {
+				result = regex.ExpandString(result, *p.Template, s, submatches)
+			}
+			ret = append(ret, regexMatch{string(result)})
+			continue
+		}
+
 		m := regex.FindStringSubmatch(s)
 		if m == nil {
 			ret = append(ret, regexDidNotMatch)

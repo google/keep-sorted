@@ -65,28 +65,12 @@ func (p *parser) popValue(typ reflect.Type) (reflect.Value, error) {
 	case reflect.TypeFor[map[string]bool]():
 		val, err := p.popSet()
 		return reflect.ValueOf(val), err
-	case reflect.TypeFor[[]*regexp.Regexp]():
-		val, err := p.popList()
+	case reflect.TypeFor[[]ByRegexOption]():
+		val, err := p.popListRegexOption()
 		if err != nil {
 			return reflect.Zero(typ), err
 		}
-
-		ret := make([]*regexp.Regexp, len(val))
-		var errs []error
-		for i, s := range val {
-			regex, err := regexp.Compile(s)
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-			ret[i] = regex
-		}
-
-		if err := errors.Join(errs...); err != nil {
-			return reflect.Zero(typ), err
-		}
-
-		return reflect.ValueOf(ret), nil
+		return reflect.ValueOf(val), nil
 	}
 
 	panic(fmt.Errorf("unhandled case in switch: %v", typ))
@@ -129,25 +113,78 @@ func (p *parser) popIntOrBool() (IntOrBool, error) {
 	return IntOrBool(i), nil
 }
 
-func (p *parser) popList() ([]string, error) {
+func (ar *ByRegexOption) UnmarshalYAML(node *yaml.Node) error {
+	switch node.Tag {
+	case "!!str":
+		pat, err := regexp.Compile(node.Value)
+		if err != nil {
+			return err
+		}
+		ar.Pattern = pat
+		ar.Template = nil
+		return nil
+	case "!!map":
+		var m map[string]string
+		if err := node.Decode(&m); err != nil {
+			return err
+		}
+		if len(m) != 1 {
+			return fmt.Errorf("by_regex map item must have exactly one key-value pair, but got %d", len(m))
+		}
+		for pattern, template := range m {
+			pat, err := regexp.Compile(pattern)
+			if err != nil {
+				return fmt.Errorf("invalid regex pattern %q: %w", pattern, err)
+			}
+			ar.Pattern = pat
+			ar.Template = &template
+			return nil
+		}
+	}
+
+	return fmt.Errorf("unexpected data type at %v", node.Tag)
+}
+
+func popListValue[T any](p *parser, parse func(string) (T, error)) ([]T, error) {
 	if p.allowYAMLLists {
 		val, rest, err := tryFindYAMLListAtStart(p.line)
 		if err != nil && !errors.Is(err, errNotYAMLList) {
 			return nil, err
 		}
 		if err == nil {
-			p.line = rest
-			return parseYAMLList(val)
+			p.line = strings.TrimSpace(rest)
+			return parseYAMLList[T](val)
 		}
+	}
 
-		// err is errNotYAMLList, parse it as a regular list.
-	}
 	val, rest, _ := strings.Cut(p.line, " ")
-	p.line = rest
+	p.line = strings.TrimSpace(rest)
 	if val == "" {
-		return []string{}, nil
+		return []T{}, nil
 	}
-	return strings.Split(val, ","), nil
+
+	var ret []T
+	var errs []error
+	for _, item := range strings.Split(val, ",") {
+		v, err := parse(item)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		ret = append(ret, v)
+	}
+	return ret, errors.Join(errs...)
+}
+
+func (p *parser) popList() ([]string, error) {
+	return popListValue(p, func(s string) (string, error) { return s, nil })
+}
+
+func (p *parser) popListRegexOption() ([]ByRegexOption, error) {
+	return popListValue(p, func(s string) (ByRegexOption, error) {
+		pat, err := regexp.Compile(s)
+		return ByRegexOption{Pattern: pat}, err
+	})
 }
 
 func tryFindYAMLListAtStart(s string) (list, rest string, err error) {
@@ -210,11 +247,12 @@ loop:
 	return s[:iter.idx], s[iter.idx:], nil
 }
 
-func parseYAMLList(list string) ([]string, error) {
-	var val []string
+func parseYAMLList[T any](list string) ([]T, error) {
+	var val []T
 	if err := yaml.Unmarshal([]byte(list), &val); err != nil {
 		return nil, err
 	}
+
 	return val, nil
 }
 
