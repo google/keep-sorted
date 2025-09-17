@@ -9,6 +9,9 @@ import (
 )
 
 var cmpRegexp = cmp.Comparer(func(a, b *regexp.Regexp) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
 	return a.String() == b.String()
 })
 
@@ -215,14 +218,30 @@ func TestPopValue(t *testing.T) {
 			name: "Regex",
 
 			input: ".*",
-			want:  []*regexp.Regexp{regexp.MustCompile(".*")},
+			want:  []ByRegexOption{{regexp.MustCompile(".*"), nil}},
 		},
 		{
 			name: "MultipleRegex",
 
 			input:         `[.*, abcd, '(?:efgh)ijkl']`,
 			allowYAMLList: true,
-			want:          []*regexp.Regexp{regexp.MustCompile(".*"), regexp.MustCompile("abcd"), regexp.MustCompile("(?:efgh)ijkl")},
+			want: []ByRegexOption{
+				{regexp.MustCompile(".*"), nil},
+				{regexp.MustCompile("abcd"), nil},
+				{regexp.MustCompile("(?:efgh)ijkl"), nil},
+			},
+		},
+		{
+			name: "RegexTemplates",
+
+			input:         `[.*, Mon: 0, '\b(\d{2})/(\d{2})/(\d{4})\b': '${3}-${1}-${2}', "0: 1": 2]`,
+			allowYAMLList: true,
+			want: []ByRegexOption{
+				{regexp.MustCompile(".*"), nil},
+				{regexp.MustCompile("Mon"), &([]string{"0"})[0]},
+				{regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`), &([]string{"${3}-${1}-${2}"})[0]},
+				{regexp.MustCompile(`0: 1`), &([]string{"2"})[0]},
+			},
 		},
 		{
 			name: "IntOrBool_Int",
