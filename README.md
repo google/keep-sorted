@@ -506,6 +506,8 @@ your regular expressions.
 > If you want your regular expression itself to be case insensitive, consider
 > setting the case-insensitive flag `(?i)` at the start of your expression.
 
+When using the [YAML Sequence syntax](#syntax) as the argument, a [regexp template](https://pkg.go.dev/regexp#Regexp.Expand) can be supplied optionally as a single string-to-string mapping in the sequence.  Refer to the `Bernoulli` example below for a demonstration of pattern group reordering.  Note that a templated rewrite will be returned wholly as the sorting key.
+
 [RE2 regular expressions]: https://github.com/google/re2/wiki/Syntax
 [lexicographically]: https://en.wikipedia.org/wiki/Lexicographic_order
 
@@ -607,7 +609,7 @@ Data Size B 250K
 ```
 
 ```diff
-+keep-sorted start skip_lines=1 by_regex=['\w+ (\w+)', '(\w+) \w+']
++keep-sorted start skip_lines=1 by_regex=['^(?<first_name>\w+) (?<last_name>\w+)$': '${last_name} ${first_name}']
  
  Daniel Bernoulli
  Jacob Bernoulli
