@@ -1,0 +1,12 @@
+// keep-sorted-test start by_regex=(k[A-Za-z0-9_]+)(?:Name|Description),(Name|Description) prefix_order=Name skip_lines=2 block=yes blank_lines_as_separators=yes
+
+kAccelerateName="Accelerate"
+kAccelerateDescription="When pressed, moves faster."
+
+kTurnName="Turn left or right"
+kTurnDescription="When used, changes direction."
+
+kDecelerateDescription="When pressed, brakes."
+kDecelerateName="Decelerate"
+
+// keep-sorted-test end

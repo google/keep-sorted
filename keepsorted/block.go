@@ -237,6 +237,12 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 
 	log.Printf("Creating line groups for block at index %d (options %v)", b.start, b.metadata.opts)
 	groups := groupLines(lines, b.metadata)
+
+	// Special handling for blank_lines_as_separators
+	if b.metadata.opts.BlankLinesAsSeparators {
+		return b.sortBlankLineSeparatedBlocks(lines)
+	}
+
 	trimTrailingComma := handleTrailingComma(groups)
 
 	numNewlines := int(b.metadata.opts.NewlineSeparated)
@@ -353,6 +359,123 @@ func isNewlineSeparated(gs []*lineGroup, numNewlines int) bool {
 	}
 
 	return true
+}
+
+// sortBlankLineSeparatedBlocks handles sorting when blank_lines_as_separators=yes
+// This option treats blank lines as delimiters between logical groups of lines:
+// 1. Split input into blank-line-separated blocks
+// 2. Sort each block internally
+// 3. Sort the blocks relative to each other
+// 4. Reassemble with blank lines preserved between blocks
+func (b block) sortBlankLineSeparatedBlocks(lines []string) ([]string, bool) {
+	// Split input into blocks separated by blank lines
+	var blocks [][]string
+	var currentBlock []string
+
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			// Blank line found - finish current block if it has content
+			if len(currentBlock) > 0 {
+				blocks = append(blocks, currentBlock)
+				currentBlock = nil
+			}
+		} else {
+			// Non-blank line - add to current block
+			currentBlock = append(currentBlock, line)
+		}
+	}
+	// Don't forget the last block
+	if len(currentBlock) > 0 {
+		blocks = append(blocks, currentBlock)
+	}
+
+	// If no blank separators found: fall back to normal sorting
+	if len(blocks) <= 1 {
+		return b.sortWithoutBlankLineSeparators(lines)
+	}
+
+	// Sort each block internally and determine if everything is already sorted
+	type blockWithKey struct {
+		lines   []string
+		sortKey string // Key used to sort blocks relative to each other
+	}
+
+	var sortedBlocks []blockWithKey
+	allBlocksSorted := true  // false = keep-sorted had to rearrange order.
+
+	for _, block := range blocks {
+		sortedBlockLines, blockWasSorted := b.sortWithoutBlankLineSeparators(block)
+
+		if !blockWasSorted {
+			allBlocksSorted = false
+		}
+
+		// Use the first group's sort key to determine block ordering:
+		// ensures blocks are sorted the same way individual lines would be
+		tempMetadata := b.metadata
+		tempMetadata.opts.BlankLinesAsSeparators = false
+		groups := groupLines(sortedBlockLines, tempMetadata)
+
+		var sortKey string
+		if len(groups) > 0 {
+			sortKey = groups[0].joinedLines()
+		}
+
+		sortedBlocks = append(sortedBlocks, blockWithKey{
+			lines:   sortedBlockLines,
+			sortKey: sortKey,
+		})
+	}
+
+	// Check if blocks are already in the correct order
+	blocksAlreadySorted := slices.IsSortedFunc(sortedBlocks, func(a, b blockWithKey) int {
+		return strings.Compare(a.sortKey, b.sortKey)
+	})
+
+	// If both individual blocks and block order are correct, no changes needed
+	if allBlocksSorted && blocksAlreadySorted {
+		return lines, true
+	}
+
+	// Sort blocks by their sort keys
+	slices.SortStableFunc(sortedBlocks, func(a, b blockWithKey) int {
+		return strings.Compare(a.sortKey, b.sortKey)
+	})
+
+	// Reassemble with blank lines preserved between blocks
+	var result []string
+	for i, block := range sortedBlocks {
+		if i > 0 {
+			// Add blank line separator between blocks
+			result = append(result, "")
+		}
+		result = append(result, block.lines...)
+	}
+
+	return result, false
+}
+
+// sortWithoutBlankLineSeparators is a helper that sorts lines normally,
+// used as fallback when no blank line separators are found
+func (b block) sortWithoutBlankLineSeparators(lines []string) ([]string, bool) {
+	tempMetadata := b.metadata
+	tempMetadata.opts.BlankLinesAsSeparators = false
+
+	groups := groupLines(lines, tempMetadata)
+	alreadySorted := slices.IsSortedFunc(groups, compareLineGroups)
+
+	if alreadySorted {
+		return lines, true
+	}
+
+	slices.SortStableFunc(groups, compareLineGroups)
+
+	var result []string
+	for _, g := range groups {
+		result = append(result, g.allLines()...)
+	}
+
+	return result, false
 }
 
 func isAllEmpty(lg *lineGroup) bool {
