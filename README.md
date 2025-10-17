@@ -869,6 +869,28 @@ Pineapples
 </tr>
 </table>
 
+#### Blank line separators
+
+The `blank_lines_as_separators=yes` option treats blank lines as block separators. Lines within each block are sorted internally, then blocks are sorted relative to each other while preserving the blank lines between them.
+
+This is useful for sorting groups of related lines:
+
+```diff
+ // keep-sorted start blank_lines_as_separators=yes
+ kAccelerateName="Accelerate"
+ kAccelerateDescription="Speed up"
+ 
+-kTurnName="Turn"
+-kTurnDescription="Change direction"
+-
+ kBrakeName="Brake"
+ kBrakeDescription="Slow down"
++
++kTurnName="Turn"
++kTurnDescription="Change direction"
+ // keep-sorted end
+```
+
 ### Syntax
 
 If you find yourself wanting to include special characters (spaces, commas, left

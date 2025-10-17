@@ -1264,6 +1264,104 @@ func TestLineSorting(t *testing.T) {
 			},
 			wantAlreadySorted: true,
 		},
+		{
+			name: "BlankLinesAsSeparators_AlreadySorted",
+
+			opts: blockOptions{BlankLinesAsSeparators: true},
+			in: []string{
+				"Apple",
+				"Apricot",
+				"",
+				"Banana",
+				"Berry",
+				"",
+				"Cherry",
+				"Coconut",
+			},
+
+			want: []string{
+				"Apple",
+				"Apricot",
+				"",
+				"Banana",
+				"Berry",
+				"",
+				"Cherry",
+				"Coconut",
+			},
+			wantAlreadySorted: true,
+		},
+		{
+			name: "BlankLinesAsSeparators_NeedsSorting",
+
+			opts: blockOptions{BlankLinesAsSeparators: true},
+			in: []string{
+				"Coconut",
+				"Cherry",
+				"",
+				"Berry",
+				"Banana",
+				"",
+				"Apricot",
+				"Apple",
+			},
+
+			want: []string{
+				"Apple",
+				"Apricot",
+				"",
+				"Banana",
+				"Berry",
+				"",
+				"Cherry",
+				"Coconut",
+			},
+			wantAlreadySorted: false,
+		},
+		{
+			name: "BlankLinesAsSeparators_WithInternalSorting",
+
+			opts: blockOptions{BlankLinesAsSeparators: true},
+			in: []string{
+				"zebra",
+				"apple",
+				"",
+				"dog",
+				"cat",
+				"",
+				"orange",
+				"banana",
+			},
+
+			want: []string{
+				"apple",
+				"zebra",
+				"",
+				"banana",
+				"orange",
+				"",
+				"cat",
+				"dog",
+			},
+			wantAlreadySorted: false,
+		},
+		{
+			name: "BlankLinesAsSeparators_NoBlankLines",
+
+			opts: blockOptions{BlankLinesAsSeparators: true},
+			in: []string{
+				"zebra",
+				"apple",
+				"cat",
+			},
+
+			want: []string{
+				"apple",
+				"cat",
+				"zebra",
+			},
+			wantAlreadySorted: false,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)

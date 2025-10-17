@@ -116,6 +116,8 @@ type blockOptions struct {
 	NewlineSeparated IntOrBool `key:"newline_separated"`
 	// RemoveDuplicates determines whether we drop lines that are an exact duplicate.
 	RemoveDuplicates bool `key:"remove_duplicates"`
+	// BlankLinesAsSeparators indicates that blank lines should be treated as block separators.
+	BlankLinesAsSeparators bool `key:"blank_lines_as_separators"`
 
 	// Syntax used to start a comment for keep-sorted annotation, e.g. "//".
 	commentMarker string
