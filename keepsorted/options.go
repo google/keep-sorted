@@ -35,7 +35,7 @@ import (
 // true is unmarshaled as 1, false as 0.
 type IntOrBool int
 
-type ByRegexOption struct {
+type RegexOption struct {
 	Pattern  *regexp.Regexp
 	Template *string
 }
@@ -67,7 +67,7 @@ func (opts BlockOptions) String() string {
 //   - []string:         key=a,b,c,d
 //   - map[string]bool:  key=a,b,c,d
 //   - int:              key=123
-//   - ByRegexOptions    key=a,b,c,d, key=[yaml_list]
+//   - []RegexOptions:   key=a,b,c,d, key=[yaml_list]
 type blockOptions struct {
 	// AllowYAMLLists determines whether list.set valued options are allowed to be specified by YAML.
 	AllowYAMLLists bool `key:"allow_yaml_lists"`
@@ -88,6 +88,8 @@ type blockOptions struct {
 	StickyComments bool `key:"sticky_comments"`
 	// StickyPrefixes tells us about other types of lines that should behave as sticky comments.
 	StickyPrefixes map[string]bool `key:"sticky_prefixes"`
+	// GroupDelimiterRegexes tells us if a line is allowed to end a group.
+	GroupDelimiterRegexes []RegexOption `key:"group_delimiter_regexes"`
 
 	///////////////////////
 	//  Sorting options  //
@@ -102,7 +104,7 @@ type blockOptions struct {
 	// IgnorePrefixes is a slice of prefixes that we do not consider when sorting lines.
 	IgnorePrefixes []string `key:"ignore_prefixes"`
 	// ByRegex is a slice of regexes that are used to extract the pieces of the line group that keep-sorted should sort by.
-	ByRegex []ByRegexOption `key:"by_regex"`
+	ByRegex []RegexOption `key:"by_regex"`
 
 	////////////////////////////
 	//  Post-sorting options  //
@@ -210,8 +212,8 @@ func formatValue(val reflect.Value) (string, error) {
 		return strconv.Itoa(int(val.Int())), nil
 	case reflect.TypeFor[int]():
 		return strconv.Itoa(int(val.Int())), nil
-	case reflect.TypeFor[[]ByRegexOption]():
-		opts := val.Interface().([]ByRegexOption)
+	case reflect.TypeFor[[]RegexOption]():
+		opts := val.Interface().([]RegexOption)
 		vals := make([]string, 0, len(opts))
 		seenTemplate := false
 		for _, opt := range opts {
@@ -390,20 +392,20 @@ func (opts blockOptions) trimIgnorePrefix(s string) string {
 	return s
 }
 
-// matchRegexes applies ByRegex to s.
-// If ByRegex is empty, returns a slice that contains just s.
+// matchRegexes applies regexes to s.
+// If regexes is empty, returns a slice that contains just s.
 // Otherwise, applies each regex to s in sequence:
 // If a regex has capturing groups, the capturing groups will be added to the
 // resulting slice.
 // If a regex does not have capturing groups, all matched text will be added to
 // the resulting slice.
-func (opts blockOptions) matchRegexes(s string) []regexMatch {
-	if len(opts.ByRegex) == 0 {
+func (opts blockOptions) matchRegexes(s string, regexes []RegexOption) []regexMatch {
+	if len(regexes) == 0 {
 		return []regexMatch{{s}}
 	}
 
 	var ret []regexMatch
-	for _, p := range opts.ByRegex {
+	for _, p := range regexes {
 		regex := p.Pattern
 
 		if p.Template != nil {
@@ -421,6 +423,7 @@ func (opts blockOptions) matchRegexes(s string) []regexMatch {
 		}
 
 		m := regex.FindStringSubmatch(s)
+
 		if m == nil {
 			ret = append(ret, regexDidNotMatch)
 			continue

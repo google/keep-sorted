@@ -65,7 +65,7 @@ func (p *parser) popValue(typ reflect.Type) (reflect.Value, error) {
 	case reflect.TypeFor[map[string]bool]():
 		val, err := p.popSet()
 		return reflect.ValueOf(val), err
-	case reflect.TypeFor[[]ByRegexOption]():
+	case reflect.TypeFor[[]RegexOption]():
 		val, err := p.popListRegexOption()
 		if err != nil {
 			return reflect.Zero(typ), err
@@ -113,7 +113,7 @@ func (p *parser) popIntOrBool() (IntOrBool, error) {
 	return IntOrBool(i), nil
 }
 
-func (ar *ByRegexOption) UnmarshalYAML(node *yaml.Node) error {
+func (ar *RegexOption) UnmarshalYAML(node *yaml.Node) error {
 	switch node.Tag {
 	case "!!str":
 		pat, err := regexp.Compile(node.Value)
@@ -180,10 +180,10 @@ func (p *parser) popList() ([]string, error) {
 	return popListValue(p, func(s string) (string, error) { return s, nil })
 }
 
-func (p *parser) popListRegexOption() ([]ByRegexOption, error) {
-	return popListValue(p, func(s string) (ByRegexOption, error) {
+func (p *parser) popListRegexOption() ([]RegexOption, error) {
+	return popListValue(p, func(s string) (RegexOption, error) {
 		pat, err := regexp.Compile(s)
-		return ByRegexOption{Pattern: pat}, err
+		return RegexOption{Pattern: pat}, err
 	})
 }
 
