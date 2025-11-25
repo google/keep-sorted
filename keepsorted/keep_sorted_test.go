@@ -15,6 +15,7 @@
 package keepsorted
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -1630,6 +1631,52 @@ func TestLineGrouping(t *testing.T) {
 					"efgh",
 					"abcd",
 					`"""`}},
+			},
+		},
+		{
+			name: "GroupDelimiter_BlankLine",
+			opts: blockOptions{
+				GroupDelimiterRegexes: []RegexOption{
+					{Pattern: regexp.MustCompile(`^$`)},
+				},
+			},
+
+			want: []lineGroupContent{
+				{lines: []string{
+					"[toml]",
+					"key=value",
+					"",
+				}},
+				{lines: []string{
+					"[block_two]",
+					"key=value",
+					"",
+				}},
+				{lines: []string{
+					"[block_three]",
+					"final_key=value",
+				}},
+			},
+		},
+		{
+			name: "GroupDelimiter_Semicolon",
+			opts: blockOptions{
+				GroupDelimiterRegexes: []RegexOption{
+					{Pattern: regexp.MustCompile(`;$`)},
+				},
+			},
+
+			want: []lineGroupContent{
+				{lines: []string{
+					"statement ; in middle",
+					"semicolon at end;",
+				}},
+				{lines: []string{
+					"Next paragraph;",
+				}},
+				{lines: []string{
+					"And the final one",
+				}},
 			},
 		},
 	} {

@@ -193,7 +193,7 @@ func TestBlockOptions(t *testing.T) {
 
 			want: blockOptions{
 				AllowYAMLLists: true,
-				ByRegex: []ByRegexOption{
+				ByRegex: []RegexOption{
 					{regexp.MustCompile("(?:abcd)"), nil}, {regexp.MustCompile("efg.*"), nil},
 				},
 			},
@@ -205,10 +205,23 @@ func TestBlockOptions(t *testing.T) {
 
 			want: blockOptions{
 				AllowYAMLLists: true,
-				ByRegex: []ByRegexOption{
+				ByRegex: []RegexOption{
 					{Pattern: regexp.MustCompile(`.*`)},
 					{Pattern: regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`),
 						Template: &[]string{"${3}-${1}-${2}"}[0]},
+				},
+			},
+		},
+		{
+			name:           "GroupDelimiterRegexes",
+			in:             `group_delimiter_regexes=['^$', ';$']`,
+			defaultOptions: blockOptions{AllowYAMLLists: true},
+
+			want: blockOptions{
+				AllowYAMLLists: true,
+				GroupDelimiterRegexes: []RegexOption{
+					{Pattern: regexp.MustCompile(`^$`)},
+					{Pattern: regexp.MustCompile(`;$`)},
 				},
 			},
 		},
@@ -325,10 +338,10 @@ func TestBlockOptions_regexTransform(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var opts blockOptions
 			for _, regex := range tc.regexes {
-				opts.ByRegex = append(opts.ByRegex, ByRegexOption{regexp.MustCompile(regex), nil})
+				opts.ByRegex = append(opts.ByRegex, RegexOption{regexp.MustCompile(regex), nil})
 			}
 
-			gotTokens := opts.matchRegexes(tc.in)
+			gotTokens := opts.matchRegexes(tc.in, opts.ByRegex)
 			got := make([][]string, len(gotTokens))
 			for i, t := range gotTokens {
 				got[i] = []string(t)

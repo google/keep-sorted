@@ -1,0 +1,20 @@
+Sort by consecutive newlines:
+  // keep-sorted-test start group_delimiter_regexes=['^$']
+  a-block
+  attached line 3
+  attached line 4
+  b-block
+  attached line 1
+  attached line 2
+
+  // keep-sorted-test end
+
+Sort by semicolon:
+  // keep-sorted-test start group_delimiter_regexes=[';$']
+  XXX a semicolon ; in the middle is ignored
+  But at the end it terminates the group ;
+
+  YYY will be sorted up;
+
+  ZZZ This group will come after YYY;
+  // keep-sorted-test end

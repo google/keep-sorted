@@ -145,6 +145,17 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 				// its appendLine call.
 				countStartDirectives(l)
 			}
+		} else if len(metadata.opts.GroupDelimiterRegexes) != 0 {
+ 		        appendLine(i, l)
+			for _, match := range metadata.opts.matchRegexes(l, metadata.opts.GroupDelimiterRegexes) {
+				if match == nil {
+					continue
+				}
+				if !lineRange.empty() {
+					finishGroup()
+				}
+				break
+			}
 		} else {
 			if !lineRange.empty() {
 				finishGroup()
@@ -357,7 +368,7 @@ func (lg *lineGroup) commentOnly() bool {
 
 func (lg *lineGroup) regexTokens() []regexToken {
 	// TODO: jfaer - Should we match regexes on the original content?
-	regexMatches := lg.opts.matchRegexes(lg.internalJoinedLines())
+	regexMatches := lg.opts.matchRegexes(lg.internalJoinedLines(), lg.opts.ByRegex)
 	ret := make([]regexToken, len(regexMatches))
 	if lg.access.regexTokens == nil {
 		lg.access.regexTokens = make([]regexTokenAccessRecorder, len(regexMatches))
