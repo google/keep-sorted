@@ -137,17 +137,13 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 				finishGroup()
 			}
 
-			if metadata.opts.Group && strings.Contains(l, metadata.startDirective) {
-				// We don't need to check for end directives here because this makes
-				// numUnmatchedStartDirectives > 0, so we'll take the code path above through appendLine.
-				if lineRange.empty() {
-					commentRange.append(i)
-					countStartDirectives(l)
-				} else {
-					appendLine(i, l)
-				}
-			} else {
-				commentRange.append(i)
+			commentRange.append(i)
+			if metadata.opts.Group {
+				// Note: This will not count end directives. If this call ever finds a
+				// start directive, it will set numUnmatchedStartDirectives > 0 and then
+				// we will enter the branch above where we'll count end directives via
+				// its appendLine call.
+				countStartDirectives(l)
 			}
 		} else {
 			if !lineRange.empty() {
