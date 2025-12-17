@@ -59,6 +59,9 @@ func (p *parser) popValue(typ reflect.Type) (reflect.Value, error) {
 	case reflect.TypeFor[int]():
 		val, err := p.popInt()
 		return reflect.ValueOf(val), err
+	case reflect.TypeFor[SortOrder]():
+		val, err := p.popSortOrder()
+		return reflect.ValueOf(val), err
 	case reflect.TypeFor[[]string]():
 		val, err := p.popList()
 		return reflect.ValueOf(val), err
@@ -185,6 +188,19 @@ func (p *parser) popListRegexOption() ([]ByRegexOption, error) {
 		pat, err := regexp.Compile(s)
 		return ByRegexOption{Pattern: pat}, err
 	})
+}
+
+func (p *parser) popSortOrder() (SortOrder, error) {
+	val, rest, _ := strings.Cut(p.line, " ")
+	p.line = rest
+	switch val {
+	case string(OrderAsc):
+		return OrderAsc, nil
+	case string(OrderDesc):
+		return OrderDesc, nil
+	default:
+		return OrderAsc, fmt.Errorf("unrecognized order value %q, expected 'asc' or 'desc'", val)
+	}
 }
 
 func tryFindYAMLListAtStart(s string) (list, rest string, err error) {

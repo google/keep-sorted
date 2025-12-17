@@ -754,6 +754,38 @@ This can also be combined with numerical sorting:
  ]
 ```
 
+#### Sort order
+
+By default, keep-sorted sorts in ascending order. This can be changed to
+descending order using `order=desc`:
+
+<table border="0">
+<tr>
+<td>
+
+```
+# keep-sorted start
+a
+c
+b
+# keep-sorted end
+```
+
+</td>
+<td>
+
+```diff
++# keep-sorted start order=desc
+ c
+ b
+ a
+ # keep-sorted end
+```
+
+</td>
+</tr>
+</table>
+
 ### Post-sorting options
 
 Post-sorting options are additional convenience features that make the resulting

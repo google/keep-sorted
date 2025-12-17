@@ -212,6 +212,23 @@ func TestBlockOptions(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "OrderAsc",
+			in:   "order=asc",
+			want: blockOptions{Order: OrderAsc},
+		},
+		{
+			name: "OrderDesc",
+			in:   "order=desc",
+			want: blockOptions{Order: OrderDesc},
+		},
+		{
+			name:           "OrderInvalid",
+			in:             "order=foo",
+			defaultOptions: blockOptions{Order: OrderAsc},
+			want:           blockOptions{Order: OrderAsc},
+			wantErr:        `while parsing option "order": unrecognized order value "foo", expected 'asc' or 'desc'`,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
