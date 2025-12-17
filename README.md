@@ -766,8 +766,8 @@ descending order using `order=desc`:
 ```
 # keep-sorted start
 a
-c
 b
+c
 # keep-sorted end
 ```
 
