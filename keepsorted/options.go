@@ -40,6 +40,14 @@ type ByRegexOption struct {
 	Template *string
 }
 
+// SortOrder defines whether we sort in ascending or descending order.
+type SortOrder string
+
+const (
+	OrderAsc SortOrder = "asc"
+	OrderDesc SortOrder = "desc"
+)
+
 type BlockOptions struct {
 	opts blockOptions
 }
@@ -93,6 +101,8 @@ type blockOptions struct {
 	//  Sorting options  //
 	///////////////////////
 
+	// Order is whether we sort in ascending or descending order.
+	Order SortOrder `key:"order"`
 	// CaseSensitive is whether we're case sensitive while sorting.
 	CaseSensitive bool `key:"case"`
 	// Numeric indicates that the contents should be sorted like numbers.
@@ -127,6 +137,7 @@ var (
 		Group:            true,
 		StickyComments:   true,
 		StickyPrefixes:   nil, // Will be populated with the comment marker of the start directive.
+		Order:            OrderAsc,
 		CaseSensitive:    true,
 		RemoveDuplicates: true,
 	}
@@ -202,6 +213,8 @@ func formatValue(val reflect.Value) (string, error) {
 	switch val.Type() {
 	case reflect.TypeFor[bool]():
 		return boolString[val.Bool()], nil
+	case reflect.TypeFor[SortOrder]():
+		return string(val.Interface().(SortOrder)), nil
 	case reflect.TypeFor[[]string]():
 		return formatList(val.Interface().([]string))
 	case reflect.TypeFor[map[string]bool]():
@@ -359,7 +372,7 @@ func (opts blockOptions) cutFirstPrefix(s string, prefixes iter.Seq[string]) (pr
 		}
 		if strings.HasPrefix(t, q) {
 			after = s
-			// Remove leading whitepace (t already has its leading whitespace removed).
+			// Remove leading whitespace (t already has its leading whitespace removed).
 			after = strings.TrimLeftFunc(after, unicode.IsSpace)
 			// Remove the prefix.
 			after = after[len(p):]

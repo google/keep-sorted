@@ -123,3 +123,17 @@ Invalid YAML
   2
   3
   keep-sorted-test end
+
+Ascending order (default):
+// keep-sorted-test start
+a
+b
+c
+// keep-sorted-test end
+
+Descending order:
+// keep-sorted-test start order=desc
+c
+b
+a
+// keep-sorted-test end

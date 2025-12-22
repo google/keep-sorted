@@ -834,6 +834,45 @@ func TestLineSorting(t *testing.T) {
 			wantAlreadySorted: true,
 		},
 		{
+			name: "Descending",
+			opts: blockOptions{
+				Order: OrderDesc,
+			},
+			in: []string{
+				"Bar",
+				"Baz",
+				"Foo",
+				"Qux",
+			},
+
+			want: []string{
+				"Qux",
+				"Foo",
+				"Baz",
+				"Bar",
+			},
+		},
+		{
+			name: "AlreadySorted_Descending",
+			opts: blockOptions{
+				Order: OrderDesc,
+			},
+			in: []string{
+				"Qux",
+				"Foo",
+				"Baz",
+				"Bar",
+			},
+
+			want: []string{
+				"Qux",
+				"Foo",
+				"Baz",
+				"Bar",
+			},
+			wantAlreadySorted: true,
+		},
+		{
 			name: "AlreadySorted_ExceptForNewlineSorted",
 
 			opts: blockOptions{

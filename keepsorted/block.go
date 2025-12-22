@@ -267,7 +267,12 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 		groups = deduped
 	}
 
-	if alreadySorted && wasNewlineSeparated && !removedDuplicate && slices.IsSortedFunc(groups, compareLineGroups) {
+	cmp := compareLineGroups
+	if b.metadata.opts.Order == OrderDesc {
+		cmp = cmp.reversed()
+	}
+
+	if alreadySorted && wasNewlineSeparated && !removedDuplicate && slices.IsSortedFunc(groups, cmp) {
 		log.Printf("It was already sorted!")
 		if log.Debug().Enabled() {
 			for _, lg := range groups {
@@ -278,7 +283,7 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 		return lines, true
 	}
 
-	slices.SortStableFunc(groups, compareLineGroups)
+	slices.SortStableFunc(groups, cmp)
 	if log.Debug().Enabled() {
 		for _, lg := range groups {
 			log.Print(lg.DebugString())
