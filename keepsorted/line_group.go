@@ -91,6 +91,19 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 		indents = calculateIndents(lines)
 	}
 
+	// Determines whether the current block is still accepting additional lines.
+	shouldAddToBlock := func() bool {
+		return metadata.opts.Block && !lineRange.empty() && block.expectsContinuation()
+	}
+	// Determines whether the current group should accept the next line.
+	shouldAddToGroup := func(i int, l string) bool {
+		if !metadata.opts.Group {
+			return false
+		}
+
+		increasedIndent := !lineRange.empty() && initialIndent != nil && indents[i] > *initialIndent
+		return increasedIndent || numUnmatchedStartDirectives > 0 || metadata.opts.hasGroupPrefix(l)
+	}
 	countStartDirectives := func(l string) {
 		if strings.Contains(l, metadata.startDirective) {
 			numUnmatchedStartDirectives++
@@ -98,7 +111,6 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 			numUnmatchedStartDirectives--
 		}
 	}
-
 	// append a line to both lineRange, and block, if necessary.
 	appendLine := func(i int, l string) {
 		lineRange.append(i)
@@ -126,26 +138,24 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 		block = codeBlock{}
 	}
 	for i, l := range lines {
-		if metadata.opts.Block && !lineRange.empty() && block.expectsContinuation() {
-			appendLine(i, l)
-		} else if metadata.opts.Group && (!lineRange.empty() && initialIndent != nil && indents[i] > *initialIndent || numUnmatchedStartDirectives > 0) {
-			appendLine(i, l)
-		} else if metadata.opts.Group && metadata.opts.hasGroupPrefix(l) {
+		if shouldAddToBlock() || shouldAddToGroup(i, l) {
 			appendLine(i, l)
 		} else if metadata.opts.hasStickyPrefix(l) {
+			// Top-level comments break the current block/group.
 			if !lineRange.empty() {
 				finishGroup()
 			}
 
 			commentRange.append(i)
 			if metadata.opts.Group {
-				// Note: This will not count end directives. If this call ever finds a
-				// start directive, it will set numUnmatchedStartDirectives > 0 and then
-				// we will enter the branch above where we'll count end directives via
-				// its appendLine call.
+				// Note: This line will not count end directives. If this call ever
+				// finds a start directive, it will set numUnmatchedStartDirectives > 0
+				// and then we will enter the shouldAddToGroup branch above where we'll
+				// count end directives via its appendLine call.
 				countStartDirectives(l)
 			}
 		} else {
+			// Begin a new block or group.
 			if !lineRange.empty() {
 				finishGroup()
 			}
