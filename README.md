@@ -112,7 +112,7 @@ bar = [
 1. Install go: https://go.dev/doc/install
 
 > [!NOTE]
-> keep-sorted currently requires at least go 1.23.
+> keep-sorted currently requires at least go 1.25.
 
 2. Install keep-sorted:
 
