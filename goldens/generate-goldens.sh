@@ -24,10 +24,14 @@ git_dir="$(git -C "${dir}" rev-parse --show-toplevel)"
 for i in "$@"; do
   out="${i%%in}out"
   err="${i%%in}err"
+  diff="${i%%in}diff"
 
   go run "${git_dir}" --id=keep-sorted-test --omit-timestamps - <"${i}" >"${out}" 2>"${err}" \
     || true  # Ignore any non-zero exit codes.
   if (( $(wc -l < "${err}") == 0 )); then
     rm "${err}"
   fi
+
+  go run "${git_dir}" --id=keep-sorted-test --mode=diff --omit-timestamps - <"${i}" >"${diff}" 2>/dev/null \
+    || true  # Ignore any non-zero exit codes.
 done
