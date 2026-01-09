@@ -128,6 +128,11 @@ bar = [
 
    If the file is `-`, the tool will read from stdin and write to stdout.
 
+   You can select a mode with the `--mode` flag:
+   - `fix` (default) sorts files in place.
+   - `lint` prints JSON findings and exits non-zero if anything is out of order.
+   - `diff` prints a unified diff instead of rewriting files and exits non-zero if anything would change.
+
 #### pre-commit
 
 You can run keep-sorted automatically by adding this repository to your
