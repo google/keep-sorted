@@ -3,13 +3,12 @@ package keepsorted
 import (
 	"errors"
 	"fmt"
+	yaml "gopkg.in/yaml.v3"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
-
-	yaml "gopkg.in/yaml.v3"
 )
 
 var (
@@ -69,7 +68,13 @@ func (p *parser) popValue(typ reflect.Type) (reflect.Value, error) {
 		val, err := p.popSet()
 		return reflect.ValueOf(val), err
 	case reflect.TypeFor[[]ByRegexOption]():
-		val, err := p.popListRegexOption()
+		val, err := p.popByRegexOption()
+		if err != nil {
+			return reflect.Zero(typ), err
+		}
+		return reflect.ValueOf(val), nil
+	case reflect.TypeFor[[]*regexp.Regexp]():
+		val, err := p.popRegexListOption()
 		if err != nil {
 			return reflect.Zero(typ), err
 		}
@@ -183,10 +188,17 @@ func (p *parser) popList() ([]string, error) {
 	return popListValue(p, func(s string) (string, error) { return s, nil })
 }
 
-func (p *parser) popListRegexOption() ([]ByRegexOption, error) {
+func (p *parser) popByRegexOption() ([]ByRegexOption, error) {
 	return popListValue(p, func(s string) (ByRegexOption, error) {
 		pat, err := regexp.Compile(s)
 		return ByRegexOption{Pattern: pat}, err
+	})
+}
+
+func (p *parser) popRegexListOption() ([]*regexp.Regexp, error) {
+	return popListValue(p, func(s string) (*regexp.Regexp, error) {
+		pat, err := regexp.Compile(s)
+		return pat, err
 	})
 }
 

@@ -18,6 +18,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	yaml "gopkg.in/yaml.v3"
 	"iter"
 	"maps"
 	"math/big"
@@ -27,8 +28,6 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-
-	yaml "gopkg.in/yaml.v3"
 )
 
 // IntOrBool can be unmarshaled from a boolean or an integer value.
@@ -44,7 +43,7 @@ type ByRegexOption struct {
 type SortOrder string
 
 const (
-	OrderAsc SortOrder = "asc"
+	OrderAsc  SortOrder = "asc"
 	OrderDesc SortOrder = "desc"
 )
 
@@ -96,6 +95,15 @@ type blockOptions struct {
 	StickyComments bool `key:"sticky_comments"`
 	// StickyPrefixes tells us about other types of lines that should behave as sticky comments.
 	StickyPrefixes map[string]bool `key:"sticky_prefixes"`
+	// GroupStartRegex is a list of regexes that match the start of a group of lines (does not need to match the whole line).
+	// If none of the listed regexes match a given line, the line is considered to be part of the same
+	// group as the previous line.
+	GroupStartRegex []*regexp.Regexp `key:"group_start_regex"`
+	// GroupEndRegex is a list of regexes that match the end of a group of lines (does not need to match the whole line).
+	// If any of the listed regexes match a given line, the line will end the current group,
+	// provided that it does not get ignored by other options (indented/prefixed group, block, sticky comment).
+	// Non-comment lines no longer end groups when GroupEndRegex is used.
+	GroupEndRegex []*regexp.Regexp `key:"group_end_regex"`
 
 	///////////////////////
 	//  Sorting options  //
@@ -238,6 +246,13 @@ func formatValue(val reflect.Value) (string, error) {
 		if seenTemplate {
 			// always presented as a yaml sequence to preserve any `k:v` items
 			return fmt.Sprintf("[%s]", strings.Join(vals, ", ")), nil
+		}
+		return formatList(vals)
+	case reflect.TypeFor[[]*regexp.Regexp]():
+		regexps := val.Interface().([]*regexp.Regexp)
+		vals := make([]string, len(regexps))
+		for i, regex := range regexps {
+			vals[i] = regex.String()
 		}
 		return formatList(vals)
 	}

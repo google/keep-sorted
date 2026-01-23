@@ -17,13 +17,12 @@ package keepsorted
 import (
 	"errors"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"reflect"
 	"regexp"
 	"strings"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestBlockOptions(t *testing.T) {
@@ -228,6 +227,24 @@ func TestBlockOptions(t *testing.T) {
 			defaultOptions: blockOptions{Order: OrderAsc},
 			want:           blockOptions{Order: OrderAsc},
 			wantErr:        `while parsing option "order": unrecognized order value "foo", expected 'asc' or 'desc'`,
+		},
+		{
+			name: "GroupStartRegex",
+			in:   "group_start_regex=^CREATE",
+
+			want: blockOptions{
+				GroupStartRegex: []*regexp.Regexp{regexp.MustCompile("^CREATE")},
+			},
+		},
+		{
+			name:           "GroupStartRegex_YAML",
+			in:             "group_start_regex=['^CREATE', 'b']",
+			defaultOptions: blockOptions{AllowYAMLLists: true},
+
+			want: blockOptions{
+				AllowYAMLLists:  true,
+				GroupStartRegex: []*regexp.Regexp{regexp.MustCompile("^CREATE"), regexp.MustCompile("b")},
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

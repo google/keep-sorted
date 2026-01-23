@@ -16,12 +16,11 @@ package keepsorted
 
 import (
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"regexp"
 	"strings"
 	"sync"
 	"unicode"
-
-	"github.com/rs/zerolog/log"
 )
 
 // lineGroup is a logical unit of source code. It's one or more lines combined
@@ -59,6 +58,16 @@ type accessRecorder struct {
 	regexTokens   []regexTokenAccessRecorder
 	joinedLines   bool
 	joinedComment bool
+}
+
+// matchesAnyRegex returns true if s matches one of the regexes.
+func matchesAnyRegex(s string, regexes []*regexp.Regexp) bool {
+	for _, regex := range regexes {
+		if regex.FindStringSubmatch(s) != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // groupLines splits lines into one or more lineGroups based on the provided options.
@@ -116,6 +125,12 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 	}
 	// finish an outstanding lineGroup and reset our state to prepare for a new lineGroup.
 	finishGroup := func() {
+		// If the current lineRange ends with an extra empty line, remove it and place it in a separate group.
+		endingEmptyLines := 0
+		for lineRange.size() > 1 && lines[lineRange.end-1] == "" {
+			endingEmptyLines++
+			lineRange.end--
+		}
 		groups = append(groups, &lineGroup{
 			opts:             metadata.opts,
 			prefixOrder:      prefixOrder,
@@ -124,6 +139,14 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 		commentRange = indexRange{}
 		lineRange = indexRange{}
 		block = codeBlock{}
+		for endingEmptyLines > 0 {
+			groups = append(groups, &lineGroup{
+				opts:             metadata.opts,
+				prefixOrder:      prefixOrder,
+				lineGroupContent: lineGroupContent{lines: []string{""}},
+			})
+			endingEmptyLines--
+		}
 	}
 	for i, l := range lines {
 		if metadata.opts.Block && !lineRange.empty() && block.expectsContinuation() {
@@ -145,6 +168,15 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 				// its appendLine call.
 				countStartDirectives(l)
 			}
+		} else if metadata.opts.GroupEndRegex != nil {
+			if matchesAnyRegex(l, metadata.opts.GroupEndRegex) {
+				appendLine(i, l)
+				finishGroup()
+			} else {
+				appendLine(i, l)
+			}
+		} else if metadata.opts.GroupStartRegex != nil && !matchesAnyRegex(l, metadata.opts.GroupStartRegex) {
+			appendLine(i, l)
 		} else {
 			if !lineRange.empty() {
 				finishGroup()
@@ -213,6 +245,13 @@ type indexRange struct {
 
 func (r *indexRange) empty() bool {
 	return !r.init || r.start == r.end
+}
+
+func (r *indexRange) size() int {
+	if !r.init {
+		return 0
+	}
+	return r.end - r.start
 }
 
 func (r *indexRange) append(i int) {
