@@ -229,6 +229,24 @@ func TestBlockOptions(t *testing.T) {
 			want:           blockOptions{Order: OrderAsc},
 			wantErr:        `while parsing option "order": unrecognized order value "foo", expected 'asc' or 'desc'`,
 		},
+		{
+			name: "GroupStartRegex",
+			in:   "group_start_regex=^CREATE",
+
+			want: blockOptions{
+				GroupStartRegex: []*regexp.Regexp{regexp.MustCompile("^CREATE")},
+			},
+		},
+		{
+			name:           "GroupStartRegex_YAML",
+			in:             "group_start_regex=['^CREATE', 'b']",
+			defaultOptions: blockOptions{AllowYAMLLists: true},
+
+			want: blockOptions{
+				AllowYAMLLists:  true,
+				GroupStartRegex: []*regexp.Regexp{regexp.MustCompile("^CREATE"), regexp.MustCompile("b")},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
