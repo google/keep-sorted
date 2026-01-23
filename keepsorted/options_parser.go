@@ -3,12 +3,13 @@ package keepsorted
 import (
 	"errors"
 	"fmt"
-	yaml "gopkg.in/yaml.v3"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	yaml "gopkg.in/yaml.v3"
 )
 
 var (

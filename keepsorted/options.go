@@ -18,7 +18,6 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
-	yaml "gopkg.in/yaml.v3"
 	"iter"
 	"maps"
 	"math/big"
@@ -28,6 +27,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	yaml "gopkg.in/yaml.v3"
 )
 
 // IntOrBool can be unmarshaled from a boolean or an integer value.

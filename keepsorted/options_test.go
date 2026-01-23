@@ -17,12 +17,13 @@ package keepsorted
 import (
 	"errors"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"reflect"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestBlockOptions(t *testing.T) {

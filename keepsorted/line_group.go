@@ -16,11 +16,12 @@ package keepsorted
 
 import (
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"regexp"
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/rs/zerolog/log"
 )
 
 // lineGroup is a logical unit of source code. It's one or more lines combined
