@@ -40,9 +40,9 @@ jobs:
 
       - name: Upload Artifacts to Release
         run: |
-          echo Uploading ${{matrix.suffix}} artifact for ${{github.ref_name}}
+          echo Uploading ${{matrix.suffix}} artifact for ${GITHUB_REF_NAME}
           mv keep-sorted${{matrix.extension}} keep-sorted_${{matrix.suffix}}${{matrix.extension}}
-          gh release upload ${{github.ref_name}} keep-sorted_${{matrix.suffix}}${{matrix.extension}} --clobber
+          gh release upload ${GITHUB_REF_NAME} keep-sorted_${{matrix.suffix}}${{matrix.extension}} --clobber
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
