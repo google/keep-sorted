@@ -1,0 +1,506 @@
+--- stdin
++++ stdout
+@@ -1,264 +1,268 @@
+ Group indented lines:
+   public class Foo {
+     // keep-sorted-test start group=yes
+-    private final Foo foo;
+-    private final Bar bar;
++    private final Bar bar;
+     private final Baz baz =
+         new Baz();
+-    private final Qux qux;
++    private final Foo foo;
+-    // keep-sorted-test end
+-  }
+-
+-Same thing but it's tabs:
+-  public class Foo {
+-  	// keep-sorted-test start group=yes
+-  	private final Foo foo;
+-  	private final Bar bar;
+-  	private final Baz baz =
+-  			new Baz();
+-  	private final Qux qux;
+-  	// keep-sorted-test end
+-  }
+-
+-Do not count indent from empty lines:
+-  // keep-sorted-test start
+-
+-  a
+-  c
+-  b
+-  // keep-sorted-test end
+-
+-Multiple indentions:
+-  public class Foo {
+-    // keep-sorted-test start group=yes
+-    private final Foo foo;
+-    private final Bar bar;
+-    private final Baz baz =
+-        new
+-            Baz();
+-    private final Qux qux;
+-    // keep-sorted-test end
+-  }
+-
+-With sticky comments:
+-  public class Foo {
+-    // keep-sorted-test start group=yes sticky_comments=yes
+-    private final Foo foo;
+-    private final Bar bar;
+-    // What a long line!
+-    private final Baz baz =
+-        new Baz();
+-    private final Qux qux;
+-    // keep-sorted-test end
+-  }
+-
+-Sorting doesn't take newline into account
+-  // keep-sorted-test start group=yes
+-  line 4
+-  line
+-    3
+-  line
+-    1
+-  line 2
+-  // keep-sorted-test end
+-
+-With list separator
+-  // keep-sorted-test start group=yes
+-  Foo foo,
+-  Bar bar,
+-  Baz
+-      baz
+-  // keep-sorted-test end
+-
+-Without whitespace on unbroken lines
+-  // keep-sorted-test start group=yes
+-  SomeLongEnumTypeNameWithLongValueNames.D_SHORT_VALUE
+-  SomeLongEnumTypeNameWithLongValueNames
+-      .C_SOME_LONG_ENUM_VALUE_THAT_REQUIRES_A_LINE_BREAK
+-  SomeLongEnumTypeNameWithLongValueNames.B_SHORT_VALUE
+-  SomeLongEnumTypeNameWithLongValueNames
+-      .A_SOME_LONG_ENUM_VALUE_THAT_REQUIRES_A_LINE_BREAK
+-  // keep-sorted-test end
+-
+-Without grouping:
+-  public class Foo {
+-    // keep-sorted-test start group=no
+-    private final Foo foo;
+-    private final Bar bar;
+-    private final Baz baz =
+-        new Baz();
+-    private final Qux qux;
+-    // keep-sorted-test end
+-  }
+-
+-Indented markdown lists:
+-  <!-- keep-sorted-test start group=yes -->
+-  
+-   * Foo
+-       * Wise insight
+-   * Bar
+-   * Baz
+-       * Philosophical conjecture
+-  
+-  <!-- keep-sorted-test end -->
+-
+-Nested keep-sorted
+-  // keep-sorted-test start group=yes
+-  private static final List<String> b = [
+-    // keep-sorted-test start
+-    "x",
+-    "z",
+-    "y"
+-    // keep-sorted-test end
+-    ];
+-  private static final List<String> a = [
+-    // keep-sorted-test start
+-    "3",
+-    "2",
+-    "1"
+-    // keep-sorted-test end
+-    ];
+-  // keep-sorted-test end
+-
+-Nested keep-sorted, nested blocks change their number of lines.
+-  // keep-sorted-test start group=yes
+-  private static final List<String> b = [
+-    // keep-sorted-test start
+-    "x",
+-    "x",
+-    "y"
+-    // keep-sorted-test end
+-    ];
+-  private static final List<String> a = [
+-    // keep-sorted-test start newline_separated=yes
+-    "3",
+-    "2",
+-    "1"
+-    // keep-sorted-test end
+-    ];
+-  // keep-sorted-test end
+-
+-Nested keep-sorted, nested blocks with newlines=2.
+-  // keep-sorted-test start group=yes
+-  private static final List<String> b = [
+-    // keep-sorted-test start
+-    "x",
+-    "x",
+-    "y"
+-    // keep-sorted-test end
+-    ];
+-  private static final List<String> a = [
+-    // keep-sorted-test start newline_separated=2
+-    "3",
+-    "2",
+-    "1"
+-    // keep-sorted-test end
+-    ];
+-  // keep-sorted-test end
+-
+-
+-Nested keep-sorted without indentation
+-  // keep-sorted-test start group=yes newline_separated=yes
+-  
+-  // def
+-  // keep-sorted-test start
+-  3
+-  1
+-  2
+-  // keep-sorted-test end
+-  
+-  // abc
+-  // keep-sorted-test start
+-  b
+-  c
+-  a
+-  // keep-sorted-test end
+-  
+-  // keep-sorted-test end
+-
+-Nested keep-sorted without indentation, with newlines=3:
+-  // keep-sorted-test start group=yes newline_separated=3
+-  
+-  // def
+-  // keep-sorted-test start
+-  3
+-  1
+-  2
+-  // keep-sorted-test end
+-  
+-  // abc
+-  // keep-sorted-test start
+-  b
+-  c
+-  a
+-  // keep-sorted-test end
+-  
+-  // keep-sorted-test end
+-
+-Sorting a switch statement with consecutive cases.
+-Note: This doesn't actually work how I was hoping, but it does exercise an edge case.
+-  switch (foo) {
+-  // keep-sorted-test start group_prefixes=case
+-  case 2:
+-    return 2;
+-  case 6:
+-    return 6;
+-  case 4:
+-    return 4;
+-  case 3:
+-  case 1:
+-  case 5:
+-    return 10
+-  // keep-sorted-test end
+-
+-Sorting a switch statement with consecutive cases using nested keep-sorted block
+-  switch (foo) {
+-  // keep-sorted-test start
+-  case 2:
+-    return 2;
+-  case 6:
+-    return 6;
+-  case 4:
+-    return 4;
+-  // keep-sorted-test start
+-  case 3:
+-  case 1:
+-  case 5:
+-  // keep-sorted-test end
++    private final Qux qux;
++    // keep-sorted-test end
++  }
++
++Same thing but it's tabs:
++  public class Foo {
++  	// keep-sorted-test start group=yes
++  	private final Bar bar;
++  	private final Baz baz =
++  			new Baz();
++  	private final Foo foo;
++  	private final Qux qux;
++  	// keep-sorted-test end
++  }
++
++Do not count indent from empty lines:
++  // keep-sorted-test start
++
++  a
++  b
++  c
++  // keep-sorted-test end
++
++Multiple indentions:
++  public class Foo {
++    // keep-sorted-test start group=yes
++    private final Bar bar;
++    private final Baz baz =
++        new
++            Baz();
++    private final Foo foo;
++    private final Qux qux;
++    // keep-sorted-test end
++  }
++
++With sticky comments:
++  public class Foo {
++    // keep-sorted-test start group=yes sticky_comments=yes
++    private final Bar bar;
++    // What a long line!
++    private final Baz baz =
++        new Baz();
++    private final Foo foo;
++    private final Qux qux;
++    // keep-sorted-test end
++  }
++
++Sorting doesn't take newline into account
++  // keep-sorted-test start group=yes
++  line
++    1
++  line 2
++  line
++    3
++  line 4
++  // keep-sorted-test end
++
++With list separator
++  // keep-sorted-test start group=yes
++  Bar bar,
++  Baz
++      baz,
++  Foo foo
++  // keep-sorted-test end
++
++Without whitespace on unbroken lines
++  // keep-sorted-test start group=yes
++  SomeLongEnumTypeNameWithLongValueNames
++      .A_SOME_LONG_ENUM_VALUE_THAT_REQUIRES_A_LINE_BREAK
++  SomeLongEnumTypeNameWithLongValueNames.B_SHORT_VALUE
++  SomeLongEnumTypeNameWithLongValueNames
++      .C_SOME_LONG_ENUM_VALUE_THAT_REQUIRES_A_LINE_BREAK
++  SomeLongEnumTypeNameWithLongValueNames.D_SHORT_VALUE
++  // keep-sorted-test end
++
++Without grouping:
++  public class Foo {
++    // keep-sorted-test start group=no
++        new Baz();
++    private final Bar bar;
++    private final Baz baz =
++    private final Foo foo;
++    private final Qux qux;
++    // keep-sorted-test end
++  }
++
++Indented markdown lists:
++  <!-- keep-sorted-test start group=yes -->
++  
++   * Bar
++   * Baz
++       * Philosophical conjecture
++   * Foo
++       * Wise insight
++  
++  <!-- keep-sorted-test end -->
++
++Nested keep-sorted
++  // keep-sorted-test start group=yes
++  private static final List<String> a = [
++    // keep-sorted-test start
++    "1",
++    "2",
++    "3"
++    // keep-sorted-test end
++    ];
++  private static final List<String> b = [
++    // keep-sorted-test start
++    "x",
++    "y",
++    "z"
++    // keep-sorted-test end
++    ];
++  // keep-sorted-test end
++
++Nested keep-sorted, nested blocks change their number of lines.
++  // keep-sorted-test start group=yes
++  private static final List<String> a = [
++    // keep-sorted-test start newline_separated=yes
++    "1",
++
++    "2",
++
++    "3"
++    // keep-sorted-test end
++    ];
++  private static final List<String> b = [
++    // keep-sorted-test start
++    "x",
++    "y"
++    // keep-sorted-test end
++    ];
++  // keep-sorted-test end
++
++Nested keep-sorted, nested blocks with newlines=2.
++  // keep-sorted-test start group=yes
++  private static final List<String> a = [
++    // keep-sorted-test start newline_separated=2
++    "1",
++
++
++    "2",
++
++
++    "3"
++    // keep-sorted-test end
++    ];
++  private static final List<String> b = [
++    // keep-sorted-test start
++    "x",
++    "y"
++    // keep-sorted-test end
++    ];
++  // keep-sorted-test end
++
++
++Nested keep-sorted without indentation
++  // keep-sorted-test start group=yes newline_separated=yes
++  // def
++  // keep-sorted-test start
++  1
++  2
++  3
++  // keep-sorted-test end
++
++  // abc
++  // keep-sorted-test start
++  a
++  b
++  c
++  // keep-sorted-test end
++  
++  // keep-sorted-test end
++
++Nested keep-sorted without indentation, with newlines=3:
++  // keep-sorted-test start group=yes newline_separated=3
++  // def
++  // keep-sorted-test start
++  1
++  2
++  3
++  // keep-sorted-test end
++
++
++
++  // abc
++  // keep-sorted-test start
++  a
++  b
++  c
++  // keep-sorted-test end
++  
++  // keep-sorted-test end
++
++Sorting a switch statement with consecutive cases.
++Note: This doesn't actually work how I was hoping, but it does exercise an edge case.
++  switch (foo) {
++  // keep-sorted-test start group_prefixes=case
++  case 2:
++    return 2;
++  case 6:
++    return 6;
++  case 4:
++    return 4;
++  case 3:
++  case 1:
++  case 5:
++    return 10
++  // keep-sorted-test end
++
++Sorting a switch statement with consecutive cases using nested keep-sorted block
++  switch (foo) {
++  // keep-sorted-test start
++  // keep-sorted-test start
++  case 1:
++  case 3:
++  case 5:
++  // keep-sorted-test end
++    return 10
++  case 2:
++    return 2;
++  case 4:
++    return 4;
++  case 6:
+-    return 10
++    return 6;
+   // keep-sorted-test end
+ 
+ Sorting a switch statement with consecutive cases using nested keep-sorted block
+ where the nested keep-sorted block shouldn't be the first element.
+   switch (foo) {
+   // keep-sorted-test start
+-  case 5:
++  case 1:
+-    return 5;
++    return 1;
+   // keep-sorted-test start
+   case 2:
+-  case 6:
++  case 4:
+-  case 4:
++  case 6:
+   // keep-sorted-test end
+     return 10;
+   case 3:
+     return 3;
+-  case 1:
++  case 5:
+-    return 1;
++    return 5;
+   // keep-sorted-test end
+ 
+ The same, except block=yes is also set.
+   switch (foo) {
+   // keep-sorted-test start block=yes
+-  case 5:
++  case 1:
+-    return 5;
++    return 1;
+   // keep-sorted-test start block=yes
+   case 2:
+-  case 6:
++  case 4:
+-  case 4:
++  case 6:
+   // keep-sorted-test end
+     return 10;
+   case 3:
+     return 3;
+-  case 1:
++  case 5:
+-    return 1;
++    return 5;
+   // keep-sorted-test end

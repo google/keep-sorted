@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aymanbagabas/go-udiff"
 	"github.com/google/keep-sorted/keepsorted"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
@@ -84,6 +85,7 @@ var (
 	operations = map[string]operation{
 		"lint": lint,
 		"fix":  fix,
+		"diff": diff,
 	}
 )
 
@@ -267,6 +269,46 @@ func lint(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorte
 	}
 
 	return false, nil
+}
+
+func diff(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error) {
+	ok = true
+
+	for _, fn := range filenames {
+		contents, err := read(fn)
+		if err != nil {
+			return false, err
+		}
+		want, alreadyFixed, warnings := fixer.Fix(fn, contents, modifiedLines)
+		if !alreadyFixed {
+			ok = false
+			inName := fn
+			outName := fn
+			if fn == stdin {
+				inName = "stdin"
+				outName = "stdout"
+			}
+			if _, err := os.Stdout.WriteString(udiff.Unified(inName, outName, contents, want)); err != nil {
+				return false, err
+			}
+		}
+
+		for _, warn := range warnings {
+			ok = false
+			log := log.Warn()
+			if warn.Path != stdin {
+				log = log.Str("file", warn.Path)
+			}
+			if warn.Lines.Start == warn.Lines.End {
+				log = log.Int("line", warn.Lines.Start)
+			} else {
+				log = log.Int("start", warn.Lines.Start).Int("end", warn.Lines.End)
+			}
+			log.Msg(warn.Message)
+		}
+	}
+
+	return ok, nil
 }
 
 func read(fn string) (string, error) {

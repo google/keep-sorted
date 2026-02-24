@@ -61,7 +61,7 @@ func TestGoldens(t *testing.T) {
 		t.Fatalf("Did not find any golden files.")
 	}
 
-	needsRegen := make(chan string, 2*len(tcs))
+	needsRegen := make(chan string, 3*len(tcs))
 	// The outer t.Run doesn't return until all the parallel tests have completed.
 	t.Run("parallelTests", func(t *testing.T) {
 		for _, tc := range tcs {
@@ -80,6 +80,12 @@ func TestGoldens(t *testing.T) {
 					}
 					t.Fatalf("Could not read .out file: %v", err)
 				}
+				wantDiff, err := os.ReadFile(filepath.Join(dir, tc+".diff"))
+				if err != nil {
+					if !errors.Is(err, os.ErrNotExist) {
+						t.Fatalf("Could not read .diff file: %v", err)
+					}
+				}
 				wantErr, err := os.ReadFile(filepath.Join(dir, tc+".err"))
 				if err != nil {
 					if !errors.Is(err, os.ErrNotExist) {
@@ -91,7 +97,7 @@ func TestGoldens(t *testing.T) {
 				wantErr = []byte(strings.ReplaceAll(string(wantErr), "\r\n", "\n"))
 				wantErr = []byte(strings.ReplaceAll(string(wantErr), "\r", "\n"))
 
-				gotOut, gotErr, exitCode, err := runKeepSorted(in)
+				gotOut, gotErr, exitCode, err := runKeepSorted(in, "fix")
 				if err != nil {
 					t.Errorf("Had trouble running keep-sorted: %v", err)
 				}
@@ -104,7 +110,20 @@ func TestGoldens(t *testing.T) {
 					needsRegen <- inFile
 				}
 
-				gotOut2, _, exitCode2, err := runKeepSorted(strings.NewReader(gotOut))
+				_, err = in.Seek(0, 0)
+				if err != nil {
+					t.Fatalf("Had trouble seeking file: %v", err)
+				}
+				gotDiff, _, _, err := runKeepSorted(in, "diff")
+				if err != nil {
+					t.Errorf("Had trouble running keep-sorted --mode diff: %v", err)
+				}
+				if diff := cmp.Diff(string(wantDiff), gotDiff); diff != "" {
+					t.Errorf("keep-sorted --mode diff out diff (-want +got):\n%s", diff)
+					needsRegen <- inFile
+				}
+
+				gotOut2, _, exitCode2, err := runKeepSorted(strings.NewReader(gotOut), "fix")
 				if err != nil {
 					t.Errorf("Had trouble running keep-sorted on keep-sorted output: %v", err)
 				}
@@ -134,8 +153,8 @@ func showTopLevel(dir string) (string, error) {
 	return strings.TrimSpace(string(b)), err
 }
 
-func runKeepSorted(stdin io.Reader) (stdout, stderr string, exitCode int, err error) {
-	cmd := exec.Command("go", "run", gitDir, "--id=keep-sorted-test", "--omit-timestamps", "-")
+func runKeepSorted(stdin io.Reader, mode string) (stdout, stderr string, exitCode int, err error) {
+	cmd := exec.Command("go", "run", gitDir, "--id=keep-sorted-test", "--mode="+mode, "--omit-timestamps", "-")
 	cmd.Stdin = stdin
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {

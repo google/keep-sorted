@@ -1,0 +1,26 @@
+--- stdin
++++ stdout
+@@ -1,17 +1,17 @@
+ Comma separator:
+ static class Foo {
+   // keep-sorted-test start
+-  "Foo",
++  "Bar",
+-  "Bar",
++  "Baz",
+-  "Baz"
++  "Foo"
+   // keep-sorted-test end
+ }
+ 
+ Comma separator with comments:
+-// keep-sorted-test start sticky_comments=yes
+-"Foo",
++// keep-sorted-test start sticky_comments=yes
+ // Sticky comment
+ "Bar",
+-"Baz"
++"Baz",
++"Foo"
+ // Trailing comments
+ // keep-sorted-test end
