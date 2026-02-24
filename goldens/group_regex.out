@@ -1,0 +1,68 @@
+# keep-sorted-test start group_start_regex=^CREATE newline_separated=yes
+# Bar comment
+CREATE PUBLIC FUNCTION Bar(x INT64)
+RETURNS INT64
+AS (
+  x + 2
+);
+
+# Baz comment
+CREATE PUBLIC FUNCTION Baz(x INT64)
+RETURNS INT64
+AS (
+  x + LENGTH('CREATE')
+);
+
+# Foo comment
+CREATE PUBLIC FUNCTION Foo(x INT64)
+RETURNS INT64
+AS (
+  x + 1
+);
+# keep-sorted-test end
+
+# keep-sorted-test start group_start_regex=^CREATE newline_separated=yes by_regex=["\\bFUNCTION (\\w+)\\b"]
+# Bar comment
+CREATE PRIVATE FUNCTION Bar(x INT64)
+RETURNS INT64
+AS (
+  x + 2
+);
+
+# Baz comment
+CREATE PUBLIC AGGREGATE FUNCTION Baz(x INT64)
+RETURNS INT64
+AS (
+  SUM(x) + LENGTH('CREATE FUNCTION Aaa')
+);
+
+# Foo comment
+CREATE PUBLIC FUNCTION Foo(x INT64)
+RETURNS INT64
+AS (
+  x + 1
+);
+# keep-sorted-test end
+
+# keep-sorted-test start group_end_regex=;$ newline_separated=yes
+# Bar comment
+CREATE PUBLIC FUNCTION Bar(x INT64)
+RETURNS INT64
+AS (
+  x + 2
+);
+
+# Baz comment
+CREATE PUBLIC FUNCTION Baz(x INT64)
+RETURNS INT64
+AS (
+  x + LENGTH('CREATE')
+);
+
+# Foo comment
+CREATE PUBLIC FUNCTION Foo(x INT64)
+RETURNS INT64
+AS (
+  x + 1
+);
+# keep-sorted-test end
