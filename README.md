@@ -539,7 +539,7 @@ sorting. The result from each regular expression will be concatenated into a
 list of results, and that list of results will be sorted [lexicographically].
 
 Regular expressions are applied **after** pre-sorting options.
-[`group_prefixes`](#custom-grouping) will consider to the content of the file
+[`group_prefixes`](#prefix-grouping) will consider the content of the file
 before any regular expression has been applied to it.
 
 Regular expressions are applied **before** other sorting options.
