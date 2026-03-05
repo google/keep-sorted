@@ -96,6 +96,10 @@ type blockOptions struct {
 	StickyComments bool `key:"sticky_comments"`
 	// StickyPrefixes tells us about other types of lines that should behave as sticky comments.
 	StickyPrefixes map[string]bool `key:"sticky_prefixes"`
+
+	// Regex-based group options:
+	// Conceptually, GroupStartRegex lines go to the *next* group while GroupEndRegex lines go to the *current* group.
+
 	// GroupStartRegex is a list of regexes that match the start of a group of lines (does not need to match the whole line).
 	// If none of the listed regexes match a given line, the line is considered to be part of the same
 	// group as the previous line.
@@ -335,6 +339,11 @@ func validate(opts *blockOptions) (warnings []error) {
 		suggestion := "(?:" + strings.Join(pre, "|") + ")"
 		warns = append(warns, fmt.Errorf("by_regex cannot be used with ignore_prefixes (consider adding a non-capturing group to the start of your regex instead of ignore_prefixes: %q)", suggestion))
 		opts.IgnorePrefixes = nil
+	}
+
+	if opts.GroupStartRegex != nil && opts.GroupEndRegex != nil {
+		warns = append(warns, fmt.Errorf("group_start_regex should not be used together with group_end_regex; ignoring group_end_regex"))
+		opts.GroupEndRegex = nil
 	}
 
 	return warns

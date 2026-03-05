@@ -114,6 +114,23 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 		increasedIndent := !lineRange.empty() && initialIndent != nil && indents[i] > *initialIndent
 		return increasedIndent || numUnmatchedStartDirectives > 0 || metadata.opts.hasGroupPrefix(l)
 	}
+	// Determines whether the current line should be part of a regex-delimited
+	// group including any prior lines already visited.
+	// Returns another boolean indicating whether the group should be ending
+	// after that line if so.
+	shouldAddToRegexDelimitedGroup := func(l string) (bool, bool) {
+        if metadata.opts.GroupStartRegex != nil {
+			// For GroupStartRegex, all non-regex-matching lines should be
+			// part of the group including prior lines.
+			return !matchesAnyRegex(l, metadata.opts.GroupStartRegex), false
+		}
+		if metadata.opts.GroupEndRegex != nil {
+			// For GroupEndRegex, the line should always be included in the
+			// group including prior lines, but possibly terminate it.
+			return true, matchesAnyRegex(l, metadata.opts.GroupEndRegex)
+		}
+		return false, false
+	}
 	countStartDirectives := func(l string) {
 		if strings.Contains(l, metadata.startDirective) {
 			numUnmatchedStartDirectives++
@@ -139,6 +156,7 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 	// finish an outstanding lineGroup and reset our state to prepare for a new lineGroup.
 	finishGroup := func() {
 		// If the current lineRange ends with an extra empty line, remove it and place it in a separate group.
+		// This is notably needed to support group_start_regex or group_end_regex being set at the same time as newline_separated.
 		endingEmptyLines := 0
 		for lineRange.size() > 1 && lines[lineRange.end-1] == "" {
 			endingEmptyLines++
@@ -152,13 +170,12 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 		commentRange = indexRange{}
 		lineRange = indexRange{}
 		block = codeBlock{}
-		for endingEmptyLines > 0 {
+		for ; endingEmptyLines > 0; endingEmptyLines-- {
 			groups = append(groups, &lineGroup{
 				opts:             metadata.opts,
 				prefixOrder:      prefixOrder,
 				lineGroupContent: lineGroupContent{lines: []string{""}},
 			})
-			endingEmptyLines--
 		}
 	}
 	for i, l := range lines {
@@ -178,15 +195,11 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 				// count end directives via its appendLine call.
 				countStartDirectives(l)
 			}
-		} else if metadata.opts.GroupEndRegex != nil {
-			if matchesAnyRegex(l, metadata.opts.GroupEndRegex) {
-				appendLine(i, l)
-				finishGroup()
-			} else {
-				appendLine(i, l)
-			}
-		} else if metadata.opts.GroupStartRegex != nil && !matchesAnyRegex(l, metadata.opts.GroupStartRegex) {
+		} else if addToGroup, finishGroupAfter := shouldAddToRegexDelimitedGroup(l); addToGroup {
 			appendLine(i, l)
+			if finishGroupAfter {
+				finishGroup()
+			}
 		} else {
 			// Begin a new block or group.
 			if !lineRange.empty() {

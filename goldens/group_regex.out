@@ -1,16 +1,16 @@
 # keep-sorted-test start group_start_regex=^CREATE newline_separated=yes
+# Baz comment
+CREATE PUBLIC AGGREGATE FUNCTION Baz(x INT64)
+RETURNS INT64
+AS (
+  x + LENGTH('CREATE')
+);
+
 # Bar comment
 CREATE PUBLIC FUNCTION Bar(x INT64)
 RETURNS INT64
 AS (
   x + 2
-);
-
-# Baz comment
-CREATE PUBLIC FUNCTION Baz(x INT64)
-RETURNS INT64
-AS (
-  x + LENGTH('CREATE')
 );
 
 # Foo comment
@@ -45,18 +45,18 @@ AS (
 # keep-sorted-test end
 
 # keep-sorted-test start group_end_regex=;$ newline_separated=yes
+# Baz comment
+CREATE PUBLIC AGGREGATE FUNCTION Baz(x INT64)
+RETURNS INT64
+AS (
+  x + LENGTH('CREATE')
+);
+
 # Bar comment
 CREATE PUBLIC FUNCTION Bar(x INT64)
 RETURNS INT64
 AS (
   x + 2
-);
-
-# Baz comment
-CREATE PUBLIC FUNCTION Baz(x INT64)
-RETURNS INT64
-AS (
-  x + LENGTH('CREATE')
 );
 
 # Foo comment

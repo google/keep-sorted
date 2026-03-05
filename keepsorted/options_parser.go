@@ -197,10 +197,7 @@ func (p *parser) popByRegexOption() ([]ByRegexOption, error) {
 }
 
 func (p *parser) popRegexListOption() ([]*regexp.Regexp, error) {
-	return popListValue(p, func(s string) (*regexp.Regexp, error) {
-		pat, err := regexp.Compile(s)
-		return pat, err
-	})
+	return popListValue(p, regexp.Compile)
 }
 
 func (p *parser) popSortOrder() (SortOrder, error) {

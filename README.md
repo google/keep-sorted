@@ -250,7 +250,7 @@ allows for sorting data such as Go structs and JSON objects.
 > Note: angle brackets (`<` and `>`) are not supported by block mode due to
 > being used for mathematical expressions in an unbalanced format.
 
-#### Custom grouping
+#### Prefix grouping
 
 Another way to group lines together is with the `group_prefixes` option. This
 takes a comma-separated list of prefixes. Any line beginning with one of those
@@ -284,6 +284,51 @@ and tomatoes
  and jelly
  spaghetti
  with meatballs
++// keep-sorted end
+```
+
+</td>
+</tr>
+</table>
+
+#### Regex-delimited grouping
+
+Two mutually-exclusive options exist for delimiting groups using regular
+expressions: `group_start_regex` and `group_end_regex`. If _part_ of a line
+matches the specified regular expression, that line will end the previous group
+and start a new group. With `group_start_regex`, the matching line will be at
+the start of a new group (potentially preceded by sticky comments), whereas with
+`group_end_regex`, the line will end the group. Some matching lines may be
+ignored based on the other options that are enabled.
+
+<table border="0">
+<tr>
+<td>
+
+```
+
+// Some comment for foo
+define foo =
+abc + def;
+
+// Some other comment for bar
+define bar =
+ghi + jkl;
+
+```
+
+</td>
+<td>
+
+```diff
++// keep-sorted start group_start_regex=["^define\\b"] newline_separated=yes
+ // Some other comment for bar
+ define bar =
+ ghi + jkl;
+
+ // Some comment for foo
+ define foo =
+ abc + def;
 +// keep-sorted end
 ```
 
