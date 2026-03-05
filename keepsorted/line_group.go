@@ -118,7 +118,7 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 	// group including any prior lines already visited.
 	// Returns another boolean indicating whether the group should be ending
 	// after that line if so.
-	shouldAddToRegexDelimitedGroup := func(l string) (bool, bool) {
+	shouldAddToRegexDelimitedGroup := func(l string) (addToGroup bool, finishGroupAfter bool) {
         if metadata.opts.GroupStartRegex != nil {
 			// For GroupStartRegex, all non-regex-matching lines should be
 			// part of the group including prior lines.
