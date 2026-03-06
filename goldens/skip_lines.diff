@@ -1,0 +1,85 @@
+--- stdin
++++ stdout
+@@ -6,9 +6,9 @@
+ // keep-sorted-test start skip_lines=2
+ foo
+ bar
+-c
++a
+ b
+-a
++c
+ // keep-sorted-test end
+ 
+ Number of skipped lines is greater than block size, so block is ignored:
+@@ -21,42 +20,42 @@
+ Skipping lines with nested blocks:
+ <!-- keep-sorted-test start skip_lines=1 -->
+ This line should not be sorted.
+-### Table 2
++### Table 1
+-  <!-- keep-sorted-test start skip_lines=2 -->
++  <!-- keep-sorted-test start skip_lines=2  -->
+   Name    | Value
+   ------- | -----
+-  Bravo   | Foxtrot
++  Alpha   | Foo
++  Bravo   | Bar
+-  Alpha   | Romeo
++  Charlie | Baz
+-  <!-- keep-sorted-test end -->
+-### Table 1
+-  <!-- keep-sorted-test start skip_lines=2  -->
+-  Name    | Value
+-  ------- | -----
+-  Delta   | Qux
+-  Bravo   | Bar
+-  Alpha   | Foo
+-  Charlie | Baz
+-  <!-- keep-sorted-test end -->
+-<!-- keep-sorted-test end -->
+-
+-Skip lines with group_prefixes:
+-// keep-sorted-test start skip_lines=2 group_prefixes=:
+-| birds        |
+-| ------------ |
+-| blue footed  |
+-: booby        |
+-| crested      |
+-: bobwhite     |
+-| anhinga      |
++  Delta   | Qux
++  <!-- keep-sorted-test end -->
++### Table 2
++  <!-- keep-sorted-test start skip_lines=2 -->
++  Name    | Value
++  ------- | -----
++  Alpha   | Romeo
++  Bravo   | Foxtrot
++  <!-- keep-sorted-test end -->
++<!-- keep-sorted-test end -->
++
++Skip lines with group_prefixes:
++// keep-sorted-test start skip_lines=2 group_prefixes=:
++| birds        |
++| ------------ |
++| anhinga      |
++| blue footed  |
++: booby        |
++| crested      |
++: bobwhite     |
+ // keep-sorted-test end
+ 
+ Skip lines with group_prefixes indented:
+ // keep-sorted-test start skip_lines=2 group_prefixes=:
+     | birds        |
+-    | ------------ |
++    | ------------ |
++    | anhinga      |
+     | blue footed  |
+     : booby        |
+     | crested      |
+-    : bobwhite     |
+-    | anhinga      |
++    : bobwhite     |
+ // keep-sorted-test end
