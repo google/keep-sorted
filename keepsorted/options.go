@@ -40,6 +40,14 @@ type ByRegexOption struct {
 	Template *string
 }
 
+func (opt ByRegexOption) MarshalYAML() (any, error) {
+	if opt.Template == nil {
+		return opt.Pattern.String(), nil
+	}
+
+	return map[string]string{opt.Pattern.String(): *opt.Template}, nil
+}
+
 // SortOrder defines whether we sort in ascending or descending order.
 type SortOrder string
 
@@ -238,26 +246,20 @@ func formatValue(val reflect.Value) (string, error) {
 		return strconv.Itoa(int(val.Int())), nil
 	case reflect.TypeFor[[]ByRegexOption]():
 		opts := val.Interface().([]ByRegexOption)
-		vals := make([]any, len(opts))
+		vals := make([]string, len(opts))
 		seenTemplate := false
 		for i, opt := range opts {
 			if opt.Template != nil {
 				seenTemplate = true
-				vals[i] = map[string]string{opt.Pattern.String(): *opt.Template}
-				continue
+				break
 			}
 			vals[i] = opt.Pattern.String()
 		}
-
 		if seenTemplate {
-			return formatYAMLList(vals)
+			// always presented as a yaml sequence to preserve any `k:v` items
+			return formatYAMLList(opts)
 		}
-
-		s := make([]string, len(vals))
-		for i, val := range vals {
-			s[i] = val.(string)
-		}
-		return formatList(s)
+		return formatList(vals)
 	case reflect.TypeFor[[]*regexp.Regexp]():
 		regexps := val.Interface().([]*regexp.Regexp)
 		vals := make([]string, len(regexps))
@@ -446,14 +448,13 @@ func (opts blockOptions) trimIgnorePrefix(s string) string {
 // the resulting slice.
 func (opts blockOptions) matchRegexes(s string) []regexMatch {
 	if len(opts.ByRegex) == 0 {
-		return nil
+		return []regexMatch{{s}}
 	}
 
 	var ret []regexMatch
 	for _, p := range opts.ByRegex {
 		regex := p.Pattern
 
-		// TODO: jfaer - It'd be nice if these two branches were unified.
 		if p.Template != nil {
 			var result []byte
 			m := regex.FindAllStringSubmatchIndex(s, -1)

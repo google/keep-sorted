@@ -214,6 +214,20 @@ func TestBlockOptions(t *testing.T) {
 			},
 		},
 		{
+			name:           "RegexWithTemplateAndSingletonWithSpecialChars",
+			in:             `by_regex=['foo, bar', '\b(\d{2})/(\d{2})/(\d{4})\b': '${3}-${1}-${2}']`,
+			defaultOptions: blockOptions{AllowYAMLLists: true},
+
+			want: blockOptions{
+				AllowYAMLLists: true,
+				ByRegex: []ByRegexOption{
+					{Pattern: regexp.MustCompile(`foo, bar`)},
+					{Pattern: regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`),
+						Template: &[]string{"${3}-${1}-${2}"}[0]},
+				},
+			},
+		},
+		{
 			name: "OrderAsc",
 			in:   "order=asc",
 			want: blockOptions{Order: OrderAsc},
