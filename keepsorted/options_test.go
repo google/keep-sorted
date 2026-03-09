@@ -221,8 +221,8 @@ func TestBlockOptions(t *testing.T) {
 			want: blockOptions{
 				AllowYAMLLists: true,
 				ByRegex: []ByRegexOption{
-					{Pattern: regexp.MustCompile(`foo, bar`)},
-					{Pattern: regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`),
+					{Pattern: regexp.MustCompile(`(?s)foo, bar`)},
+					{Pattern: regexp.MustCompile(`(?s)\b(\d{2})/(\d{2})/(\d{4})\b`),
 						Template: &[]string{"${3}-${1}-${2}"}[0]},
 				},
 			},
