@@ -323,7 +323,7 @@ func (iter *runeIter) pop() (rune, bool) {
 }
 
 func compileByRegex(re string) (*regexp.Regexp, error) {
-	if !strings.HasPrefix(re, "(?s)") {
+	if !strings.HasPrefix(re, "(?s)") && !strings.HasPrefix(re, "(?-s)") {
 		// The initial version of by_regex ran on top of lineGroup.joinedLines. This
 		// meant that users wrote regexes that didn't need to handle newlines.
 		// To minimize disruption, we automatically set dotall flag so that their
