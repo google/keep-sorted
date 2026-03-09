@@ -218,7 +218,7 @@ func TestPopValue(t *testing.T) {
 			name: "Regex",
 
 			input: ".*",
-			want:  []ByRegexOption{{regexp.MustCompile(".*"), nil}},
+			want:  []ByRegexOption{{regexp.MustCompile("(?s).*"), nil}},
 		},
 		{
 			name: "MultipleRegex",
@@ -226,9 +226,9 @@ func TestPopValue(t *testing.T) {
 			input:         `[.*, abcd, '(?:efgh)ijkl']`,
 			allowYAMLList: true,
 			want: []ByRegexOption{
-				{regexp.MustCompile(".*"), nil},
-				{regexp.MustCompile("abcd"), nil},
-				{regexp.MustCompile("(?:efgh)ijkl"), nil},
+				{regexp.MustCompile("(?s).*"), nil},
+				{regexp.MustCompile("(?s)abcd"), nil},
+				{regexp.MustCompile("(?s)(?:efgh)ijkl"), nil},
 			},
 		},
 		{
@@ -237,10 +237,10 @@ func TestPopValue(t *testing.T) {
 			input:         `[.*, Mon: 0, '\b(\d{2})/(\d{2})/(\d{4})\b': '${3}-${1}-${2}', "0: 1": 2]`,
 			allowYAMLList: true,
 			want: []ByRegexOption{
-				{regexp.MustCompile(".*"), nil},
-				{regexp.MustCompile("Mon"), &([]string{"0"})[0]},
-				{regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`), &([]string{"${3}-${1}-${2}"})[0]},
-				{regexp.MustCompile(`0: 1`), &([]string{"2"})[0]},
+				{regexp.MustCompile("(?s).*"), nil},
+				{regexp.MustCompile("(?s)Mon"), &([]string{"0"})[0]},
+				{regexp.MustCompile(`(?s)\b(\d{2})/(\d{2})/(\d{4})\b`), &([]string{"${3}-${1}-${2}"})[0]},
+				{regexp.MustCompile(`(?s)0: 1`), &([]string{"2"})[0]},
 			},
 		},
 		{
