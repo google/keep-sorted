@@ -238,21 +238,25 @@ func formatValue(val reflect.Value) (string, error) {
 		return strconv.Itoa(int(val.Int())), nil
 	case reflect.TypeFor[[]ByRegexOption]():
 		opts := val.Interface().([]ByRegexOption)
-		vals := make([]string, 0, len(opts))
+		vals := make([]any, len(opts))
 		seenTemplate := false
-		for _, opt := range opts {
+		for i, opt := range opts {
 			if opt.Template != nil {
 				seenTemplate = true
-				vals = append(vals, fmt.Sprintf(`%q: %q`, opt.Pattern.String(), *opt.Template))
+				vals[i] = map[string]string{opt.Pattern.String(): *opt.Template}
 				continue
 			}
-			vals = append(vals, opt.Pattern.String())
+			vals[i] = opt.Pattern.String()
 		}
 		if seenTemplate {
 			// always presented as a yaml sequence to preserve any `k:v` items
-			return fmt.Sprintf("[%s]", strings.Join(vals, ", ")), nil
+			return formatYAMLList(vals)
 		}
-		return formatList(vals)
+		s := make([]string, len(vals))
+		for i, val := range vals {
+			s[i] = val.(string)
+		}
+		return formatList(s)
 	case reflect.TypeFor[[]*regexp.Regexp]():
 		regexps := val.Interface().([]*regexp.Regexp)
 		vals := make([]string, len(regexps))
@@ -282,6 +286,10 @@ func formatList(vals []string) (string, error) {
 		return strings.Join(vals, ","), nil
 	}
 
+	return formatYAMLList(vals)
+}
+
+func formatYAMLList[T any](vals []T) (string, error) {
 	node := new(yaml.Node)
 	if err := node.Encode(vals); err != nil {
 		return "", fmt.Errorf("while converting list to YAML: %w", err)
