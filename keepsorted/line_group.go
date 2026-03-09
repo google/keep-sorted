@@ -492,7 +492,7 @@ func (lg *lineGroup) internalJoinedLines() string {
 	return s.String()
 }
 
-// regexJoinedLines concatenates all of this lineGroup's content in a way that
+// regexJoinedLines concatenates all of this lineGroup's content in a way that's
 // friendlier to regexes than internalJoinedLines.
 //
 // Primarily, this method still strips leading whitespace but it uses a real
