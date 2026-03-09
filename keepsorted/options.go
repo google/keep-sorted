@@ -437,13 +437,14 @@ func (opts blockOptions) trimIgnorePrefix(s string) string {
 // the resulting slice.
 func (opts blockOptions) matchRegexes(s string) []regexMatch {
 	if len(opts.ByRegex) == 0 {
-		return []regexMatch{{s}}
+		return nil
 	}
 
 	var ret []regexMatch
 	for _, p := range opts.ByRegex {
 		regex := p.Pattern
 
+		// TODO: jfaer - It'd be nice if these two branches were unified.
 		if p.Template != nil {
 			var result []byte
 			m := regex.FindAllStringSubmatchIndex(s, -1)
