@@ -233,7 +233,14 @@ func formatValue(val reflect.Value) (string, error) {
 	case reflect.TypeFor[map[string]bool]():
 		return formatList(slices.Sorted(maps.Keys(val.Interface().(map[string]bool))))
 	case reflect.TypeFor[IntOrBool]():
-		return strconv.Itoa(int(val.Int())), nil
+		switch i := int(val.Int()); i {
+		case 0:
+			return boolString[false], nil
+		case 1:
+			return boolString[true], nil
+		default:
+			return strconv.Itoa(i), nil
+		}
 	case reflect.TypeFor[int]():
 		return strconv.Itoa(int(val.Int())), nil
 	case reflect.TypeFor[[]ByRegexOption]():
