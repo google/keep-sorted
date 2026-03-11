@@ -430,8 +430,7 @@ func (lg *lineGroup) regexTokens() []regexToken {
 	} else {
 		regexMatches = lg.opts.matchRegexes(lg.regexJoinedLines())
 		// We still want to apply the joinLines transform so that we get
-		// "reasonable human" comparisons if the regex intentionally
-		// (or accidentally!) matches more than one line.
+		// "reasonable human" comparisons if the regex matches more than one line.
 		for _, match := range regexMatches {
 			for i, s := range match {
 				match[i] = joinLines(strings.Split(s, "\n"))
