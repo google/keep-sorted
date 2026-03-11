@@ -429,6 +429,14 @@ func (lg *lineGroup) regexTokens() []regexToken {
 		regexMatches = []regexMatch{{lg.internalJoinedLines()}}
 	} else {
 		regexMatches = lg.opts.matchRegexes(lg.regexJoinedLines())
+		// We still want to apply the joinLines transform so that we get
+		// "reasonable human" comparisons if the regex intentionally
+		// (or accidentally!) matches more than one line.
+		for _, match := range regexMatches {
+			for i, s := range match {
+				match[i] = joinLines(strings.Split(s, "\n"))
+			}
+		}
 	}
 
 	ret := make([]regexToken, len(regexMatches))
@@ -473,7 +481,11 @@ func (lg *lineGroup) regexTokens() []regexToken {
 // Unlike joinedLines, this method does not record that it was used in the
 // accessRecorder.
 func (lg *lineGroup) internalJoinedLines() string {
-	if len(lg.lines) == 0 {
+	return joinLines(lg.lines)
+}
+
+func joinLines(lines []string) string {
+	if len(lines) == 0 {
 		return ""
 	}
 
@@ -481,7 +493,7 @@ func (lg *lineGroup) internalJoinedLines() string {
 	startsWithWordChar := regexp.MustCompile(`^\w`)
 	var s strings.Builder
 	var last string
-	for _, l := range lg.lines {
+	for _, l := range lines {
 		l := strings.TrimLeftFunc(l, unicode.IsSpace)
 		if len(last) > 0 && len(l) > 0 && endsWithWordChar.MatchString(last) && startsWithWordChar.MatchString(l) {
 			s.WriteString(" ")
