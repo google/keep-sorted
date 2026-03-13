@@ -53,6 +53,24 @@ func TestPopValue(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "IntList_Empty",
+
+			input: "",
+			want:  []int{},
+		},
+		{
+			name: "IntList_SingleElement",
+
+			input: "1",
+			want:  []int{1},
+		},
+		{
+			name: "IntList_MultipleElements_WithRepeats",
+
+			input: "1,-2,1",
+			want:  []int{1, -2, 1},
+		},
+		{
 			name: "List_Empty",
 
 			input: "",
@@ -69,12 +87,6 @@ func TestPopValue(t *testing.T) {
 
 			input: "foo,bar,foo",
 			want:  []string{"foo", "bar", "foo"},
-		},
-		{
-			name: "List_IntElement",
-
-			input: "1",
-			want:  []int{1},
 		},
 		{
 			name: "List_YAML",
