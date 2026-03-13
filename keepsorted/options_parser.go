@@ -59,6 +59,9 @@ func (p *parser) popValue(typ reflect.Type) (reflect.Value, error) {
 	case reflect.TypeFor[int]():
 		val, err := p.popInt()
 		return reflect.ValueOf(val), err
+	case reflect.TypeFor[[]int]():
+		val, err := p.popIntList()
+		return reflect.ValueOf(val), err
 	case reflect.TypeFor[SortOrder]():
 		val, err := p.popSortOrder()
 		return reflect.ValueOf(val), err
@@ -187,6 +190,10 @@ func popListValue[T any](p *parser, parse func(string) (T, error)) ([]T, error) 
 
 func (p *parser) popList() ([]string, error) {
 	return popListValue(p, func(s string) (string, error) { return s, nil })
+}
+
+func (p *parser) popIntList() ([]int, error) {
+	return popListValue(p, func(s string) (int, error) { return strconv.Atoi(s) })
 }
 
 func (p *parser) popByRegexOption() ([]ByRegexOption, error) {

@@ -71,6 +71,12 @@ func TestPopValue(t *testing.T) {
 			want:  []string{"foo", "bar", "foo"},
 		},
 		{
+			name: "List_IntElement",
+
+			input: "1",
+			want:  []int{1},
+		},
+		{
 			name: "List_YAML",
 
 			input:         "[foo, bar, foo]",
