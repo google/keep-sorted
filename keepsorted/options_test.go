@@ -70,10 +70,22 @@ func TestBlockOptions(t *testing.T) {
 			want: blockOptions{Group: true},
 		},
 		{
-			name: "SkipLines",
+			name: "SkipLinesStart",
 			in:   "skip_lines=10",
 
-			want: blockOptions{SkipLines: 10},
+			want: blockOptions{SkipLines: []int{10}},
+		},
+		{
+			name: "SkipLinesEnd",
+			in:   "skip_lines=-3",
+
+			want: blockOptions{SkipLines: []int{-3}},
+		},
+		{
+			name: "SkipLinesStartAndEnd",
+			in:   "skip_lines=2,-1",
+
+			want: blockOptions{SkipLines: []int{2, -1}},
 		},
 		{
 			name: "NewlineSeparated_Bool",
@@ -94,10 +106,22 @@ func TestBlockOptions(t *testing.T) {
 			wantErr: "newline_separated has invalid value: -1",
 		},
 		{
-			name: "ErrorSkipLinesIsNegative",
-			in:   "skip_lines=-1",
+			name: "ErrorSkipLinesFirstNegative",
+			in:   "skip_lines=-1,-1",
 
-			wantErr: "skip_lines has invalid value: -1",
+			wantErr: "skip_lines at start must be nonnegative: -1,-1",
+		},
+		{
+			name: "ErrorSkipLinesSecondPositive",
+			in:   "skip_lines=1,1",
+
+			wantErr: "skip_lines at end must be nonpositive: 1,1",
+		},
+		{
+			name: "ErrorSkipLinesTooMany",
+			in:   "skip_lines=1,-1,2",
+
+			wantErr: "skip_lines accepts at most two values: 1,-1,2",
 		},
 		{
 			name: "ItemList",

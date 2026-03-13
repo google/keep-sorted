@@ -110,7 +110,7 @@ B
 // keep-sorted-test end
 
 Invalid option
-  keep-sorted-test start group=yes skip_lines=-1 foo=bar
+  keep-sorted-test start group=yes skip_lines=-1,1 foo=bar
   2
   1
   3
