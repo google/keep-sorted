@@ -461,13 +461,13 @@ Total | $4.69
 
 ```diff
 +<!-- keep-sorted start skip_lines=2,-2 -->
-Item  | Cost
------ | -----
-Apple | $1.09
-Lemon | $1.50
-Pear  | $2.10
------ | -----
-Total | $4.69
+ Item  | Cost
+ ----- | -----
+ Apple | $1.09
+ Lemon | $1.50
+ Pear  | $2.10
+ ----- | -----
+ Total | $4.69
 +<!-- keep-sorted end -->
 ```
 
