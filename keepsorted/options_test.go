@@ -109,13 +109,7 @@ func TestBlockOptions(t *testing.T) {
 			name: "ErrorSkipLinesFirstNegative",
 			in:   "skip_lines=-1,-1",
 
-			wantErr: "skip_lines at start must be nonnegative: -1,-1",
-		},
-		{
-			name: "ErrorSkipLinesSecondPositive",
-			in:   "skip_lines=1,1",
-
-			wantErr: "skip_lines at end must be nonpositive: 1,1",
+			wantErr: "skip_lines values must have opposite sign: -1,-1",
 		},
 		{
 			name: "ErrorSkipLinesTooMany",

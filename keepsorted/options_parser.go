@@ -193,7 +193,7 @@ func (p *parser) popList() ([]string, error) {
 }
 
 func (p *parser) popIntList() ([]int, error) {
-	return popListValue(p, func(s string) (int, error) { return strconv.Atoi(s) })
+	return popListValue(p, strconv.Atoi)
 }
 
 func (p *parser) popByRegexOption() ([]ByRegexOption, error) {

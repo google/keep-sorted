@@ -338,12 +338,12 @@ func validate(opts *blockOptions) (warnings []error) {
 		warns = append(warns, fmt.Errorf("skip_lines accepts at most two values: %v", formatIntList(opts.SkipLines)))
 		opts.SkipLines = nil
 	} else if len(opts.SkipLines) == 2 {
-		if opts.SkipLines[0] < 0 {
-			warns = append(warns, fmt.Errorf("skip_lines at start must be nonnegative: %v", formatIntList(opts.SkipLines)))
-			opts.SkipLines = nil
-		} else if opts.SkipLines[1] > 0 {
-			warns = append(warns, fmt.Errorf("skip_lines at end must be nonpositive: %v", formatIntList(opts.SkipLines)))
-			opts.SkipLines = nil
+		if cmp.Compare(opts.SkipLines[0], 0) == cmp.Compare(opts.SkipLines[1], 0) {
+			// Both are the same sign. It's okay for both to be 0.
+			if opts.SkipLines[0] != 0 {
+				warns = append(warns, fmt.Errorf("skip_lines values must have opposite sign: %v", formatIntList(opts.SkipLines)))
+				opts.SkipLines = nil
+			}
 		}
 	}
 
@@ -550,9 +550,12 @@ func (opts blockOptions) maybeParseNumeric(s string) numericTokens {
 	return t
 }
 
-func (opts blockOptions) startIndex() int {
+func (opts blockOptions) startOffset() int {
 	if len(opts.SkipLines) == 2 {
-		return opts.SkipLines[0]
+		if opts.SkipLines[0] > opts.SkipLines[1] {
+			return opts.SkipLines[0]
+		}
+		return opts.SkipLines[1]
 	} else if len(opts.SkipLines) == 1 {
 		if opts.SkipLines[0] > 0 {
 			return opts.SkipLines[0]
@@ -561,9 +564,12 @@ func (opts blockOptions) startIndex() int {
 	return 0
 }
 
-func (opts blockOptions) endIndex() int {
+func (opts blockOptions) endOffset() int {
 	if len(opts.SkipLines) == 2 {
-		return opts.SkipLines[1]
+		if opts.SkipLines[1] < 0 {
+			return opts.SkipLines[1]
+		}
+		return opts.SkipLines[0]
 	} else if len(opts.SkipLines) == 1 {
 		if opts.SkipLines[0] < 0 {
 			return opts.SkipLines[0]

@@ -264,6 +264,20 @@ func TestFindings(t *testing.T) {
 			want: []*Finding{finding(filename, 4, 6, errorUnordered, automaticReplacement(4, 6, "2\n3\n4\n"))},
 		},
 		{
+			name: "SkipLinesEndAndStart",
+
+			in: `
+// keep-sorted-test start skip_lines=-1,1
+5
+4
+3
+2
+1
+// keep-sorted-test end`,
+
+			want: []*Finding{finding(filename, 4, 6, errorUnordered, automaticReplacement(4, 6, "2\n3\n4\n"))},
+		},
+		{
 			name: "MismatchedStart",
 
 			in: `
