@@ -398,8 +398,8 @@ treated as sticky. These prefixes cannot contain space characters.
 In some cases, it may not be possible to have the start directive on the line
 immediately before the sorted region or end immediately after. In these cases,
 `skip_lines` can be used to indicate how many lines are to be skipped before
-and/or after the sorted region.  The `skip_lines` option interprets positive
-values as lines to skip at the  start of the sorted region and negative values
+and/or after the sorted region. The `skip_lines` option interprets positive
+values as lines to skip at the start of the sorted region and negative values
 as lines to skip at the end.
 
 For instance, this can be used with a Markdown table, to prevent the headers
