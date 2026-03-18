@@ -563,10 +563,7 @@ func (opts blockOptions) startOffset() int {
 
 func (opts blockOptions) endOffset() int {
 	if len(opts.SkipLines) == 2 {
-		if opts.SkipLines[1] < 0 {
-			return opts.SkipLines[1]
-		}
-		return opts.SkipLines[0]
+		return min(opts.SkipLines[0], opts.SkipLines[1])
 	} else if len(opts.SkipLines) == 1 {
 		if opts.SkipLines[0] < 0 {
 			return opts.SkipLines[0]
