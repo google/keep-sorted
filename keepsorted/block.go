@@ -113,7 +113,8 @@ func (f *Fixer) newBlocks(filename string, lines []string, offset int, include f
 				warnings = append(warnings, finding(filename, start.index+offset, start.index+offset, warn.Error()))
 			}
 
-			start.index += opts.SkipLines
+			start.index += opts.startOffset()
+			endIndex += opts.endOffset()
 			if start.index >= endIndex {
 				continue
 			}

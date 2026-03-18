@@ -222,7 +222,7 @@ func TestFindings(t *testing.T) {
 			want: []*Finding{finding(filename, 3, 5, errorUnordered, automaticReplacement(3, 5, "1\n2\n3\n"))},
 		},
 		{
-			name: "SkipLines",
+			name: "SkipLinesStart",
 
 			in: `
 // keep-sorted-test start skip_lines=2
@@ -234,6 +234,48 @@ func TestFindings(t *testing.T) {
 // keep-sorted-test end`,
 
 			want: []*Finding{finding(filename, 5, 7, errorUnordered, automaticReplacement(5, 7, "1\n2\n3\n"))},
+		},
+		{
+			name: "SkipLinesEnd",
+
+			in: `
+// keep-sorted-test start skip_lines=-2
+5
+4
+3
+2
+1
+// keep-sorted-test end`,
+
+			want: []*Finding{finding(filename, 3, 5, errorUnordered, automaticReplacement(3, 5, "3\n4\n5\n"))},
+		},
+		{
+			name: "SkipLinesStartAndEnd",
+
+			in: `
+// keep-sorted-test start skip_lines=1,-1
+5
+4
+3
+2
+1
+// keep-sorted-test end`,
+
+			want: []*Finding{finding(filename, 4, 6, errorUnordered, automaticReplacement(4, 6, "2\n3\n4\n"))},
+		},
+		{
+			name: "SkipLinesEndAndStart",
+
+			in: `
+// keep-sorted-test start skip_lines=-1,1
+5
+4
+3
+2
+1
+// keep-sorted-test end`,
+
+			want: []*Finding{finding(filename, 4, 6, errorUnordered, automaticReplacement(4, 6, "2\n3\n4\n"))},
 		},
 		{
 			name: "MismatchedStart",
