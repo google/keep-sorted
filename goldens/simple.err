@@ -1,4 +1,4 @@
-WRN skip_lines values must have opposite sign: -1,-1 line=113
+WRN skip_lines has conflicting values (should one of these be positive, to skip lines at the start of the block instead?): -1,-1 line=113
 WRN unrecognized option "foo" line=113
 WRN while parsing option "ignore_prefixes": content appears to be an unterminated YAML list: "[abc, foo" line=120
 exit status 1

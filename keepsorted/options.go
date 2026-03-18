@@ -340,8 +340,13 @@ func validate(opts *blockOptions) (warnings []error) {
 	} else if len(opts.SkipLines) == 2 {
 		if cmp.Compare(opts.SkipLines[0], 0) == cmp.Compare(opts.SkipLines[1], 0) {
 			// Both are the same sign. It's okay for both to be 0.
-			if opts.SkipLines[0] != 0 {
-				warns = append(warns, fmt.Errorf("skip_lines values must have opposite sign: %v", formatIntList(opts.SkipLines)))
+			if opts.SkipLines[0] < 0 {
+				// Both are negative.
+				warns = append(warns, fmt.Errorf("skip_lines has conflicting values (should one of these be positive, to skip lines at the start of the block instead?): %v", formatIntList(opts.SkipLines)))
+				opts.SkipLines = nil
+			} else if opts.SkipLines[0] > 0 {
+				// Both are positive.
+				warns = append(warns, fmt.Errorf("skip_lines has conflicting values (should one of these be negative, to skip lines at the end of the block instead?): %v", formatIntList(opts.SkipLines)))
 				opts.SkipLines = nil
 			}
 		}

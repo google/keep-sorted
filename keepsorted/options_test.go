@@ -106,10 +106,16 @@ func TestBlockOptions(t *testing.T) {
 			wantErr: "newline_separated has invalid value: -1",
 		},
 		{
-			name: "ErrorSkipLinesFirstNegative",
+			name: "ErrorSkipBothNegative",
 			in:   "skip_lines=-1,-1",
 
-			wantErr: "skip_lines values must have opposite sign: -1,-1",
+			wantErr: "skip_lines has conflicting values (should one of these be positive, to skip lines at the start of the block instead?): -1,-1",
+		},
+		{
+			name: "ErrorSkipBothPositive",
+			in:   "skip_lines=1,1",
+
+			wantErr: "skip_lines has conflicting values (should one of these be negative, to skip lines at the end of the block instead?): 1,1",
 		},
 		{
 			name: "ErrorSkipLinesTooMany",
