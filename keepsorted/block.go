@@ -390,7 +390,10 @@ func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)
 		}
 	}
 
-	if n := len(dataGroups); n > 1 && allEndInComma(dataGroups[0:n-1]) && !dataGroups[n-1].matchesSuffix(commaLineEnd) {
+	commaLineEnd := regexp.MustCompile("(,)( *)((#|//).*)?$")
+	commentLineEnd := regexp.MustCompile("( *)((#|//).*)$")
+
+	if n := len(dataGroups); n > 1 && allMatchSuffix(dataGroups[0:n-1], commaLineEnd) && !dataGroups[n-1].matchesSuffix(commaLineEnd) {
 		if dataGroups[n-1].matchesSuffix(commentLineEnd) {
 			dataGroups[n-1].replaceSuffix(commentLineEnd, ", $2")
 		} else {
@@ -414,16 +417,11 @@ func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)
 	return func([]*lineGroup) {}
 }
 
-func allEndInComma(lgs []*lineGroup) bool {
+func allMatchSuffix(lgs []*lineGroup, suffix *regexp.Regexp) bool {
 	for _, lg := range lgs {
-		if !lg.matchesSuffix(commaLineEnd) {
+		if !lg.matchesSuffix(suffix) {
 			return false
 		}
 	}
 	return true
 }
-
-var (
-	commaLineEnd   = regexp.MustCompile("(,)( *)((#|//).*)?$")
-	commentLineEnd = regexp.MustCompile("( *)((#|//).*)$")
-)
