@@ -453,7 +453,7 @@ func (opts blockOptions) hasGroupPrefix(s string) bool {
 }
 
 // trimIgnorePrefix removes the first matching IgnorePrefixes from s, if s
-// matchesSuffix one of the IgnorePrefixes.
+// matches one of the IgnorePrefixes.
 func (opts blockOptions) trimIgnorePrefix(s string) string {
 	_, s, _ = opts.cutFirstPrefix(s, slices.Values(opts.IgnorePrefixes))
 	return s

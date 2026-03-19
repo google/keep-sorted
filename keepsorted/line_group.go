@@ -61,7 +61,7 @@ type accessRecorder struct {
 	joinedComment bool
 }
 
-// matchesAnyRegex returns true if s matchesSuffix one of the regexes.
+// matchesAnyRegex returns true if s matches one of the regexes.
 func matchesAnyRegex(s string, regexes []*regexp.Regexp) bool {
 	for _, regex := range regexes {
 		if regex.FindStringSubmatch(s) != nil {
