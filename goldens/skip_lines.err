@@ -1,0 +1,4 @@
+WRN block start is at or after end, possibly due to skip_lines [5+1,6-0] line=6
+WRN block start is at or after end, possibly due to skip_lines [9+0,10-1] line=9
+WRN block start is at or after end, possibly due to skip_lines [22+10,26-0] [start,end]=[32,26]
+exit status 1
