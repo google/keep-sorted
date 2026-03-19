@@ -312,9 +312,13 @@ func formatIntList(intVals []int) string {
 	return strings.Join(vals, ",")
 }
 
+func knownCommentMarkers() []string {
+	return []string{"//", "#", "/*", "--", ";", "<!--"}
+}
+
 func guessCommentMarker(startLine string) string {
 	startLine = strings.TrimSpace(startLine)
-	for _, marker := range []string{"//", "#", "/*", "--", ";", "<!--"} {
+	for _, marker := range knownCommentMarkers() {
 		if strings.HasPrefix(startLine, marker) {
 			return marker
 		}

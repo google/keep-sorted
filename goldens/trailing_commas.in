@@ -16,18 +16,26 @@ Trailing comma and a comment
 Trailing comma except for last, last has a comment
   keep-sorted-test start
   3,
-  1,
-  2  # two
+  1, <!-- one -->
+  2  <!-- two -->
   keep-sorted-test end
 
 Trailing comma and a comment, last has a comment
   keep-sorted-test start
-  3, # three
+  3, -- three
   1,
-  2  # two
+  2  -- two
+  keep-sorted-test end
+
+Trailing commas with inline comment
+  keep-sorted-test start
+  "c" /* c */,
+  "b",
+  "a" /* a */
   keep-sorted-test end
 
 Trailing commas with quoted comment characters
+TODO: https://github.com/google/keep-sorted/issues/33 - Fix this
   keep-sorted-test start
   "c",
   "b, //",

@@ -390,24 +390,23 @@ func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)
 		}
 	}
 
-	commaLineEnd := regexp.MustCompile("(,)( *)((#|//).*)?$")
-	commentLineEnd := regexp.MustCompile("( *)((#|//).*)$")
+	knownCommentMarkersList := knownCommentMarkers()
+	for i, marker := range knownCommentMarkersList {
+		// Some comment markers, such as "/*", include regex metacharacters.
+		knownCommentMarkersList[i] = regexp.QuoteMeta(marker)
+	}
+	knownCommentMarkersStr := strings.Join(knownCommentMarkersList, "|")
+
+	commaLineEnd := regexp.MustCompile(fmt.Sprintf(",(\\s*(%s).*)?$", knownCommentMarkersStr))
+	lineEnd := regexp.MustCompile(fmt.Sprintf("(\\s*(%s).*)?$", knownCommentMarkersStr))
 
 	if n := len(dataGroups); n > 1 && allMatchSuffix(dataGroups[0:n-1], commaLineEnd) && !dataGroups[n-1].matchesSuffix(commaLineEnd) {
-		if dataGroups[n-1].matchesSuffix(commentLineEnd) {
-			dataGroups[n-1].replaceSuffix(commentLineEnd, ", $2")
-		} else {
-			dataGroups[n-1].append(",")
-		}
+		dataGroups[n-1].replaceSuffix(lineEnd, ",$1")
 
 		return func(lgs []*lineGroup) {
 			for i := len(lgs) - 1; i >= 0; i-- {
 				if len(lgs[i].lines) > 0 {
-					if lgs[i].matchesSuffix(commentLineEnd) {
-						lgs[i].replaceSuffix(commaLineEnd, "  $3")
-					} else {
-						lgs[i].trimSuffix(",")
-					}
+					lgs[i].replaceSuffix(commaLineEnd, "$1")
 					return
 				}
 			}
