@@ -15,6 +15,7 @@
 package keepsorted
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -116,6 +117,10 @@ func (f *Fixer) newBlocks(filename string, lines []string, offset int, include f
 			start.index += opts.startOffset()
 			endIndex += opts.endOffset()
 			if start.index >= endIndex {
+				warnings = append(warnings, finding(filename, start.index-opts.startOffset()+offset, endIndex-opts.endOffset()+offset,
+					fmt.Sprintf("block start is at or after end, possibly due to skip_lines [%d+%d,%d-%d]",
+						start.index-opts.startOffset()+offset, opts.startOffset(), endIndex-opts.endOffset()+offset, -opts.endOffset())),
+				)
 				continue
 			}
 
