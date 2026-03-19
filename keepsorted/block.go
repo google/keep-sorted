@@ -16,6 +16,7 @@ package keepsorted
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -389,13 +390,13 @@ func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)
 		}
 	}
 
-	if n := len(dataGroups); n > 1 && allHaveSuffix(dataGroups[0:n-1], ",") && !dataGroups[n-1].hasSuffix(",") {
-		dataGroups[n-1].append(",")
+	if n := len(dataGroups); n > 1 && allEndInComma(dataGroups[0:n-1]) && !endInComma(dataGroups[n-1]) {
+		dataGroups[n-1].replaceSuffix(possibleCommentLineEnd, ", $2")
 
 		return func(lgs []*lineGroup) {
 			for i := len(lgs) - 1; i >= 0; i-- {
 				if len(lgs[i].lines) > 0 {
-					lgs[i].trimSuffix(",")
+					lgs[i].replaceSuffix(commaLineEnd, " $2")
 					return
 				}
 			}
@@ -405,11 +406,20 @@ func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)
 	return func([]*lineGroup) {}
 }
 
-func allHaveSuffix(lgs []*lineGroup, s string) bool {
+func allEndInComma(lgs []*lineGroup) bool {
 	for _, lg := range lgs {
-		if !lg.hasSuffix(s) {
+		if !endInComma(lg) {
 			return false
 		}
 	}
 	return true
+}
+
+var (
+	commaLineEnd           = regexp.MustCompile("(,)(\\s*(#|//).*)?$")
+	possibleCommentLineEnd = regexp.MustCompile("( +)?((#|//).*)?$")
+)
+
+func endInComma(lg *lineGroup) bool {
+	return lg.matchesSuffix(commaLineEnd)
 }
