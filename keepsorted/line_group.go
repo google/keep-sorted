@@ -119,7 +119,7 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 	// Returns another boolean indicating whether the group should be ending
 	// after that line if so.
 	shouldAddToRegexDelimitedGroup := func(l string) (addToGroup bool, finishGroupAfter bool) {
-        if metadata.opts.GroupStartRegex != nil {
+		if metadata.opts.GroupStartRegex != nil {
 			// For GroupStartRegex, all non-regex-matching lines should be
 			// part of the group including prior lines.
 			return !matchesAnyRegex(l, metadata.opts.GroupStartRegex), false
@@ -349,7 +349,7 @@ func (cb *codeBlock) append(s string, opts blockOptions) {
 		cb.braceCounts = make(map[string]int)
 	}
 
-	// TODO(jfalgout): Does this need to handle runes more correctly?
+	// TODO: jfaer - Does this need to handle runes more correctly?
 	for i := 0; i < len(s); {
 		if cb.expectedQuote == "" {
 			// We do not appear to be inside a string literal.
@@ -419,8 +419,25 @@ func (lg *lineGroup) commentOnly() bool {
 }
 
 func (lg *lineGroup) regexTokens() []regexToken {
-	// TODO: jfaer - Should we match regexes on the original content?
-	regexMatches := lg.opts.matchRegexes(lg.internalJoinedLines())
+	var regexMatches []regexMatch
+	if len(lg.opts.ByRegex) == 0 {
+		// We apply other options on top of what the regex extracts, but if the user
+		// didn't set by_regex, we should fall back to the behavior they would've
+		// expected before we started supporting by_regex.
+		// Namely: We would apply the other options on top of the
+		// internalJoinedLines() instead of the raw content.
+		regexMatches = []regexMatch{{lg.internalJoinedLines()}}
+	} else {
+		regexMatches = lg.opts.matchRegexes(lg.regexJoinedLines())
+		// We still want to apply the joinLines transform so that we get
+		// "reasonable human" comparisons if the regex matches more than one line.
+		for _, match := range regexMatches {
+			for i, s := range match {
+				match[i] = joinLines(strings.Split(s, "\n"))
+			}
+		}
+	}
+
 	ret := make([]regexToken, len(regexMatches))
 	if lg.access.regexTokens == nil {
 		lg.access.regexTokens = make([]regexTokenAccessRecorder, len(regexMatches))
@@ -453,10 +470,21 @@ func (lg *lineGroup) regexTokens() []regexToken {
 	return ret
 }
 
-// internalJoinedLines calculates the same thing as joinedLines, except it
-// doesn't record that it was used in the accessRecorder.
+// internalJoinedLines attempts to concatenate all of this lineGroup's content
+// the same way a reasonable human might.
+//
+// If the previous line ends with a "word" character and the current line starts
+// with a "word" character, the two lines will be separated by a space.
+// Otherwise, the lines are concatenated without any separation.
+//
+// Unlike joinedLines, this method does not record that it was used in the
+// accessRecorder.
 func (lg *lineGroup) internalJoinedLines() string {
-	if len(lg.lines) == 0 {
+	return joinLines(lg.lines)
+}
+
+func joinLines(lines []string) string {
+	if len(lines) == 0 {
 		return ""
 	}
 
@@ -464,7 +492,7 @@ func (lg *lineGroup) internalJoinedLines() string {
 	startsWithWordChar := regexp.MustCompile(`^\w`)
 	var s strings.Builder
 	var last string
-	for _, l := range lg.lines {
+	for _, l := range lines {
 		l := strings.TrimLeftFunc(l, unicode.IsSpace)
 		if len(last) > 0 && len(l) > 0 && endsWithWordChar.MatchString(last) && startsWithWordChar.MatchString(l) {
 			s.WriteString(" ")
@@ -475,6 +503,25 @@ func (lg *lineGroup) internalJoinedLines() string {
 	return s.String()
 }
 
+// regexJoinedLines concatenates all of this lineGroup's content in a way that's
+// friendlier to regexes than internalJoinedLines.
+//
+// Primarily, this method still strips leading whitespace but it uses a real
+// newline character to separate lines instead of the "word" character logic of
+// internalJoinedLines.
+func (lg *lineGroup) regexJoinedLines() string {
+	if len(lg.lines) == 0 {
+		return ""
+	}
+	lines := make([]string, len(lg.lines))
+	for i, l := range lg.lines {
+		lines[i] = strings.TrimLeftFunc(l, unicode.IsSpace)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// joinedLines returns internalJoinedLines and records that it was called in the
+// accessRecorder.
 func (lg *lineGroup) joinedLines() string {
 	lg.access.joinedLines = true
 	return lg.internalJoinedLines()

@@ -218,7 +218,8 @@ func TestBlockOptions(t *testing.T) {
 			want: blockOptions{
 				AllowYAMLLists: true,
 				ByRegex: []ByRegexOption{
-					{regexp.MustCompile("(?:abcd)"), nil}, {regexp.MustCompile("efg.*"), nil},
+					{regexp.MustCompile("(?s)(?:abcd)"), nil},
+					{regexp.MustCompile("(?s)efg.*"), nil},
 				},
 			},
 		},
@@ -230,9 +231,9 @@ func TestBlockOptions(t *testing.T) {
 			want: blockOptions{
 				AllowYAMLLists: true,
 				ByRegex: []ByRegexOption{
-					{Pattern: regexp.MustCompile(`.*`)},
+					{Pattern: regexp.MustCompile(`(?s).*`)},
 					{
-						Pattern:  regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`),
+						Pattern:  regexp.MustCompile(`(?s)\b(\d{2})/(\d{2})/(\d{4})\b`),
 						Template: &[]string{"${3}-${1}-${2}"}[0],
 					},
 				},
@@ -246,9 +247,9 @@ func TestBlockOptions(t *testing.T) {
 			want: blockOptions{
 				AllowYAMLLists: true,
 				ByRegex: []ByRegexOption{
-					{Pattern: regexp.MustCompile(`foo, bar`)},
+					{Pattern: regexp.MustCompile(`(?s)foo, bar`)},
 					{
-						Pattern:  regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`),
+						Pattern:  regexp.MustCompile(`(?s)\b(\d{2})/(\d{2})/(\d{4})\b`),
 						Template: &[]string{"${3}-${1}-${2}"}[0],
 					},
 				},
