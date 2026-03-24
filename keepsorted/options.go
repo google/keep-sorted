@@ -40,6 +40,14 @@ type ByRegexOption struct {
 	Template *string
 }
 
+func (opt ByRegexOption) MarshalYAML() (any, error) {
+	if opt.Template == nil {
+		return opt.Pattern.String(), nil
+	}
+
+	return map[string]string{opt.Pattern.String(): *opt.Template}, nil
+}
+
 // SortOrder defines whether we sort in ascending or descending order.
 type SortOrder string
 
@@ -248,19 +256,18 @@ func formatValue(val reflect.Value) (string, error) {
 		return formatIntList(val.Interface().([]int)), nil
 	case reflect.TypeFor[[]ByRegexOption]():
 		opts := val.Interface().([]ByRegexOption)
-		vals := make([]string, 0, len(opts))
+		vals := make([]string, len(opts))
 		seenTemplate := false
-		for _, opt := range opts {
+		for i, opt := range opts {
 			if opt.Template != nil {
 				seenTemplate = true
-				vals = append(vals, fmt.Sprintf(`%q: %q`, opt.Pattern.String(), *opt.Template))
-				continue
+				break
 			}
-			vals = append(vals, opt.Pattern.String())
+			vals[i] = opt.Pattern.String()
 		}
 		if seenTemplate {
 			// always presented as a yaml sequence to preserve any `k:v` items
-			return fmt.Sprintf("[%s]", strings.Join(vals, ", ")), nil
+			return formatYAMLList(opts)
 		}
 		return formatList(vals)
 	case reflect.TypeFor[[]*regexp.Regexp]():
@@ -292,6 +299,10 @@ func formatList(vals []string) (string, error) {
 		return strings.Join(vals, ","), nil
 	}
 
+	return formatYAMLList(vals)
+}
+
+func formatYAMLList[T any](vals []T) (string, error) {
 	node := new(yaml.Node)
 	if err := node.Encode(vals); err != nil {
 		return "", fmt.Errorf("while converting list to YAML: %w", err)

@@ -231,8 +231,26 @@ func TestBlockOptions(t *testing.T) {
 				AllowYAMLLists: true,
 				ByRegex: []ByRegexOption{
 					{Pattern: regexp.MustCompile(`.*`)},
-					{Pattern: regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`),
-						Template: &[]string{"${3}-${1}-${2}"}[0]},
+					{
+						Pattern:  regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`),
+						Template: &[]string{"${3}-${1}-${2}"}[0],
+					},
+				},
+			},
+		},
+		{
+			name:           "RegexWithTemplateAndSingletonWithSpecialChars",
+			in:             `by_regex=['foo, bar', '\b(\d{2})/(\d{2})/(\d{4})\b': '${3}-${1}-${2}']`,
+			defaultOptions: blockOptions{AllowYAMLLists: true},
+
+			want: blockOptions{
+				AllowYAMLLists: true,
+				ByRegex: []ByRegexOption{
+					{Pattern: regexp.MustCompile(`foo, bar`)},
+					{
+						Pattern:  regexp.MustCompile(`\b(\d{2})/(\d{2})/(\d{4})\b`),
+						Template: &[]string{"${3}-${1}-${2}"}[0],
+					},
 				},
 			},
 		},
@@ -277,13 +295,13 @@ func TestBlockOptions(t *testing.T) {
 			got, warns := parseBlockOptions(tc.commentMarker, tc.in, tc.defaultOptions)
 			if err := errors.Join(warns...); err != nil {
 				if tc.wantErr == "" {
-					t.Errorf("parseBlockOptions(%q, %q) = %v", tc.commentMarker, tc.in, err)
+					t.Errorf("parseBlockOptions(%#v, %#v) = %v", tc.commentMarker, tc.in, err)
 				} else if !strings.Contains(err.Error(), tc.wantErr) {
-					t.Errorf("parseBlockOptions(%q, %q) = %v, expected to contain %q", tc.commentMarker, tc.in, err, tc.wantErr)
+					t.Errorf("parseBlockOptions(%#v, %#v) = %v, expected to contain %q", tc.commentMarker, tc.in, err, tc.wantErr)
 				}
 			}
 			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(blockOptions{}), cmpRegexp); diff != "" {
-				t.Errorf("parseBlockOptions(%q, %q) mismatch (-want +got):\n%s", tc.commentMarker, tc.in, diff)
+				t.Errorf("parseBlockOptions(%#v, %#v) mismatch (-want +got):\n%s", tc.commentMarker, tc.in, diff)
 			}
 
 			if tc.wantErr == "" {
@@ -291,10 +309,10 @@ func TestBlockOptions(t *testing.T) {
 					s := got.String()
 					got2, warns := parseBlockOptions(tc.commentMarker, s, tc.defaultOptions)
 					if err := errors.Join(warns...); err != nil {
-						t.Errorf("parseBlockOptions(%q, %q) = %v", tc.commentMarker, s, err)
+						t.Errorf("parseBlockOptions(%#v, %#v) = %v", tc.commentMarker, s, err)
 					}
 					if diff := cmp.Diff(got, got2, cmp.AllowUnexported(blockOptions{}), cmpRegexp); diff != "" {
-						t.Errorf("parseBlockOptions(%q, %q) mismatch (-want +got):\n%s", tc.commentMarker, s, diff)
+						t.Errorf("parseBlockOptions(%#v, %#v) mismatch (-want +got):\n%s", tc.commentMarker, s, diff)
 					}
 				})
 			}
