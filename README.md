@@ -396,8 +396,11 @@ treated as sticky. These prefixes cannot contain space characters.
 #### Skipping lines
 
 In some cases, it may not be possible to have the start directive on the line
-immediately before the sorted region. In this case, `skip_lines` can be used to
-indicate how many lines are to be skipped before the sorted region.
+immediately before the sorted region or end immediately after. In these cases,
+`skip_lines` can be used to indicate how many lines are to be skipped before
+and/or after the sorted region. The `skip_lines` option interprets positive
+values as lines to skip at the start of the sorted region and negative values
+as lines to skip at the end.
 
 For instance, this can be used with a Markdown table, to prevent the headers
 and the dashed line after the headers from being sorted:
@@ -428,6 +431,43 @@ Alpha   | Foo
  Bravo   | Bar
  Charlie | Baz
  Delta   | Qux
++<!-- keep-sorted end -->
+```
+
+</td>
+</tr>
+</table>
+
+This can be used to keep the footers of a table from being sorted as well:
+
+<table>
+<tr>
+<td>
+
+```md
+
+Item  | Cost
+----- | -----
+Lemon | $1.50
+Pear  | $2.10
+Apple | $1.09
+----- | -----
+Total | $4.69
+
+```
+
+</td>
+<td>
+
+```diff
++<!-- keep-sorted start skip_lines=2,-2 -->
+ Item  | Cost
+ ----- | -----
+ Apple | $1.09
+ Lemon | $1.50
+ Pear  | $2.10
+ ----- | -----
+ Total | $4.69
 +<!-- keep-sorted end -->
 ```
 

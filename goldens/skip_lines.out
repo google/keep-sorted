@@ -1,5 +1,13 @@
-Skip lines with an empty block:
+Skip no lines with an empty block is ok:
+keep-sorted-test start skip_lines=0
+keep-sorted-test end
+
+Skip lines at start with an empty block:
 keep-sorted-test start skip_lines=1
+keep-sorted-test end
+
+Skip lines at end with an empty block:
+keep-sorted-test start skip_lines=-1
 keep-sorted-test end
 
 Skip two lines:
@@ -11,7 +19,7 @@ b
 c
 // keep-sorted-test end
 
-Number of skipped lines is greater than block size, so block is ignored:
+Number of skipped lines is greater than block size, so skip_lines causes warning:
 // keep-sorted-test start skip_lines=10
 z
 y

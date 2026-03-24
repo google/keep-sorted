@@ -83,6 +83,7 @@ func (opts BlockOptions) String() string {
 //   - []string:         key=a,b,c,d
 //   - map[string]bool:  key=a,b,c,d
 //   - int:              key=123
+//   - []int:            key=1,-1
 //   - ByRegexOptions    key=a,b,c,d, key=[yaml_list]
 type blockOptions struct {
 	// AllowYAMLLists determines whether list.set valued options are allowed to be specified by YAML.
@@ -93,7 +94,7 @@ type blockOptions struct {
 	///////////////////////////
 
 	// SkipLines is the number of lines to ignore before sorting.
-	SkipLines int `key:"skip_lines"`
+	SkipLines []int `key:"skip_lines"`
 	// Group determines whether we group lines together based on increasing indentation.
 	Group bool
 	// GroupPrefixes tells us about other types of lines that should be added to a group.
@@ -241,9 +242,18 @@ func formatValue(val reflect.Value) (string, error) {
 	case reflect.TypeFor[map[string]bool]():
 		return formatList(slices.Sorted(maps.Keys(val.Interface().(map[string]bool))))
 	case reflect.TypeFor[IntOrBool]():
-		return strconv.Itoa(int(val.Int())), nil
+		switch i := int(val.Int()); i {
+		case 0:
+			return boolString[false], nil
+		case 1:
+			return boolString[true], nil
+		default:
+			return strconv.Itoa(i), nil
+		}
 	case reflect.TypeFor[int]():
 		return strconv.Itoa(int(val.Int())), nil
+	case reflect.TypeFor[[]int]():
+		return formatIntList(val.Interface().([]int)), nil
 	case reflect.TypeFor[[]ByRegexOption]():
 		opts := val.Interface().([]ByRegexOption)
 		vals := make([]string, len(opts))
@@ -305,6 +315,14 @@ func formatYAMLList[T any](vals []T) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+func formatIntList(intVals []int) string {
+	vals := make([]string, 0, len(intVals))
+	for _, v := range intVals {
+		vals = append(vals, strconv.Itoa(v))
+	}
+	return strings.Join(vals, ",")
+}
+
 func guessCommentMarker(startLine string) string {
 	startLine = strings.TrimSpace(startLine)
 	for _, marker := range []string{"//", "#", "/*", "--", ";", "<!--"} {
@@ -327,9 +345,22 @@ func (opts *blockOptions) setCommentMarker(marker string) {
 
 func validate(opts *blockOptions) (warnings []error) {
 	var warns []error
-	if opts.SkipLines < 0 {
-		warns = append(warns, fmt.Errorf("skip_lines has invalid value: %v", opts.SkipLines))
-		opts.SkipLines = 0
+	if len(opts.SkipLines) > 2 {
+		warns = append(warns, fmt.Errorf("skip_lines accepts at most two values: %v", formatIntList(opts.SkipLines)))
+		opts.SkipLines = nil
+	} else if len(opts.SkipLines) == 2 {
+		if cmp.Compare(opts.SkipLines[0], 0) == cmp.Compare(opts.SkipLines[1], 0) {
+			// Both are the same sign. It's okay for both to be 0.
+			if opts.SkipLines[0] < 0 {
+				// Both are negative.
+				warns = append(warns, fmt.Errorf("skip_lines has conflicting values (should one of these be positive, to skip lines at the start of the block instead?): %v", formatIntList(opts.SkipLines)))
+				opts.SkipLines = nil
+			} else if opts.SkipLines[0] > 0 {
+				// Both are positive.
+				warns = append(warns, fmt.Errorf("skip_lines has conflicting values (should one of these be negative, to skip lines at the end of the block instead?): %v", formatIntList(opts.SkipLines)))
+				opts.SkipLines = nil
+			}
+		}
 	}
 
 	if opts.NewlineSeparated < 0 {
@@ -533,6 +564,28 @@ func (opts blockOptions) maybeParseNumeric(s string) numericTokens {
 		}
 	}
 	return t
+}
+
+func (opts blockOptions) startOffset() int {
+	if len(opts.SkipLines) == 2 {
+		return max(opts.SkipLines[0], opts.SkipLines[1])
+	} else if len(opts.SkipLines) == 1 {
+		if opts.SkipLines[0] > 0 {
+			return opts.SkipLines[0]
+		}
+	}
+	return 0
+}
+
+func (opts blockOptions) endOffset() int {
+	if len(opts.SkipLines) == 2 {
+		return min(opts.SkipLines[0], opts.SkipLines[1])
+	} else if len(opts.SkipLines) == 1 {
+		if opts.SkipLines[0] < 0 {
+			return opts.SkipLines[0]
+		}
+	}
+	return 0
 }
 
 // numericTokens is the result of parsing all numeric tokens out of a string.
