@@ -1127,6 +1127,21 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
+			name: "TrailingCommas_WithComments",
+
+			in: []string{
+				"foo,",
+				"baz, /* baz */",
+				"bar // bar",
+			},
+
+			want: []string{
+				"bar, // bar",
+				"baz, /* baz */",
+				"foo",
+			},
+		},
+		{
 			name: "IgnorePrefixes",
 
 			opts: blockOptions{

@@ -119,7 +119,7 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 	// Returns another boolean indicating whether the group should be ending
 	// after that line if so.
 	shouldAddToRegexDelimitedGroup := func(l string) (addToGroup bool, finishGroupAfter bool) {
-        if metadata.opts.GroupStartRegex != nil {
+		if metadata.opts.GroupStartRegex != nil {
 			// For GroupStartRegex, all non-regex-matching lines should be
 			// part of the group including prior lines.
 			return !matchesAnyRegex(l, metadata.opts.GroupStartRegex), false
@@ -408,9 +408,18 @@ func (lg *lineGroup) hasSuffix(s string) bool {
 	return len(lg.lines) > 0 && strings.HasSuffix(lg.lines[len(lg.lines)-1], s)
 }
 
+func (lg *lineGroup) matchesSuffix(re *regexp.Regexp) bool {
+	return len(lg.lines) > 0 && re.MatchString(lg.lines[len(lg.lines)-1])
+}
+
 func (lg *lineGroup) trimSuffix(s string) {
 	lg.access = accessRecorder{}
 	lg.lines[len(lg.lines)-1] = strings.TrimSuffix(lg.lines[len(lg.lines)-1], s)
+}
+
+func (lg *lineGroup) replaceSuffix(re *regexp.Regexp, replacement string) {
+	lg.access = accessRecorder{}
+	lg.lines[len(lg.lines)-1] = re.ReplaceAllString(lg.lines[len(lg.lines)-1], replacement)
 }
 
 func (lg *lineGroup) commentOnly() bool {
