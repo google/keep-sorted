@@ -1,0 +1,30 @@
+--- stdin
++++ stdout
+@@ -1,23 +1,20 @@
+ Remove duplicates:
+ // keep-sorted-test start remove_duplicates=yes
+-foo
+ bar
+ foo
+ // keep-sorted-test end
+ 
+ Remove duplicates with comments:
+ // keep-sorted-test start remove_duplicates=yes sticky_comments=yes
+-foo
+-bar
+-// Foo again
++bar
+ foo
+ // Foo again
+ foo
+ // keep-sorted-test end
+ 
+ Preserve duplicates:
+-// keep-sorted-test start remove_duplicates=no
+-foo
++// keep-sorted-test start remove_duplicates=no
+-bar
++bar
++foo
+ foo
+ // keep-sorted-test end

@@ -1,0 +1,237 @@
+--- stdin
++++ stdout
+@@ -1,127 +1,133 @@
+ No capturing group
+   keep-sorted-test start by_regex=int|bool|long
+-  int baz
+-  bool foo
++  bool foo
+-  long bar
++  int baz
++  long bar
+   keep-sorted-test end
+ 
+ Capturing group
+   keep-sorted-test start by_regex=['[^ ]+ (.*)']
+-  int baz
++  long bar
++  int baz
+   bool foo
+-  long bar
+-  keep-sorted-test end
++  keep-sorted-test end
+ 
+ Capturing group and non-capturing group
+   keep-sorted-test start by_regex=['(?:int|bool|long) (.*)']
+-  int baz
++  long bar
+-  bool foo
+-  long bar
+-  keep-sorted-test end
+-
+-Numeric
+-  keep-sorted-test start by_regex=\d+ numeric=yes
+-  bar 40
+-  foo 7
+-  baz 01
+-  keep-sorted-test end
+-
+-Case insensitive sorting
+-  keep-sorted-test start by_regex=\D+ case=no
+-  1 FOO
+-  2 bar
+-  3 bAz
+-  keep-sorted-test end
+-
+-Prefix order
+-  // keep-sorted-test start by_regex=\w+_(\w+) prefix_order=INIT,,FINAL
+-  FOO_INIT,
+-  FOO_FINAL,
+-  BAR_INIT,
+-  BAR_FINAL,
+-  DO_STUFF,
+-  DO_MORE_STUFF,
+-  ZAP_THINGS
+-  // keep-sorted-test end
+-
+-Multiple regexes
+-  keep-sorted-test start by_regex=['(?:int|bool|long) (.*)', 'int|bool|long']
+-  int baz
+-  long baz
+-  bool baz
+-  bool foo
+-  long foo
+-  int foo
+-  long bar
+-  bool bar
+-  int bar
+-  keep-sorted-test end
+-
+-One regex, multiple capturing groups
+-  keep-sorted-test start by_regex=(.*)_(.*)
+-  foo_bar
+-  foo_baz
+-  bar_baz
+-  baz_qux
+-  keep-sorted-test end
+-
+-Multiline blocks
+-  keep-sorted-test start block=yes newline_separated=yes by_regex=(\w+)\(\)\s+{
+-  bool func2() {
+-    return true;
+-  }
+-  int func1() {
+-    return 1;
+-  }
+-  List<SomeReallyLongTypeParameterThatWouldForceTheFunctionNameOntoTheNextLine>
+-      func0() {
+-    return List.of(whatever);
+-  }
+-  keep-sorted-test end
+-
+-Multiline blocks with newlines=2
+-  keep-sorted-test start block=yes newline_separated=2 by_regex=(\w+)\(\)\s+{
+-  bool func2() {
+-    return true;
+-  }
+-  int func1() {
+-    return 1;
+-  }
+-  List<SomeReallyLongTypeParameterThatWouldForceTheFunctionNameOntoTheNextLine>
+-      func0() {
+-    return List.of(whatever);
+-  }
+-  keep-sorted-test end
+-
+-Regex doesn't match every line
+-  keep-sorted-test start by_regex=\d+
+-  3
+-  baz
+-  2
+-  foo
+-  1
++  int baz
++  bool foo
++  keep-sorted-test end
++
++Numeric
++  keep-sorted-test start by_regex=\d+ numeric=yes
++  baz 01
++  foo 7
++  bar 40
++  keep-sorted-test end
++
++Case insensitive sorting
++  keep-sorted-test start by_regex=\D+ case=no
++  2 bar
++  3 bAz
++  1 FOO
++  keep-sorted-test end
++
++Prefix order
++  // keep-sorted-test start by_regex=\w+_(\w+) prefix_order=INIT,,FINAL
++  BAR_INIT,
++  FOO_INIT,
++  DO_MORE_STUFF,
++  DO_STUFF,
++  ZAP_THINGS,
++  BAR_FINAL,
++  FOO_FINAL
++  // keep-sorted-test end
++
++Multiple regexes
++  keep-sorted-test start by_regex=['(?:int|bool|long) (.*)', 'int|bool|long']
++  bool bar
++  int bar
++  long bar
++  bool baz
++  int baz
++  long baz
++  bool foo
++  int foo
++  long foo
++  keep-sorted-test end
++
++One regex, multiple capturing groups
++  keep-sorted-test start by_regex=(.*)_(.*)
++  bar_baz
++  baz_qux
++  foo_bar
++  foo_baz
++  keep-sorted-test end
++
++Multiline blocks
++  keep-sorted-test start block=yes newline_separated=yes by_regex=(\w+)\(\)\s+{
++  List<SomeReallyLongTypeParameterThatWouldForceTheFunctionNameOntoTheNextLine>
++      func0() {
++    return List.of(whatever);
++  }
++
++  int func1() {
++    return 1;
++  }
++
++  bool func2() {
++    return true;
++  }
++  keep-sorted-test end
++
++Multiline blocks with newlines=2
++  keep-sorted-test start block=yes newline_separated=2 by_regex=(\w+)\(\)\s+{
++  List<SomeReallyLongTypeParameterThatWouldForceTheFunctionNameOntoTheNextLine>
++      func0() {
++    return List.of(whatever);
++  }
++
++
++  int func1() {
++    return 1;
++  }
++
++
++  bool func2() {
++    return true;
++  }
++  keep-sorted-test end
++
++Regex doesn't match every line
++  keep-sorted-test start by_regex=\d+
++  1
++  2
++  3
++  bar
++  baz
+-  bar
++  foo
+   keep-sorted-test end
+ 
+ Invalid regex
+   keep-sorted-test start by_regex=*
+-  2
++  1
+-  1
++  2
+   3
+   keep-sorted-test end
+ 
+ Cannot combine with ignore_prefixes
+   keep-sorted-test start by_regex=.* ignore_prefixes=foo,bar
+-  2
++  1
+-  1
++  2
+   3
+   keep-sorted-test end
+ 
+ Template rewrites
+   keep-sorted-test start by_regex=['^(Jan|(Feb|Mar|(Apr|May|(Jun|(Jul|(Aug|Sep|(Oct|(Nov|(Dec))))))))) (?<t_d>\d\d) (?<t_R>\d\d:\d\d) (?<t_Y>\d\d\d\d) ': '${t_Y} ${9}A${8}A${7}A${6}A${5}A${4}A${3}A${2}A${1} ${t_d} ${t_R}']
+-  Jun 23 09:00 2025 | nobody
++  Aug 26 09:00 2024 | nobody
+-  Aug 26 09:00 2024 | nobody
++  Sep 02 09:00 2024 | nobody
+-  Sep 02 09:00 2024 | nobody
++  Apr 14 09:00 2025 | nobody
+-  Apr 14 09:00 2025 | nobody
++  Jun 23 09:00 2025 | nobody
+   Jul 28 09:00 2025 | nobody
+   keep-sorted-test end

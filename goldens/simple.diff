@@ -1,0 +1,177 @@
+--- stdin
++++ stdout
+@@ -17,122 +17,123 @@
+ 
+ Needs sorting:
+ // keep-sorted-test start
+-Foo
+ Bar
+ Baz
++Foo
+ // keep-sorted-test end
+ 
+ Maintains indent:
+ static class Foo {
+   // keep-sorted-test start
+-  "Foo",
++  "Bar",
+-  "Bar",
++  "Baz",
+-  "Baz",
++  "Foo",
+   // keep-sorted-test end
+ }
+ 
+ Empty line at end:
+ // keep-sorted-test start
+-Foo
+ Bar
+ Baz
+-
++Foo
++
+ // keep-sorted-test end
+ 
+ Multiple empty lines at end:
+ // keep-sorted-test start
+-Foo
+ Bar
+ Baz
+-
++Foo
+ 
++
+ // keep-sorted-test end
+ 
+ Empty lines at start (duplicate lines discarded):
+ // keep-sorted-test start
+ 
+-
+-Foo
+ Bar
+ Baz
++Foo
+ // keep-sorted-test end
+ 
+ Empty lines at both:
+ // keep-sorted-test start
+ 
+-Foo
+-Bar
+-Baz
+-
+-// keep-sorted-test end
+-
+-"Empty" lines that are trailing indentation:
+-  // keep-sorted-test start
+-  
+-  Foo
+-  Bar
+-  Baz
+-  
+-  // keep-sorted-test end
+-
+-Same thing, but it's tabs.
+-	// keep-sorted-test start
+-	
+-	Foo
++Bar
++Baz
++Foo
++
++// keep-sorted-test end
++
++"Empty" lines that are trailing indentation:
++  // keep-sorted-test start
++  
++  Bar
++  Baz
++  Foo
++  
++  // keep-sorted-test end
++
++Same thing, but it's tabs.
++	// keep-sorted-test start
++	
+ 	Bar
+-	Baz
++	Baz
++	Foo
+ 	
+ 	// keep-sorted-test end
+ 
+ b/153572902 mdformat around lists:
+-<!-- keep-sorted-test start -->
+-
++<!-- keep-sorted-test start -->
+- * Foo
++
+  * Bar
+- * Baz
++ * Baz
++ * Foo
+ 
+ <!-- keep-sorted-test end -->
+ 
+-// keep-sorted-test start newline_separated=yes
+-C
+-
++// keep-sorted-test start newline_separated=yes
+ A
+ 
+-B
++B
++
++C
+ // keep-sorted-test end
+ 
+-// keep-sorted-test start newline_separated=2
++// keep-sorted-test start newline_separated=2
++A
++
+-C
++
+-
++B
+-A
++
+ 
+-B
++C
+ // keep-sorted-test end
+ 
+ Invalid option
+   keep-sorted-test start group=yes skip_lines=-1 foo=bar
+-  2
++  1
+-  1
++  2
+   3
+   keep-sorted-test end
+ 
+ Invalid YAML
+   keep-sorted-test start allow_yaml_lists=yes ignore_prefixes=[abc, foo
+-  2
++  1
+-  1
++  2
+   3
+   keep-sorted-test end
+ 
+ Ascending order (default):
+ // keep-sorted-test start
+-c
++a
+ b
+-a
++c
+ // keep-sorted-test end
+ 
+ Descending order:
+ // keep-sorted-test start order=desc
+-a
++c
+ b
+-c
++a
+ // keep-sorted-test end
