@@ -128,7 +128,7 @@ func (p *parser) popIntOrBool() (IntOrBool, error) {
 func (ar *ByRegexOption) UnmarshalYAML(node *yaml.Node) error {
 	switch node.Tag {
 	case "!!str":
-		pat, err := regexp.Compile(node.Value)
+		pat, err := compileByRegex(node.Value)
 		if err != nil {
 			return err
 		}
@@ -144,7 +144,7 @@ func (ar *ByRegexOption) UnmarshalYAML(node *yaml.Node) error {
 			return fmt.Errorf("by_regex map item must have exactly one key-value pair, but got %d", len(m))
 		}
 		for pattern, template := range m {
-			pat, err := regexp.Compile(pattern)
+			pat, err := compileByRegex(pattern)
 			if err != nil {
 				return fmt.Errorf("invalid regex pattern %q: %w", pattern, err)
 			}
@@ -198,7 +198,7 @@ func (p *parser) popIntList() ([]int, error) {
 
 func (p *parser) popByRegexOption() ([]ByRegexOption, error) {
 	return popListValue(p, func(s string) (ByRegexOption, error) {
-		pat, err := regexp.Compile(s)
+		pat, err := compileByRegex(s)
 		return ByRegexOption{Pattern: pat}, err
 	})
 }
@@ -327,4 +327,15 @@ func (iter *runeIter) pop() (rune, bool) {
 		iter.idx += utf8.RuneLen(ch)
 	}
 	return ch, ok
+}
+
+func compileByRegex(re string) (*regexp.Regexp, error) {
+	if !strings.HasPrefix(re, "(?s)") && !strings.HasPrefix(re, "(?-s)") {
+		// The initial version of by_regex ran on top of lineGroup.joinedLines. This
+		// meant that users wrote regexes that didn't need to handle newlines.
+		// To minimize disruption, we automatically set dotall flag so that their
+		// regexes might still work after we start using real newlines.
+		re = "(?s)" + re
+	}
+	return regexp.Compile(re)
 }
