@@ -408,9 +408,18 @@ func (lg *lineGroup) hasSuffix(s string) bool {
 	return len(lg.lines) > 0 && strings.HasSuffix(lg.lines[len(lg.lines)-1], s)
 }
 
+func (lg *lineGroup) matchesSuffix(re *regexp.Regexp) bool {
+	return len(lg.lines) > 0 && re.MatchString(lg.lines[len(lg.lines)-1])
+}
+
 func (lg *lineGroup) trimSuffix(s string) {
 	lg.access = accessRecorder{}
 	lg.lines[len(lg.lines)-1] = strings.TrimSuffix(lg.lines[len(lg.lines)-1], s)
+}
+
+func (lg *lineGroup) replaceSuffix(re *regexp.Regexp, replacement string) {
+	lg.access = accessRecorder{}
+	lg.lines[len(lg.lines)-1] = re.ReplaceAllString(lg.lines[len(lg.lines)-1], replacement)
 }
 
 func (lg *lineGroup) commentOnly() bool {

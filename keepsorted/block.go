@@ -16,6 +16,7 @@ package keepsorted
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -389,13 +390,23 @@ func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)
 		}
 	}
 
-	if n := len(dataGroups); n > 1 && allHaveSuffix(dataGroups[0:n-1], ",") && !dataGroups[n-1].hasSuffix(",") {
-		dataGroups[n-1].append(",")
+	knownCommentMarkersList := knownCommentMarkers()
+	for i, marker := range knownCommentMarkersList {
+		// Some comment markers, such as "/*", include regex metacharacters.
+		knownCommentMarkersList[i] = regexp.QuoteMeta(marker)
+	}
+	knownCommentMarkersStr := strings.Join(knownCommentMarkersList, "|")
+
+	commaLineEnd := regexp.MustCompile(fmt.Sprintf(",(\\s*(%s).*)?$", knownCommentMarkersStr))
+	lineEnd := regexp.MustCompile(fmt.Sprintf("(\\s*(%s).*)?$", knownCommentMarkersStr))
+
+	if n := len(dataGroups); n > 1 && allMatchSuffix(dataGroups[0:n-1], commaLineEnd) && !dataGroups[n-1].matchesSuffix(commaLineEnd) {
+		dataGroups[n-1].replaceSuffix(lineEnd, ",$1")
 
 		return func(lgs []*lineGroup) {
 			for i := len(lgs) - 1; i >= 0; i-- {
 				if len(lgs[i].lines) > 0 {
-					lgs[i].trimSuffix(",")
+					lgs[i].replaceSuffix(commaLineEnd, "$1")
 					return
 				}
 			}
@@ -405,9 +416,9 @@ func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)
 	return func([]*lineGroup) {}
 }
 
-func allHaveSuffix(lgs []*lineGroup, s string) bool {
+func allMatchSuffix(lgs []*lineGroup, suffix *regexp.Regexp) bool {
 	for _, lg := range lgs {
-		if !lg.hasSuffix(s) {
+		if !lg.matchesSuffix(suffix) {
 			return false
 		}
 	}
