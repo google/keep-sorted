@@ -568,6 +568,11 @@ option `by_regex=…` takes a comma-separated list of [RE2 regular
 expressions] that will be applied to the group, and then sorting
 will take place on just the results of the regular expressions.
 
+> [!NOTE]
+> By default, keep-sorted adds the `s` flag to all regular expressions that
+> allows `.` to also match `\n`. If you do not want that behavior, add `(?-s)`
+> to the start of your regular expression.
+
 > [!TIP]
 > Regular expressions often need special characters. See [Syntax](#syntax) below
 > for how to include special characters in the `by_regex` option.
