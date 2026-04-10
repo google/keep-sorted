@@ -1,0 +1,116 @@
+--- stdin
++++ stdout
+@@ -1,32 +1,32 @@
+ Sticky comments:
+ // keep-sorted-test start sticky_comments=yes
+-foo
+ // comment
+ bar
+ // multi line
+ // comment
+ baz
++foo
+ // keep-sorted-test end
+ 
+ Sticky comments with different comment sequence:
+ # keep-sorted-test start sticky_comments=yes
+-foo
+ # comment
+ bar
++foo
+ # keep-sorted-test end
+ 
+ Sticky comments with wrong comment sequence:
+ # keep-sorted-test start sticky_comments=yes
+-foo
+-bar
+ // comment with wrong comment sequence
++bar
++foo
+ # keep-sorted-test end
+ 
+ Trailing comments:
+ // keep-sorted-test start sticky_comments=yes
+-foo
+ // comment
+ bar
++foo
+ // trailing
+ // comment
+ // keep-sorted-test end
+@@ -39,54 +17,54 @@
+ 
+ Only non-sticky comments:
+ // keep-sorted-test start sticky_comments=no
+-// only
++// comments
+-// comments
++// only
+ // keep-sorted-test end
+ 
+ Slash-star-style comments:
+-/* keep-sorted-test start */
++/* keep-sorted-test start */
++1
+-2
+-1
++2
+ /* comment on 3 */
+ 3
+ /* keep-sorted-test end */
+ 
+ Dash-dash-style comments:
+--- keep-sorted-test start
++-- keep-sorted-test start
++1
+-2
+-1
++2
+ -- comment on 3
+ 3
+ -- keep-sorted-test end
+ 
+ Semicolon-style comments:
+-; keep-sorted-test start
++; keep-sorted-test start
++1
+-2
+-1
++2
+ ; comment on 3
+ 3
+ ; keep-sorted-test end
+ 
+ HTML-style comments:
+-<!-- keep-sorted-test start -->
++<!-- keep-sorted-test start -->
++1
+-2
+-1
++2
+ <!-- comment on 3 -->
+ 3
+ <!-- keep-sorted-test end -->
+ 
+ Additional prefixes aren't counted as part of the comment:
+-// some prefix (normally this is go/) keep-sorted-test start
++// some prefix (normally this is go/) keep-sorted-test start
++1
+-2
+-1
++2
+ // comment on 3
+ 3
+ // keep-sorted-test end
+ 
+ Non-comment prefixes are still sorted:
+-* keep-sorted-test start
+-2
+-1
++* keep-sorted-test start
+-* not a comment on 3
++* not a comment on 3
++1
++2
+ 3
+ * keep-sorted-test end
