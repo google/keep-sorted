@@ -8,15 +8,28 @@ jobs:
   build-and-upload:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: ubuntu-latest
-            suffix: linux
-          - os: windows-latest
-            suffix: windows
-            extension: .exe
+            goos: linux
+            goarch: amd64
+            suffix: linux_amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            suffix: linux_arm64
           - os: macos-latest
-            suffix: darwin
+            goos: darwin
+            goarch: amd64
+            suffix: darwin_amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            suffix: darwin_arm64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            suffix: windows_amd64
+            extension: .exe
 
     runs-on: ${{matrix.os}}
 
@@ -33,7 +46,11 @@ jobs:
           go-version: "1.23"
 
       - name: Build
-        run: go build -v .
+        run: go build -v -o keep-sorted${{matrix.extension}} .
+        env:
+          GOOS: ${{matrix.goos}}
+          GOARCH: ${{matrix.goarch}}
+          CGO_ENABLED: "0"
 
       - name: Test
         run: go test -v ./...
