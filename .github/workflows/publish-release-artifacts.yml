@@ -12,23 +12,18 @@ jobs:
           - os: ubuntu-latest
             goos: linux
             goarch: amd64
-            suffix: linux_amd64
           - os: ubuntu-latest
             goos: linux
             goarch: arm64
-            suffix: linux_arm64
           - os: macos-latest
             goos: darwin
             goarch: amd64
-            suffix: darwin_amd64
           - os: macos-latest
             goos: darwin
             goarch: arm64
-            suffix: darwin_arm64
           - os: windows-latest
             goos: windows
             goarch: amd64
-            suffix: windows_amd64
             extension: .exe
 
     runs-on: ${{matrix.os}}
@@ -57,9 +52,9 @@ jobs:
 
       - name: Upload Artifacts to Release
         run: |
-          echo Uploading ${{matrix.suffix}} artifact for ${GITHUB_REF_NAME}
-          mv keep-sorted${{matrix.extension}} keep-sorted_${{matrix.suffix}}${{matrix.extension}}
-          gh release upload ${GITHUB_REF_NAME} keep-sorted_${{matrix.suffix}}${{matrix.extension}} --clobber
+          echo Uploading ${{matrix.goos}}_${{matrix.goarch}} artifact for ${GITHUB_REF_NAME}
+          mv keep-sorted${{matrix.extension}} keep-sorted_${{matrix.goos}}_${{matrix.goarch}}${{matrix.extension}}
+          gh release upload ${GITHUB_REF_NAME} keep-sorted_${{matrix.goos}}_${{matrix.goarch}}${{matrix.extension}} --clobber
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
