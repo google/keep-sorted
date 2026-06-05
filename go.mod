@@ -6,6 +6,8 @@ go 1.23.1
 
 require (
 	github.com/Workiva/go-datastructures v1.0.53
+	github.com/aymanbagabas/go-udiff v0.3.1
+	github.com/bluekeyes/go-gitdiff v0.8.1
 	github.com/google/go-cmp v0.5.8
 	github.com/mattn/go-isatty v0.0.20
 	github.com/rs/zerolog v1.31.0

@@ -15,6 +15,7 @@
 package golden_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -27,6 +28,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bluekeyes/go-gitdiff/gitdiff"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -68,7 +70,7 @@ func TestGoldens(t *testing.T) {
 			t.Run(tc, func(t *testing.T) {
 				t.Parallel()
 				inFile := filepath.Join(dir, tc+".in")
-				in, err := os.Open(inFile)
+				in, err := os.ReadFile(inFile)
 				if err != nil {
 					t.Fatalf("Could not open .in file: %v", err)
 				}
@@ -91,7 +93,7 @@ func TestGoldens(t *testing.T) {
 				wantErr = []byte(strings.ReplaceAll(string(wantErr), "\r\n", "\n"))
 				wantErr = []byte(strings.ReplaceAll(string(wantErr), "\r", "\n"))
 
-				gotOut, gotErr, exitCode, err := runKeepSorted(in)
+				gotOut, gotErr, exitCode, err := runKeepSorted(bytes.NewReader(in), "fix")
 				if err != nil {
 					t.Errorf("Had trouble running keep-sorted: %v", err)
 				}
@@ -104,7 +106,9 @@ func TestGoldens(t *testing.T) {
 					needsRegen <- inFile
 				}
 
-				gotOut2, _, exitCode2, err := runKeepSorted(strings.NewReader(gotOut))
+				testDiffMode(t, in, wantOut)
+
+				gotOut2, _, exitCode2, err := runKeepSorted(strings.NewReader(gotOut), "fix")
 				if err != nil {
 					t.Errorf("Had trouble running keep-sorted on keep-sorted output: %v", err)
 				}
@@ -129,13 +133,48 @@ func TestGoldens(t *testing.T) {
 	}
 }
 
+func testDiffMode(t *testing.T, in []byte, wantOut []byte) {
+	t.Run("diff", func(t *testing.T) {
+		t.Parallel()
+		gotDiff, _, _, err := runKeepSorted(bytes.NewReader(in), "diff")
+		if err != nil {
+			t.Fatalf("Had trouble running keep-sorted --mode diff: %v", err)
+		}
+		files, _, err := gitdiff.Parse(strings.NewReader(gotDiff))
+		if err != nil {
+			t.Fatalf("Had trouble parsing diff: %v", err)
+		}
+		if len(files) != 1 {
+			t.Fatalf("Exactly one file is expected in diff, got %d", len(files))
+		}
+		var b strings.Builder
+		err = gitdiff.Apply(&b, bytes.NewReader(in), files[0])
+		if err != nil {
+			t.Fatalf("Had trouble applying diff: %v", err)
+		}
+		if diff := cmp.Diff(string(wantOut), b.String()); diff != "" {
+			t.Fatalf("Diff applied to the input didn't match expected out:\n%s", diff)
+		}
+	})
+	t.Run("diff after fix", func(t *testing.T) {
+		t.Parallel()
+		gotDiff, _, _, err := runKeepSorted(bytes.NewReader(wantOut), "diff")
+		if err != nil {
+			t.Fatalf("Had trouble running keep-sorted --mode diff: %v", err)
+		}
+		if gotDiff != "" {
+			t.Errorf("Non-empty diff produced:\n%s", gotDiff)
+		}
+	})
+}
+
 func showTopLevel(dir string) (string, error) {
 	b, err := exec.Command("git", "-C", dir, "rev-parse", "--show-toplevel").Output()
 	return strings.TrimSpace(string(b)), err
 }
 
-func runKeepSorted(stdin io.Reader) (stdout, stderr string, exitCode int, err error) {
-	cmd := exec.Command("go", "run", gitDir, "--id=keep-sorted-test", "--omit-timestamps", "-")
+func runKeepSorted(stdin io.Reader, mode string) (stdout, stderr string, exitCode int, err error) {
+	cmd := exec.Command("go", "run", gitDir, "--id=keep-sorted-test", "--mode="+mode, "--omit-timestamps", "-")
 	cmd.Stdin = stdin
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
