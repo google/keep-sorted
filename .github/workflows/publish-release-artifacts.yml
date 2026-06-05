@@ -8,15 +8,23 @@ jobs:
   build-and-upload:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: ubuntu-latest
-            suffix: linux
-          - os: windows-latest
-            suffix: windows
-            extension: .exe
+            goos: linux
+            goarch: amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
           - os: macos-latest
-            suffix: darwin
+            goos: darwin
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            extension: .exe
 
     runs-on: ${{matrix.os}}
 
@@ -33,16 +41,20 @@ jobs:
           go-version: "1.23"
 
       - name: Build
-        run: go build -v .
+        run: go build -v -o keep-sorted${{matrix.extension}} .
+        env:
+          GOOS: ${{matrix.goos}}
+          GOARCH: ${{matrix.goarch}}
+          CGO_ENABLED: "0"
 
       - name: Test
         run: go test -v ./...
 
       - name: Upload Artifacts to Release
         run: |
-          echo Uploading ${{matrix.suffix}} artifact for ${GITHUB_REF_NAME}
-          mv keep-sorted${{matrix.extension}} keep-sorted_${{matrix.suffix}}${{matrix.extension}}
-          gh release upload ${GITHUB_REF_NAME} keep-sorted_${{matrix.suffix}}${{matrix.extension}} --clobber
+          echo Uploading ${{matrix.goos}}_${{matrix.goarch}} artifact for ${GITHUB_REF_NAME}
+          mv keep-sorted${{matrix.extension}} keep-sorted_${{matrix.goos}}_${{matrix.goarch}}${{matrix.extension}}
+          gh release upload ${GITHUB_REF_NAME} keep-sorted_${{matrix.goos}}_${{matrix.goarch}}${{matrix.extension}} --clobber
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
