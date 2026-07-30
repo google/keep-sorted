@@ -838,7 +838,7 @@ func TestLineSorting(t *testing.T) {
 			name: "AlreadySorted_ExceptForDuplicate",
 
 			opts: blockOptions{
-				RemoveDuplicates: true,
+				RemoveDuplicates: DuplicateResolutionTrue,
 			},
 			in: []string{
 				"Bar",
@@ -1020,7 +1020,7 @@ func TestLineSorting(t *testing.T) {
 
 			opts: func() blockOptions {
 				opts := blockOptions{
-					RemoveDuplicates: true,
+					RemoveDuplicates: DuplicateResolutionTrue,
 					StickyComments:   true,
 				}
 				opts.setCommentMarker("//")
@@ -1048,7 +1048,7 @@ func TestLineSorting(t *testing.T) {
 			name: "RemoveDuplicates_IgnoresTraliningCommas",
 
 			opts: blockOptions{
-				RemoveDuplicates: true,
+				RemoveDuplicates: DuplicateResolutionTrue,
 			},
 			in: []string{
 				"foo,",
@@ -1065,7 +1065,7 @@ func TestLineSorting(t *testing.T) {
 			name: "RemoveDuplicates_IgnoresTrailingCommas_RemovesCommaIfLastElement",
 
 			opts: blockOptions{
-				RemoveDuplicates: true,
+				RemoveDuplicates: DuplicateResolutionTrue,
 			},
 			in: []string{
 				"foo,",
@@ -1082,7 +1082,7 @@ func TestLineSorting(t *testing.T) {
 			name: "RemoveDuplicates_IgnoresTrailingCommas_RemovesCommaIfOnlyElement",
 
 			opts: blockOptions{
-				RemoveDuplicates: true,
+				RemoveDuplicates: DuplicateResolutionTrue,
 			},
 			in: []string{
 				"foo,",
@@ -1097,7 +1097,7 @@ func TestLineSorting(t *testing.T) {
 			name: "RemoveDuplicates_Keep",
 
 			opts: blockOptions{
-				RemoveDuplicates: false,
+				RemoveDuplicates: DuplicateResolutionFalse,
 			},
 			in: []string{
 				"foo",

@@ -35,6 +35,16 @@ import (
 // true is unmarshaled as 1, false as 0.
 type IntOrBool int
 
+type DuplicateResolution int
+
+const (
+	DuplicateResolutionFalse DuplicateResolution = iota
+	DuplicateResolutionTrue
+	DuplicateResolutionIgnoreComments
+	DuplicateResolutionMergeComments
+)
+
+
 type ByRegexOption struct {
 	Pattern  *regexp.Regexp
 	Template *string
@@ -147,7 +157,7 @@ type blockOptions struct {
 	// Any other positive integer specifies the number of newlines to separate the groups.
 	NewlineSeparated IntOrBool `key:"newline_separated"`
 	// RemoveDuplicates determines whether we drop lines that are an exact duplicate.
-	RemoveDuplicates bool `key:"remove_duplicates"`
+	RemoveDuplicates DuplicateResolution `key:"remove_duplicates"`
 
 	// Syntax used to start a comment for keep-sorted annotation, e.g. "//".
 	commentMarker string
@@ -161,7 +171,7 @@ var (
 		StickyPrefixes:   nil, // Will be populated with the comment marker of the start directive.
 		Order:            OrderAsc,
 		CaseSensitive:    true,
-		RemoveDuplicates: true,
+		RemoveDuplicates: DuplicateResolutionTrue,
 	}
 
 	fieldIndexByKey map[string]int
@@ -249,6 +259,19 @@ func formatValue(val reflect.Value) (string, error) {
 			return boolString[true], nil
 		default:
 			return strconv.Itoa(i), nil
+		}
+	case reflect.TypeFor[DuplicateResolution]():
+		switch val.Interface().(DuplicateResolution) {
+		case DuplicateResolutionFalse:
+			return "no", nil
+		case DuplicateResolutionTrue:
+			return "yes", nil
+		case DuplicateResolutionIgnoreComments:
+			return "ignore_comments", nil
+		case DuplicateResolutionMergeComments:
+			return "merge_comments", nil
+		default:
+			panic(fmt.Errorf("unhandled DuplicateResolution value: %v", val))
 		}
 	case reflect.TypeFor[int]():
 		return strconv.Itoa(int(val.Int())), nil

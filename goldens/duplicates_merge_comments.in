@@ -1,0 +1,21 @@
+Merge duplicate comments:
+// keep-sorted-test start remove_duplicates=merge_comments sticky_comments=yes
+// First foo
+foo
+bar
+// Second foo
+foo
+// Third foo
+foo
+// keep-sorted-test end
+
+Merge duplicate comments where some are identical:
+// keep-sorted-test start remove_duplicates=merge_comments sticky_comments=yes
+// Common foo flag
+foo
+bar
+// Common foo flag
+foo
+// Different foo flag
+foo
+// keep-sorted-test end

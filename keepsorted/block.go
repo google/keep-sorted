@@ -259,15 +259,35 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	}
 
 	removedDuplicate := false
-	if b.metadata.opts.RemoveDuplicates {
-		seen := map[string]bool{}
+	if b.metadata.opts.RemoveDuplicates != DuplicateResolutionFalse {
+		seenStrings := map[string]bool{}
+		seenLines := map[string]*lineGroup{}
 		var deduped []*lineGroup
 		for _, lg := range groups {
-			if s := lg.String(); !seen[s] {
-				seen[s] = true
-				deduped = append(deduped, lg)
+			if b.metadata.opts.RemoveDuplicates == DuplicateResolutionTrue {
+				if s := lg.String(); !seenStrings[s] {
+					seenStrings[s] = true
+					deduped = append(deduped, lg)
+				} else {
+					removedDuplicate = true
+				}
 			} else {
-				removedDuplicate = true
+				codeMapKey := strings.Join(lg.lines, "\n")
+
+				if firstLg, ok := seenLines[codeMapKey]; !ok {
+					seenLines[codeMapKey] = lg
+					deduped = append(deduped, lg)
+				} else {
+					removedDuplicate = true
+
+					if b.metadata.opts.RemoveDuplicates == DuplicateResolutionMergeComments {
+						for _, newComment := range lg.comment {
+							if !slices.Contains(firstLg.comment, newComment) {
+								firstLg.comment = append(firstLg.comment[:len(firstLg.comment):len(firstLg.comment)], newComment)
+							}
+						}
+					}
+				}
 			}
 		}
 		groups = deduped

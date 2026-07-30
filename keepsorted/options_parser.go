@@ -59,6 +59,9 @@ func (p *parser) popValue(typ reflect.Type) (reflect.Value, error) {
 	case reflect.TypeFor[int]():
 		val, err := p.popInt()
 		return reflect.ValueOf(val), err
+	case reflect.TypeFor[DuplicateResolution]():
+		val, err := p.popDuplicateResolution()
+		return reflect.ValueOf(val), err
 	case reflect.TypeFor[[]int]():
 		val, err := p.popIntList()
 		return reflect.ValueOf(val), err
@@ -96,6 +99,23 @@ func (p *parser) popBool() (bool, error) {
 		return false, fmt.Errorf("unrecognized bool value %q", val)
 	}
 	return b, nil
+}
+
+func (p *parser) popDuplicateResolution() (DuplicateResolution, error) {
+	val, rest, _ := strings.Cut(p.line, " ")
+	p.line = rest
+	switch val {
+	case "yes", "true":
+		return DuplicateResolutionTrue, nil
+	case "no", "false":
+		return DuplicateResolutionFalse, nil
+	case "keep_first_comment", "ignore_comments":
+		return DuplicateResolutionIgnoreComments, nil
+	case "merge_comments":
+		return DuplicateResolutionMergeComments, nil
+	default:
+		return DuplicateResolutionFalse, fmt.Errorf("unrecognized remove_duplicates value %q", val)
+	}
 }
 
 func (p *parser) popInt() (int, error) {
