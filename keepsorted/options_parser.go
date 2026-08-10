@@ -109,8 +109,8 @@ func (p *parser) popDuplicateResolution() (DuplicateResolution, error) {
 		return DuplicateResolutionTrue, nil
 	case "no", "false":
 		return DuplicateResolutionFalse, nil
-	case "keep_first_comment", "ignore_comments":
-		return DuplicateResolutionIgnoreComments, nil
+	case "keep_first_comment":
+		return DuplicateResolutionKeepFirstComment, nil
 	case "merge_comments":
 		return DuplicateResolutionMergeComments, nil
 	default:

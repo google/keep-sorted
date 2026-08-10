@@ -281,9 +281,10 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 					removedDuplicate = true
 
 					if b.metadata.opts.RemoveDuplicates == DuplicateResolutionMergeComments {
+						firstLg.comment = slices.Clone(firstLg.comment)
 						for _, newComment := range lg.comment {
 							if !slices.Contains(firstLg.comment, newComment) {
-								firstLg.comment = append(firstLg.comment[:len(firstLg.comment):len(firstLg.comment)], newComment)
+								firstLg.comment = append(firstLg.comment, newComment)
 							}
 						}
 					}

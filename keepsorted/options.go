@@ -40,10 +40,9 @@ type DuplicateResolution int
 const (
 	DuplicateResolutionFalse DuplicateResolution = iota
 	DuplicateResolutionTrue
-	DuplicateResolutionIgnoreComments
+	DuplicateResolutionKeepFirstComment
 	DuplicateResolutionMergeComments
 )
-
 
 type ByRegexOption struct {
 	Pattern  *regexp.Regexp
@@ -266,8 +265,8 @@ func formatValue(val reflect.Value) (string, error) {
 			return "no", nil
 		case DuplicateResolutionTrue:
 			return "yes", nil
-		case DuplicateResolutionIgnoreComments:
-			return "ignore_comments", nil
+		case DuplicateResolutionKeepFirstComment:
+			return "keep_first_comment", nil
 		case DuplicateResolutionMergeComments:
 			return "merge_comments", nil
 		default:

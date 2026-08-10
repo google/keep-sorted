@@ -284,6 +284,32 @@ func TestPopValue(t *testing.T) {
 			want:    IntOrBool(0),
 			wantErr: true,
 		},
+		{
+			name:  "DuplicateResolution_True",
+			input: "yes",
+			want:  DuplicateResolutionTrue,
+		},
+		{
+			name:  "DuplicateResolution_False",
+			input: "no",
+			want:  DuplicateResolutionFalse,
+		},
+		{
+			name:  "DuplicateResolution_KeepFirstComment",
+			input: "keep_first_comment",
+			want:  DuplicateResolutionKeepFirstComment,
+		},
+		{
+			name:  "DuplicateResolution_MergeComments",
+			input: "merge_comments",
+			want:  DuplicateResolutionMergeComments,
+		},
+		{
+			name:    "DuplicateResolution_Invalid",
+			input:   "foo",
+			want:    DuplicateResolutionFalse,
+			wantErr: true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			suffix := "trailing content..."

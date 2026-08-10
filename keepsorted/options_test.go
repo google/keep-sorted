@@ -290,6 +290,31 @@ func TestBlockOptions(t *testing.T) {
 				GroupStartRegex: []*regexp.Regexp{regexp.MustCompile("^CREATE"), regexp.MustCompile("b")},
 			},
 		},
+		{
+			name: "RemoveDuplicates_Yes",
+			in:   "remove_duplicates=yes",
+			want: blockOptions{RemoveDuplicates: DuplicateResolutionTrue},
+		},
+		{
+			name: "RemoveDuplicates_No",
+			in:   "remove_duplicates=no",
+			want: blockOptions{RemoveDuplicates: DuplicateResolutionFalse},
+		},
+		{
+			name: "RemoveDuplicates_KeepFirstComment",
+			in:   "remove_duplicates=keep_first_comment",
+			want: blockOptions{RemoveDuplicates: DuplicateResolutionKeepFirstComment},
+		},
+		{
+			name: "RemoveDuplicates_MergeComments",
+			in:   "remove_duplicates=merge_comments",
+			want: blockOptions{RemoveDuplicates: DuplicateResolutionMergeComments},
+		},
+		{
+			name:    "RemoveDuplicates_Invalid",
+			in:      "remove_duplicates=nah",
+			wantErr: `while parsing option "remove_duplicates": unrecognized remove_duplicates value "nah"`,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)
