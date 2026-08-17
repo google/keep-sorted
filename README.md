@@ -901,8 +901,8 @@ The duplicate handling can be changed with the switch `remove_duplicates`:
 
 *   `yes` (default): Deduplicates based on both code and comments.
 *   `no`: Leaves duplicates untouched.
-*   `keep_first_comment`: Deduplicates based on code lines only, retaining only the comment of the very first duplicate occurrence.
-*   `merge_comments`: Deduplicates based on code lines only, merging unique comments from all occurrences to the single remaining entry.
+*   `keep_first_comment`: Deduplicates based on code lines only, retaining only the first non-empty comment found among duplicate occurrences.
+*   `merge_comments`: Deduplicates based on code lines only, merging distinct comment blocks from all occurrences into the single remaining entry.
 
 ```diff
 +# keep-sorted start remove_duplicates=no

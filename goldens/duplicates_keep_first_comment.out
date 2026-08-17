@@ -1,12 +1,13 @@
-Remove duplicates but ignore comments:
+Remove duplicates keeping first comment:
 // keep-sorted-test start remove_duplicates=keep_first_comment sticky_comments=yes
 bar
 // First foo
 foo
 // keep-sorted-test end
 
-Remove duplicates ignoring comments, when the first item has no comment:
+Remove duplicates keeping first comment, when the first item has no comment:
 // keep-sorted-test start remove_duplicates=keep_first_comment sticky_comments=yes
 bar
+// Second foo
 foo
 // keep-sorted-test end

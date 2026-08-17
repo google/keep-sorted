@@ -14,3 +14,15 @@ bar
 // Different foo flag
 foo
 // keep-sorted-test end
+
+Merge multi-line duplicate comments with paragraph breaks:
+// keep-sorted-test start remove_duplicates=merge_comments sticky_comments=yes
+bar
+// First foo
+//
+// Shared footer
+// Second foo
+//
+// Shared footer
+foo
+// keep-sorted-test end

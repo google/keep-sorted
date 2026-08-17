@@ -35,12 +35,19 @@ import (
 // true is unmarshaled as 1, false as 0.
 type IntOrBool int
 
+// DuplicateResolution defines how duplicates are handled during sorting.
 type DuplicateResolution int
 
 const (
+	// DuplicateResolutionFalse keeps duplicate entries untouched.
 	DuplicateResolutionFalse DuplicateResolution = iota
+	// DuplicateResolutionTrue deduplicates entries based on both code and attached comments.
 	DuplicateResolutionTrue
+	// DuplicateResolutionKeepFirstComment deduplicates based on code lines only,
+	// retaining the first non-empty comment found among duplicate occurrences.
 	DuplicateResolutionKeepFirstComment
+	// DuplicateResolutionMergeComments deduplicates based on code lines only,
+	// merging distinct comment blocks from all occurrences into the single remaining entry.
 	DuplicateResolutionMergeComments
 )
 
