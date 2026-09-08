@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/aymanbagabas/go-udiff"
 	"github.com/google/keep-sorted/keepsorted"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
@@ -84,6 +85,7 @@ var (
 	operations = map[string]operation{
 		"lint": lint,
 		"fix":  fix,
+		"diff": diff,
 	}
 )
 
@@ -228,18 +230,9 @@ func fix(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted
 			}
 		}
 
-		for _, warn := range warnings {
+		if len(warnings) > 0 {
 			ok = false
-			log := log.Warn()
-			if warn.Path != stdin {
-				log = log.Str("file", warn.Path)
-			}
-			if warn.Lines.Start == warn.Lines.End {
-				log = log.Int("line", warn.Lines.Start)
-			} else {
-				log = log.Ints("[start,end]", []int{warn.Lines.Start, warn.Lines.End})
-			}
-			log.Msg(warn.Message)
+			logWarnings(warnings)
 		}
 	}
 
@@ -267,6 +260,52 @@ func lint(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorte
 	}
 
 	return false, nil
+}
+
+func diff(fixer *keepsorted.Fixer, filenames []string, modifiedLines []keepsorted.LineRange) (ok bool, err error) {
+	ok = true
+
+	for _, fn := range filenames {
+		contents, err := read(fn)
+		if err != nil {
+			return false, err
+		}
+		want, alreadyFixed, warnings := fixer.Fix(fn, contents, modifiedLines)
+		if !alreadyFixed {
+			ok = false
+			inName := fn
+			outName := fn
+			if fn == stdin {
+				inName = "stdin"
+				outName = "stdout"
+			}
+			if _, err := os.Stdout.WriteString(udiff.Unified(inName, outName, contents, want)); err != nil {
+				return false, err
+			}
+		}
+
+		if len(warnings) > 0 {
+			ok = false
+			logWarnings(warnings)
+		}
+	}
+
+	return ok, nil
+}
+
+func logWarnings(warnings []*keepsorted.Finding) {
+	for _, warn := range warnings {
+		log := log.Warn()
+		if warn.Path != stdin {
+			log = log.Str("file", warn.Path)
+		}
+		if warn.Lines.Start == warn.Lines.End {
+			log = log.Int("line", warn.Lines.Start)
+		} else {
+			log = log.Ints("[start,end]", []int{warn.Lines.Start, warn.Lines.End})
+		}
+		log.Msg(warn.Message)
+	}
 }
 
 func read(fn string) (string, error) {
