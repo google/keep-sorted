@@ -35,6 +35,7 @@ type Config struct {
 	defaultOptions keepsorted.BlockOptions
 	operation      operation
 	modifiedLines  []keepsorted.LineRange
+	allowNoFiles   bool
 }
 
 func (c *Config) FromFlags(fs *flag.FlagSet) {
@@ -55,6 +56,7 @@ func (c *Config) FromFlags(fs *flag.FlagSet) {
 		panic(err)
 	}
 	fs.Var(of, "mode", fmt.Sprintf("Determines what mode to run this tool in. One of %q", knownModes()))
+	fs.BoolVar(&c.allowNoFiles, "allow-no-files", false, "Exit successfully when no files are provided.")
 
 	fs.Var(&lineRangeFlag{lineRanges: &c.modifiedLines}, "lines", "Line ranges of the form \"start:end\". Only processes keep-sorted blocks that overlap with the given line ranges. Can only be used when fixing a single file. This flag can either be a comma-separated list of line ranges, or it can be specified multiple times on the command line to specify multiple line ranges.")
 }
@@ -203,6 +205,9 @@ func Run(c *Config, files []string) (ok bool, err error) {
 	}
 
 	if len(files) == 0 {
+		if c.allowNoFiles {
+			return true, nil
+		}
 		return false, errors.New("must pass one or more filenames")
 	}
 

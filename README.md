@@ -128,6 +128,15 @@ bar = [
 
    If the file is `-`, the tool will read from stdin and write to stdout.
 
+   By default, invoking keep-sorted without filenames is an error. Use
+   `--allow-no-files` to exit successfully without output when no files are
+   provided. This is useful for hooks that may receive an empty file list,
+   such as when a commit only deletes files:
+
+   ```sh
+   keep-sorted --mode lint --allow-no-files [file1] [file2] ...
+   ```
+
 #### pre-commit
 
 You can run keep-sorted automatically by adding this repository to your
