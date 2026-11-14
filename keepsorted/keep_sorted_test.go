@@ -170,6 +170,108 @@ baz
 foo
 // keep-sorted-test end`,
 		},
+		{
+			name: "NestedBlockInSkippedLinesAtStart",
+
+			in: `
+// keep-sorted-test start skip_lines=4
+// keep-sorted-test start
+2
+1
+// keep-sorted-test end
+c
+b
+a
+// keep-sorted-test end`,
+
+			want: `
+// keep-sorted-test start skip_lines=4
+// keep-sorted-test start
+1
+2
+// keep-sorted-test end
+a
+b
+c
+// keep-sorted-test end`,
+		},
+		{
+			name: "NestedBlockInSkippedLinesAtEnd",
+
+			in: `
+// keep-sorted-test start skip_lines=-4
+c
+b
+a
+// keep-sorted-test start
+2
+1
+// keep-sorted-test end
+// keep-sorted-test end`,
+
+			want: `
+// keep-sorted-test start skip_lines=-4
+a
+b
+c
+// keep-sorted-test start
+1
+2
+// keep-sorted-test end
+// keep-sorted-test end`,
+		},
+		{
+			name: "SkipLinesSplitsNestedBlock",
+
+			in: `
+// keep-sorted-test start skip_lines=2
+// keep-sorted-test start
+2
+1
+// keep-sorted-test end
+b
+a
+// keep-sorted-test end`,
+
+			want: `
+// keep-sorted-test start skip_lines=2
+// keep-sorted-test start
+1
+2
+// keep-sorted-test end
+b
+a
+// keep-sorted-test end`,
+			wantWarnings: []string{"skip_lines splits a nested keep-sorted block, so this block will not be sorted"},
+		},
+		{
+			name: "SkipLinesSkipsBlockWithNestedBlock",
+
+			in: `
+// keep-sorted-test start skip_lines=10
+// keep-sorted-test start
+2
+1
+// keep-sorted-test end
+// keep-sorted-test end
+// keep-sorted-test start
+b
+a
+// keep-sorted-test end`,
+
+			want: `
+// keep-sorted-test start skip_lines=10
+// keep-sorted-test start
+1
+2
+// keep-sorted-test end
+// keep-sorted-test end
+// keep-sorted-test start
+a
+b
+// keep-sorted-test end`,
+			wantWarnings: []string{"block start is at or after end, possibly due to skip_lines [2+10,7-0]"},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			initZerolog(t)

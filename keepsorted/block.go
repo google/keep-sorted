@@ -114,6 +114,38 @@ func (f *Fixer) newBlocks(filename string, lines []string, offset int, include f
 				warnings = append(warnings, finding(filename, start.index+offset, start.index+offset, warn.Error()))
 			}
 
+			// Top-level keep-sorted directives have depth 0. Nested keep-sorted
+			// directives will have depth >= 1 based on how deep it is.
+			depth := len(starts)
+			// For example, consider depth=0:
+			// If we just finished a top-level block and there are first-level nested
+			// blocks present, we need to remove those from nestedBlocks and include
+			// them on this block.
+			// It isn't possible for len(nestedBlocks) to be > depth+1:
+			// At depth n, n != 0, we increase the length of nestedBlocks to be n.
+			// At depth m=n-1, the length of nestedBlocks will initially be n=m+1 (the assertion from above)
+			// and then we trim that down to be length m when we add the nested blocks
+			// to the current block.
+			var nested []block
+			if len(nestedBlocks) == depth+1 {
+				nested = nestedBlocks[depth]
+				nestedBlocks = nestedBlocks[0:depth]
+			}
+			// addBlocks adds blocks at the same depth as the current block.
+			addBlocks := func(bs ...block) {
+				if depth == 0 {
+					// Top-level blocks get returned.
+					// Nested blocks are returned via their top-level block.
+					blocks = append(blocks, bs...)
+					return
+				}
+				// Otherwise, the current block appears to be nested. Add it to nestedBlocks.
+				for len(nestedBlocks) < depth {
+					nestedBlocks = append(nestedBlocks, nil)
+				}
+				nestedBlocks[depth-1] = append(nestedBlocks[depth-1], bs...)
+			}
+
 			start.index += opts.startOffset()
 			endIndex += opts.endOffset()
 			if start.index >= endIndex {
@@ -121,12 +153,12 @@ func (f *Fixer) newBlocks(filename string, lines []string, offset int, include f
 					fmt.Sprintf("block start is at or after end, possibly due to skip_lines [%d+%d,%d-%d]",
 						start.index-opts.startOffset()+offset, opts.startOffset(), endIndex-opts.endOffset()+offset, -opts.endOffset())),
 				)
+				// This block won't be sorted, but its nested blocks still should be.
+				addBlocks(nested...)
 				continue
 			}
 
-			// Top-level keep-sorted directives have depth 0. Nested keep-sorted
-			// directives will have depth >= 1 based on how deep it is.
-			depth := len(starts)
+			var before, after []block
 			block := block{
 				metadata: blockMetadata{
 					startDirective: f.startDirective,
@@ -137,30 +169,40 @@ func (f *Fixer) newBlocks(filename string, lines []string, offset int, include f
 				end:   endIndex + offset,
 				lines: lines[start.index+1 : endIndex],
 			}
-			// For example, consider depth=0:
-			// If we just finished a top-level block and there are first-level nested
-			// blocks present, we need to remove those from nestedBlocks and include
-			// them on this block.
-			// It isn't possible for len(nestedBlocks) to be > depth+1:
-			// At depth n, n != 0, we increase the length of nestedBlocks to be n.
-			// At depth m=n-1, the length of nestedBlocks will initially be n=m+1 (the assertion from above)
-			// and then we trim that down to be length m when we add the nested blocks
-			// to the current block.
-			if len(nestedBlocks) == depth+1 {
-				block.nestedBlocks = nestedBlocks[depth]
-				nestedBlocks = nestedBlocks[0:depth]
-			}
-			if depth == 0 {
-				// Top-level blocks get returned.
-				// Nested blocks are returned via their top-level block.
-				blocks = append(blocks, block)
-			} else {
-				// Otherwise, the current block appears to be nested. Add it to nestedBlocks.
-				for len(nestedBlocks) < depth {
-					nestedBlocks = append(nestedBlocks, nil)
+
+			// skip_lines might have excluded some nested blocks from the lines that
+			// this block sorts. Those nested blocks are sorted on their own, as if
+			// they were siblings of this block.
+			splitsNestedBlock := false
+			for _, nb := range nested {
+				// The nested block's own directives, before its skip_lines (and the
+				// removal of blank lines before its end directive) were applied.
+				nbStart := nb.start - nb.metadata.opts.startOffset()
+				nbEnd := nb.end - nb.metadata.opts.endOffset()
+				for strings.TrimSpace(lines[nbEnd-offset]) == "" {
+					nbEnd++
 				}
-				nestedBlocks[depth-1] = append(nestedBlocks[depth-1], block)
+				switch {
+				case nbEnd <= block.start:
+					before = append(before, nb)
+				case nbStart >= block.end:
+					after = append(after, nb)
+				case nbStart > block.start && nbEnd < block.end:
+					block.nestedBlocks = append(block.nestedBlocks, nb)
+				default:
+					splitsNestedBlock = true
+				}
 			}
+			if splitsNestedBlock {
+				warnings = append(warnings, finding(filename, start.index-opts.startOffset()+offset, endIndex-opts.endOffset()+offset,
+					"skip_lines splits a nested keep-sorted block, so this block will not be sorted"))
+				addBlocks(nested...)
+				continue
+			}
+
+			addBlocks(before...)
+			addBlocks(block)
+			addBlocks(after...)
 			// Invariant: len(nestedBlocks) == depth
 		}
 	}
