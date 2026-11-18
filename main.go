@@ -63,7 +63,10 @@ func main() {
 	case "never":
 		shouldColor = false
 	case "auto":
-		shouldColor = isatty.IsTerminal(out.Fd())
+		noColorValue, noColorEnvVarSet := os.LookupEnv("NO_COLOR")
+		noColor := noColorEnvVarSet && noColorValue != ""
+
+		shouldColor = isatty.IsTerminal(out.Fd()) && !noColor
 	default:
 		log.Err(fmt.Errorf("invalid --color %q", *colorMode)).Msg("")
 	}
