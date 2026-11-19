@@ -1593,6 +1593,21 @@ func TestLineGrouping(t *testing.T) {
 			},
 		},
 		{
+			name: "Block_EscapedBackslashBeforeQuote",
+			opts: blockOptions{
+				Block: true,
+			},
+
+			want: []lineGroupContent{
+				{lines: []string{
+					`foo("\\")`,
+				}},
+				{lines: []string{
+					"bar",
+				}},
+			},
+		},
+		{
 			name: "Block_IgnoresQuotesWithinQuotes",
 			opts: blockOptions{
 				Block: true,

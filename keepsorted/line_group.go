@@ -388,7 +388,7 @@ func findQuote(s string, i int) string {
 		if len(s[i:]) < len(q) {
 			continue
 		}
-		if len(q) == 1 && i > 0 && string(s[i-1]) == `\` {
+		if len(q) == 1 && isEscaped(s, i) {
 			// Ignore quote literals (\", \', \`)
 			continue
 		}
@@ -397,6 +397,16 @@ func findQuote(s string, i int) string {
 		}
 	}
 	return ""
+}
+
+// isEscaped reports whether the byte at index i in s is escaped by an odd
+// number of preceding backslashes.
+func isEscaped(s string, i int) bool {
+	escaped := false
+	for j := i - 1; j >= 0 && s[j] == '\\'; j-- {
+		escaped = !escaped
+	}
+	return escaped
 }
 
 func (lg *lineGroup) append(s string) {
