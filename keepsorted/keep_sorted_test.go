@@ -1419,6 +1419,108 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
+			name: "CommaSeparatedElementSpanningLines",
+
+			opts: blockOptions{
+				Group: true,
+			},
+			in: []string{
+				`"mmm",`,
+				`"zzz"`,
+				`"111",`,
+				`"aaa",`,
+			},
+
+			want: []string{
+				`"aaa",`,
+				`"mmm",`,
+				`"zzz"`,
+				`"111",`,
+			},
+		},
+		{
+			name: "CommaSeparatedElementSpanningLines_GroupNo",
+
+			opts: blockOptions{
+				Group: false,
+			},
+			in: []string{
+				`"mmm",`,
+				`"zzz"`,
+				`"111",`,
+				`"aaa",`,
+			},
+
+			want: []string{
+				`"111",`,
+				`"aaa",`,
+				`"mmm",`,
+				`"zzz"`,
+			},
+		},
+		{
+			name: "CommaSeparatedElementSpanningLines_TrailingComments",
+
+			opts: withCommentMarker(blockOptions{Group: true}, "//"),
+			in: []string{
+				`"zzz"  // z`,
+				`"111",`,
+				`"aaa",  // a`,
+			},
+
+			want: []string{
+				`"aaa",  // a`,
+				`"zzz"  // z`,
+				`"111",`,
+			},
+		},
+		{
+			name: "CommaSeparatedElementSpanningLines_Prefixes",
+
+			opts: blockOptions{
+				Group: true,
+			},
+			in: []string{
+				`"mmm",`,
+				`@"zzz"`,
+				`@"111",`,
+				`u8"yyy"`,
+				`u8"222",`,
+				`f'xxx'`,
+				`r"333",`,
+				`"aaa",`,
+			},
+
+			want: []string{
+				`"aaa",`,
+				`"mmm",`,
+				`@"zzz"`,
+				`@"111",`,
+				`f'xxx'`,
+				`r"333",`,
+				`u8"yyy"`,
+				`u8"222",`,
+			},
+		},
+		{
+			name: "CommaSeparatedElementSpanningLines_NotStringLiteral",
+
+			opts: blockOptions{
+				Group: true,
+			},
+			in: []string{
+				`y="2"`,
+				`x="1"`,
+				`w="0",`,
+			},
+
+			want: []string{
+				`w="0",`,
+				`x="1"`,
+				`y="2"`,
+			},
+		},
+		{
 			name: "IgnorePrefixes",
 
 			opts: blockOptions{
@@ -1721,6 +1823,18 @@ func TestLineGrouping(t *testing.T) {
 						"// trailing comment",
 					},
 				},
+			},
+		},
+		{
+			name: "CommaSeparatedElementSpanningLines",
+			opts: blockOptions{
+				Group: true,
+			},
+
+			want: []lineGroupContent{
+				{lines: []string{`"aaa",`}},
+				{lines: []string{`"bbb"`, `"ccc"`, `"ddd",`}},
+				{lines: []string{`"eee",`}},
 			},
 		},
 		{

@@ -1173,3 +1173,40 @@ marker as the start directive.
 </td>
 </tr>
 </table>
+
+### How does keep-sorted handle long strings that a formatter splits over multiple lines?
+
+Formatters like clang-format split long string literals into adjacent string
+literals on separate lines without indenting the continuation lines. In a list
+of comma-separated elements, keep-sorted keeps a line that ends with a string
+literal (instead of a comma) together with the next line if that line starts
+with a string literal, so the split string stays one element. Sorting the lines
+separately would move `"11111111111111111",` to the top, turning one element
+into two.
+
+<table border="0">
+<tr>
+<td>
+
+```
+"mmm",
+"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+"11111111111111111",
+"aaa",
+```
+
+</td>
+<td>
+
+```
+// keep-sorted start
+"aaa",
+"mmm",
+"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+"11111111111111111",
+// keep-sorted end
+```
+
+</td>
+</tr>
+</table>

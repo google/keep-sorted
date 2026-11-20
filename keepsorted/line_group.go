@@ -212,7 +212,60 @@ func groupLines(lines []string, metadata blockMetadata) []*lineGroup {
 	if !commentRange.empty() || !lineRange.empty() {
 		finishGroup()
 	}
+	if metadata.opts.Group && metadata.opts.GroupStartRegex == nil && metadata.opts.GroupEndRegex == nil {
+		groups = mergeAdjacentStringLiterals(groups)
+	}
 	return groups
+}
+
+// mergeAdjacentStringLiterals keeps a string literal that's split over multiple
+// lines together in a list of comma-separated elements.
+//
+// Formatters split long string literals into adjacent string literals, which C,
+// C++, Objective-C, and Python concatenate, without indenting the continuation
+// lines:
+//
+//	"aaa",
+//	"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+//	"cccccccccccccccccccccccccccccccc",
+//	"ddd",
+//
+// Sorting those lines separately would change the elements of the list. So if
+// any line group ends with a comma, a line group that instead ends with a
+// string literal is merged with the next line group if that one starts with a
+// string literal.
+func mergeAdjacentStringLiterals(groups []*lineGroup) []*lineGroup {
+	if !slices.ContainsFunc(groups, (*lineGroup).hasTrailingComma) {
+		return groups
+	}
+
+	merged := []*lineGroup{groups[0]}
+	for _, lg := range groups[1:] {
+		if prev := merged[len(merged)-1]; lg.startsWithStringLiteral() && prev.endsWithStringLiteral() {
+			prev.lines = slices.Concat(prev.lines, lg.comment, lg.lines)
+			continue
+		}
+		merged = append(merged, lg)
+	}
+	return merged
+}
+
+// endsWithStringLiteral reports whether the last code line of lg ends with a
+// quote, ignoring any trailing comment.
+func (lg *lineGroup) endsWithStringLiteral() bool {
+	_, code, _ := lg.lastCodeLine()
+	return strings.HasSuffix(code, `"`) || strings.HasSuffix(code, "'")
+}
+
+// stringLiteralStart matches a line that starts with a string literal,
+// optionally with a C, C++, or Objective-C prefix (R, @, u8, u, U, L, u8R, LR,
+// ...) or a Python prefix (r, b, f, t, u, rb, fr, ...).
+var stringLiteralStart = regexp.MustCompile(`^\s*(?:(?:[R@]|(?:u8|[uUL])R?)"|[bfrtuBFRTU]{0,2}["'])`)
+
+// startsWithStringLiteral reports whether the first line of lg starts with a
+// string literal.
+func (lg *lineGroup) startsWithStringLiteral() bool {
+	return len(lg.lines) > 0 && stringLiteralStart.MatchString(lg.lines[0])
 }
 
 // calculateIndents precalculates the indentation for each line.

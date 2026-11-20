@@ -48,6 +48,22 @@ Blank line and no trailing comma after the last element
   3
   keep-sorted-test end
 
+Element split over multiple lines by a formatter
+  // keep-sorted-test start
+  "aaaaaaa",
+  "mmmmmmm",
+  "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-"
+  "11111111111111111111111111111111",
+  // keep-sorted-test end
+
+String split over multiple lines in a list without a trailing comma
+  // keep-sorted-test start
+  "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-"
+  "11111111111111111111111111111111",
+  "mmmmmmm",
+  "zzzzzzz"
+  // keep-sorted-test end
+
 Blank line between the last element and a trailing comment
   # keep-sorted-test start
   "a",
