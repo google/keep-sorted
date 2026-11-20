@@ -313,6 +313,12 @@ var (
 		`"""`, `'''`, "```",
 		`"`, `'`, "`",
 	}
+	// closingCommentMarkers maps the markers that start block comments to the
+	// markers that end them.
+	closingCommentMarkers = map[string]string{
+		"/*":   "*/",
+		"<!--": "-->",
+	}
 )
 
 // codeBlock is a helper struct that let us try to understand if a section of
@@ -410,16 +416,123 @@ func isEscaped(s string, i int) bool {
 	return escaped
 }
 
-func (lg *lineGroup) append(s string) {
-	lg.setLine(len(lg.lines)-1, lg.lines[len(lg.lines)-1]+s)
+// hasCode reports whether lg has at least one line with code (not just
+// whitespace or comments).
+func (lg *lineGroup) hasCode() bool {
+	i, _, _ := lg.lastCodeLine()
+	return i >= 0
 }
 
-func (lg *lineGroup) hasSuffix(s string) bool {
-	return len(lg.lines) > 0 && strings.HasSuffix(lg.lines[len(lg.lines)-1], s)
+// lastCodeLine finds the last line in lg.lines that contains code and splits it
+// into the line index, its code, and the rest of the line (whitespace and any
+// trailing comment). If lg has no code lines, index is -1.
+//
+// For example, `  "foo",  // comment` is split into `  "foo",` and
+// `  // comment`. A block comment followed by more code on the same line, like
+// `/* x */` in `FOO /* x */,`, is part of the code. Quoted strings and block
+// comments can span multiple lines.
+func (lg *lineGroup) lastCodeLine() (index int, code, tail string) {
+	index = -1
+	marker := lg.opts.commentMarker
+	closer := closingCommentMarkers[marker]
+	var expectedQuote string
+	var inBlockComment bool
+	for n, line := range lg.lines {
+		commentStart := -1
+		if inBlockComment {
+			commentStart = 0
+		}
+		for i := 0; i < len(line); {
+			if inBlockComment {
+				j := strings.Index(line[i:], closer)
+				if j < 0 {
+					break
+				}
+				inBlockComment = false
+				i += j + len(closer)
+				continue
+			}
+			if expectedQuote != "" {
+				if q := findQuote(line, i); q == expectedQuote {
+					expectedQuote = ""
+					i += len(q)
+					continue
+				}
+				i++
+				continue
+			}
+			// A comment marker only starts a comment at the start of the line or
+			// after whitespace, so `foo#bar` or `a//b` isn't treated as a comment.
+			if marker != "" && strings.HasPrefix(line[i:], marker) && (i == 0 || isBlank(line[i-1])) {
+				if commentStart < 0 {
+					commentStart = i
+				}
+				if closer == "" {
+					// The rest of the line is a comment.
+					break
+				}
+				inBlockComment = true
+				i += len(marker)
+				continue
+			}
+			if !isBlank(line[i]) {
+				// Code follows the block comment, so it isn't a trailing comment.
+				commentStart = -1
+			}
+			if q := findQuote(line, i); q != "" {
+				expectedQuote = q
+				i += len(q)
+				continue
+			}
+			i++
+		}
+		withoutComment := line
+		if commentStart >= 0 {
+			withoutComment = line[:commentStart]
+		}
+		if c := strings.TrimRightFunc(withoutComment, unicode.IsSpace); c != "" {
+			index, code, tail = n, c, line[len(c):]
+		}
+	}
+	return index, code, tail
 }
 
-func (lg *lineGroup) trimSuffix(s string) {
-	lg.setLine(len(lg.lines)-1, strings.TrimSuffix(lg.lines[len(lg.lines)-1], s))
+func isBlank(c byte) bool {
+	return c == ' ' || c == '\t'
+}
+
+// hasTrailingComma reports whether the last code line of lg ends with a comma,
+// ignoring any trailing comment.
+func (lg *lineGroup) hasTrailingComma() bool {
+	_, code, _ := lg.lastCodeLine()
+	return strings.HasSuffix(code, ",")
+}
+
+// addTrailingComma adds a comma after the code on the last code line of lg,
+// which must exist.
+//
+// If the line has a trailing comment, the comma replaces one of the spaces
+// before the comment (unless there's only one) so that the comment doesn't
+// move.
+func (lg *lineGroup) addTrailingComma() {
+	i, code, tail := lg.lastCodeLine()
+	if strings.TrimSpace(tail) != "" && (strings.HasPrefix(tail, "  ") || strings.HasPrefix(tail, " \t")) {
+		tail = tail[1:]
+	}
+	lg.setLine(i, code+","+tail)
+}
+
+// removeTrailingComma removes the comma after the code on the last code line
+// of lg, which must exist.
+//
+// If the line has a trailing comment, the comma is replaced with a space so
+// that the comment doesn't move.
+func (lg *lineGroup) removeTrailingComma() {
+	i, code, tail := lg.lastCodeLine()
+	if strings.TrimSpace(tail) != "" {
+		tail = " " + tail
+	}
+	lg.setLine(i, strings.TrimSuffix(code, ",")+tail)
 }
 
 // setLine replaces lg.lines[i] with s.

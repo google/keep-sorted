@@ -432,20 +432,30 @@ func isAllEmpty(lg *lineGroup) bool {
 func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)) {
 	var dataGroups []*lineGroup
 	for _, lg := range lgs {
-		if len(lg.lines) > 0 {
+		if lg.hasCode() {
 			dataGroups = append(dataGroups, lg)
 		}
 	}
 
-	if n := len(dataGroups); n > 1 && allHaveSuffix(dataGroups[0:n-1], ",") && !dataGroups[n-1].hasSuffix(",") {
-		dataGroups[n-1].append(",")
+	if n := len(dataGroups); n > 1 && allHaveTrailingComma(dataGroups[0:n-1]) && !dataGroups[n-1].hasTrailingComma() {
+		last := dataGroups[n-1]
+		original := last.lines
+		last.addTrailingComma()
 
 		return func(lgs []*lineGroup) {
 			for i := len(lgs) - 1; i >= 0; i-- {
-				if len(lgs[i].lines) > 0 {
-					lgs[i].trimSuffix(",")
-					return
+				if !lgs[i].hasCode() {
+					continue
 				}
+				if lgs[i] == last {
+					// The same element is still last: Restore it exactly as it was,
+					// since removeTrailingComma doesn't exactly undo addTrailingComma
+					// (e.g. with a single space before a trailing comment).
+					last.lines = original
+				} else {
+					lgs[i].removeTrailingComma()
+				}
+				return
 			}
 		}
 	}
@@ -453,9 +463,9 @@ func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)
 	return func([]*lineGroup) {}
 }
 
-func allHaveSuffix(lgs []*lineGroup, s string) bool {
+func allHaveTrailingComma(lgs []*lineGroup) bool {
 	for _, lg := range lgs {
-		if !lg.hasSuffix(s) {
+		if !lg.hasTrailingComma() {
 			return false
 		}
 	}

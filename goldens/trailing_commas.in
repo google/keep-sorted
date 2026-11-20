@@ -7,25 +7,67 @@ Trailing comma except for last
 
 
 Trailing comma and a comment
-TODO: https://github.com/google/keep-sorted/issues/33 - Fix this
-  keep-sorted-test start
+  # keep-sorted-test start
   3, # three
+  1,
+  2
+  # keep-sorted-test end
+
+Trailing comma except for last, last has a comment
+  # keep-sorted-test start
+  3,
+  1,
+  2  # two
+  # keep-sorted-test end
+
+Trailing comma and a comment, last has a comment
+  # keep-sorted-test start
+  3, # three
+  1,
+  2  # two
+  # keep-sorted-test end
+
+Trailing comments aligned by a formatter
+  // keep-sorted-test start
+  "zzz",  // z
+  "bbb",  // b
+  "aaa"   // a
+  // keep-sorted-test end
+
+Comment marker inside a string
+  // keep-sorted-test start
+  "https://z.example.com",  // z
+  "https://a.example.com"   // a
+  // keep-sorted-test end
+
+Blank line and no trailing comma after the last element
+  keep-sorted-test start
+  3,
+
   1,
   2
   keep-sorted-test end
 
-Trailing comma except for last, last has a comment
-TODO: https://github.com/google/keep-sorted/issues/33 - Fix this
-  keep-sorted-test start
-  3,
-  1,
-  2  # two
-  keep-sorted-test end
+Blank line between the last element and a trailing comment
+  # keep-sorted-test start
+  "c",
+  "a",
+  "b",
 
-Trailing comma and a comment, last has a comment
-TODO: https://github.com/google/keep-sorted/issues/33 - Fix this
-  keep-sorted-test start
-  3, # three
-  1,
-  2  # two
-  keep-sorted-test end
+  # Insert new elements above.
+  # keep-sorted-test end
+
+Trailing comment wrapped onto the next line by a formatter
+  // keep-sorted-test start
+  "c",  // A comment that a formatter
+        // wrapped.
+  "a",
+  "b"
+  // keep-sorted-test end
+
+Wrapped trailing comment on the last element
+  // keep-sorted-test start
+  "b",
+  "a"   // A comment that a formatter
+        // wrapped.
+  // keep-sorted-test end

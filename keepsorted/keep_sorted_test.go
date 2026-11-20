@@ -1168,6 +1168,257 @@ func TestLineSorting(t *testing.T) {
 			},
 		},
 		{
+			name: "TrailingCommas_TrailingComments_AlreadySorted",
+
+			opts: withCommentMarker(blockOptions{}, "//"),
+			in: []string{
+				`"aaa",  // a`,
+				`"bbb",  // b`,
+				`"zzz"   // z`,
+			},
+
+			want: []string{
+				`"aaa",  // a`,
+				`"bbb",  // b`,
+				`"zzz"   // z`,
+			},
+			wantAlreadySorted: true,
+		},
+		{
+			name: "TrailingCommas_TrailingComments_SingleSpace",
+
+			opts: withCommentMarker(blockOptions{}, "#"),
+			in: []string{
+				"3, # three",
+				"1,",
+				"2 # two",
+			},
+
+			want: []string{
+				"1,",
+				"2, # two",
+				"3  # three",
+			},
+		},
+		{
+			name: "TrailingCommas_TrailingComments_Tab",
+
+			opts: withCommentMarker(blockOptions{}, "//"),
+			in: []string{
+				"\"z\",\t// z",
+				"\"a\",\t// a",
+				"\"m\" \t// m",
+			},
+
+			want: []string{
+				"\"a\",\t// a",
+				"\"m\",\t// m",
+				"\"z\" \t// z",
+			},
+		},
+		{
+			name: "TrailingCommas_TrailingComments_LastElementStaysLast",
+
+			opts: withCommentMarker(blockOptions{}, "#"),
+			in: []string{
+				"b, # b",
+				"a, # a",
+				"c # c",
+			},
+
+			want: []string{
+				"a, # a",
+				"b, # b",
+				"c # c",
+			},
+		},
+		{
+			name: "TrailingCommas_CommentMarkerInString",
+
+			opts: withCommentMarker(blockOptions{}, "//"),
+			in: []string{
+				`"http://z", // z`,
+				`"http://a"`,
+			},
+
+			want: []string{
+				`"http://a",`,
+				`"http://z"  // z`,
+			},
+		},
+		{
+			name: "TrailingCommas_EscapedBackslashBeforeClosingQuote",
+
+			opts: withCommentMarker(blockOptions{}, "//"),
+			in: []string{
+				`"z",   // z`,
+				`"\\",  // backslash`,
+				`"a"    // a`,
+			},
+
+			want: []string{
+				`"\\",  // backslash`,
+				`"a",   // a`,
+				`"z"    // z`,
+			},
+		},
+		{
+			name: "TrailingCommas_NonSpaceMultibyteUTF8BeforeCommentMarker",
+
+			opts: withCommentMarker(blockOptions{}, "#"),
+			in: []string{
+				"foo_ą#bar,",
+				"baz,",
+				"aaa",
+			},
+
+			want: []string{
+				"aaa,",
+				"baz,",
+				"foo_ą#bar",
+			},
+		},
+		{
+			name: "TrailingCommas_IndentedCommentOnLastElement",
+
+			opts: withCommentMarker(blockOptions{Group: true, StickyComments: true}, "#"),
+			in: []string{
+				`"c",`,
+				`"a",`,
+				`"b",`,
+				"    # indented comment",
+			},
+
+			want: []string{
+				`"a",`,
+				`"b",`,
+				"    # indented comment",
+				`"c",`,
+			},
+		},
+		{
+			name: "TrailingCommas_IndentedComment_NoTrailingCommaOnLast",
+
+			opts: withCommentMarker(blockOptions{Group: true, StickyComments: true}, "#"),
+			in: []string{
+				`"c",`,
+				"    # indented comment on c",
+				`"a",`,
+				`"b"`,
+				"    # indented comment on b",
+			},
+
+			want: []string{
+				`"a",`,
+				`"b",`,
+				"    # indented comment on b",
+				`"c"`,
+				"    # indented comment on c",
+			},
+		},
+		{
+			name: "TrailingCommas_StickyCommentsNo",
+
+			opts: withCommentMarker(blockOptions{StickyComments: false}, "#"),
+			in: []string{
+				"c,",
+				"a,",
+				"b,",
+				"# comment",
+			},
+
+			want: []string{
+				"# comment",
+				"a,",
+				"b,",
+				"c,",
+			},
+		},
+		{
+			name: "TrailingCommas_BlockCommentFollowedByCode",
+
+			opts: withCommentMarker(blockOptions{}, "/*"),
+			in: []string{
+				`{"foo", /*enabled=*/true},`,
+				`{"bar", /*enabled=*/false}`,
+			},
+
+			want: []string{
+				`{"bar", /*enabled=*/false},`,
+				`{"foo", /*enabled=*/true}`,
+			},
+		},
+		{
+			name: "TrailingCommas_BlockCommentBeforeComma",
+
+			opts: withCommentMarker(blockOptions{}, "/*"),
+			in: []string{
+				"FOO /* x */,",
+				"BAR /* y */,",
+				"BAZ",
+			},
+
+			want: []string{
+				"BAR /* y */,",
+				"BAZ,",
+				"FOO /* x */",
+			},
+		},
+		{
+			name: "TrailingCommas_TrailingBlockComments",
+
+			opts: withCommentMarker(blockOptions{}, "/*"),
+			in: []string{
+				`"c",  /* c */`,
+				`"b",  /* x */ /* y */`,
+				`"a"   /* a */`,
+			},
+
+			want: []string{
+				`"a",  /* a */`,
+				`"b",  /* x */ /* y */`,
+				`"c"   /* c */`,
+			},
+		},
+		{
+			name: "TrailingCommas_WrappedBlockComment",
+
+			opts: withCommentMarker(blockOptions{Group: true}, "/*"),
+			in: []string{
+				`"c",  /* A comment that a formatter`,
+				`         wrapped. */`,
+				`"a",`,
+				`"b"`,
+			},
+
+			want: []string{
+				`"a",`,
+				`"b",`,
+				`"c"   /* A comment that a formatter`,
+				`         wrapped. */`,
+			},
+		},
+		{
+			name: "TrailingCommas_BlankLineBeforeTrailingComment_NoTrailingCommaOnLast",
+
+			opts: withCommentMarker(blockOptions{StickyComments: true}, "#"),
+			in: []string{
+				"3,",
+				"1,",
+				"2",
+				"",
+				"# Insert new elements above.",
+			},
+
+			want: []string{
+				"1,",
+				"2,",
+				"3",
+				"",
+				"# Insert new elements above.",
+			},
+		},
+		{
 			name: "IgnorePrefixes",
 
 			opts: blockOptions{

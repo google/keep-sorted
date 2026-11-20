@@ -1144,3 +1144,32 @@ keep-sorted end
 </td>
 </tr>
 </table>
+
+If a line has a trailing comment, keep-sorted adds or removes the comma before
+the comment. keep-sorted recognizes trailing comments that use the same comment
+marker as the start directive.
+
+<table border="0">
+<tr>
+<td>
+
+```
+"c",  // three
+"a",  // one
+"b"   // two
+```
+
+</td>
+<td>
+
+```
+// keep-sorted start
+"a",  // one
+"b",  // two
+"c"   // three
+// keep-sorted end
+```
+
+</td>
+</tr>
+</table>
