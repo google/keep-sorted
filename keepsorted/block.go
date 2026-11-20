@@ -243,6 +243,12 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 
 	log.Printf("Creating line groups for block at index %d (options %v)", b.start, b.metadata.opts)
 	groups := groupLines(lines, b.metadata)
+	var trailing []*lineGroup
+	if b.metadata.opts.NewlineSeparated == 0 {
+		// With newline_separated, a trailing comment is treated like an element
+		// (sorted last by commentOnly) so that it gets a separator too.
+		groups, trailing = splitTrailingBlank(groups)
+	}
 	trimTrailingComma := handleTrailingComma(groups)
 
 	numNewlines := int(b.metadata.opts.NewlineSeparated)
@@ -318,7 +324,6 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 				log.Print(lg.DebugString())
 			}
 		}
-		trimTrailingComma(groups)
 		return lines, true
 	}
 
@@ -347,7 +352,25 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 	for _, g := range groups {
 		l = append(l, g.allLines()...)
 	}
+	for _, g := range trailing {
+		l = append(l, g.allLines()...)
+	}
 	return l, false
+}
+
+// splitTrailingBlank splits off the trailing line groups whose lines are all
+// blank (they may have sticky comments). They stay in place, like blank lines
+// right before the end directive.
+func splitTrailingBlank(lgs []*lineGroup) (sortable, trailing []*lineGroup) {
+	i := len(lgs)
+	for i > 0 && hasOnlyBlankLines(lgs[i-1]) {
+		i--
+	}
+	return lgs[:i], lgs[i:]
+}
+
+func hasOnlyBlankLines(lg *lineGroup) bool {
+	return !slices.ContainsFunc(lg.lines, func(l string) bool { return strings.TrimSpace(l) != "" })
 }
 
 // isNewlineSeparated determines if the given lineGroups are already NewlineSeparated,
@@ -400,15 +423,7 @@ func isNewlineSeparated(gs []*lineGroup, numNewlines int) bool {
 }
 
 func isAllEmpty(lg *lineGroup) bool {
-	if len(lg.comment) > 0 {
-		return false
-	}
-	for _, line := range lg.lines {
-		if strings.TrimSpace(line) != "" {
-			return false
-		}
-	}
-	return true
+	return len(lg.comment) == 0 && hasOnlyBlankLines(lg)
 }
 
 // handleTrailingComma handles the special case that all lines of a sorted segment are terminated
@@ -417,20 +432,30 @@ func isAllEmpty(lg *lineGroup) bool {
 func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)) {
 	var dataGroups []*lineGroup
 	for _, lg := range lgs {
-		if len(lg.lines) > 0 {
+		if lg.hasCode() {
 			dataGroups = append(dataGroups, lg)
 		}
 	}
 
-	if n := len(dataGroups); n > 1 && allHaveSuffix(dataGroups[0:n-1], ",") && !dataGroups[n-1].hasSuffix(",") {
-		dataGroups[n-1].append(",")
+	if n := len(dataGroups); n > 1 && allHaveTrailingComma(dataGroups[0:n-1]) && !dataGroups[n-1].hasTrailingComma() {
+		last := dataGroups[n-1]
+		original := last.lines
+		last.addTrailingComma()
 
 		return func(lgs []*lineGroup) {
 			for i := len(lgs) - 1; i >= 0; i-- {
-				if len(lgs[i].lines) > 0 {
-					lgs[i].trimSuffix(",")
-					return
+				if !lgs[i].hasCode() {
+					continue
 				}
+				if lgs[i] == last {
+					// The same element is still last: Restore it exactly as it was,
+					// since removeTrailingComma doesn't exactly undo addTrailingComma
+					// (e.g. with a single space before a trailing comment).
+					last.lines = original
+				} else {
+					lgs[i].removeTrailingComma()
+				}
+				return
 			}
 		}
 	}
@@ -438,9 +463,9 @@ func handleTrailingComma(lgs []*lineGroup) (trimTrailingComma func([]*lineGroup)
 	return func([]*lineGroup) {}
 }
 
-func allHaveSuffix(lgs []*lineGroup, s string) bool {
+func allHaveTrailingComma(lgs []*lineGroup) bool {
 	for _, lg := range lgs {
-		if !lg.hasSuffix(s) {
+		if !lg.hasTrailingComma() {
 			return false
 		}
 	}

@@ -1046,9 +1046,41 @@ keep-sorted start
 keep-sorted end
 ```
 
+Blank lines after the last element also stay in place when only comments follow
+them, so a trailing comment like "Insert new elements above" keeps its spacing:
+
+<table border="0">
+<tr>
+<td>
+
+```
+c
+a
+b
+
+# Insert new elements above.
+```
+
+</td>
+<td>
+
+```
+# keep-sorted start
+a
+b
+c
+
+# Insert new elements above.
+# keep-sorted end
+```
+
+</td>
+</tr>
+</table>
+
 Additionally, keep-sorted does not preserve other linebreaks like a person
-might. All non-trailing linebreaks will be moved to the beginning of the content
-(and deduplicated if `remove_duplicates=yes`):
+might. All other linebreaks will be moved to the beginning of the content (and
+deduplicated if `remove_duplicates=yes`):
 
 <table border="0">
 <tr>
@@ -1107,6 +1139,72 @@ keep-sorted start
 2,
 3
 keep-sorted end
+```
+
+</td>
+</tr>
+</table>
+
+If a line has a trailing comment, keep-sorted adds or removes the comma before
+the comment. keep-sorted recognizes trailing comments that use the same comment
+marker as the start directive.
+
+<table border="0">
+<tr>
+<td>
+
+```
+"c",  // three
+"a",  // one
+"b"   // two
+```
+
+</td>
+<td>
+
+```
+// keep-sorted start
+"a",  // one
+"b",  // two
+"c"   // three
+// keep-sorted end
+```
+
+</td>
+</tr>
+</table>
+
+### How does keep-sorted handle long strings that a formatter splits over multiple lines?
+
+Formatters like clang-format split long string literals into adjacent string
+literals on separate lines without indenting the continuation lines. In a list
+of comma-separated elements, keep-sorted keeps a line that ends with a string
+literal (instead of a comma) together with the next line if that line starts
+with a string literal, so the split string stays one element. Sorting the lines
+separately would move `"11111111111111111",` to the top, turning one element
+into two.
+
+<table border="0">
+<tr>
+<td>
+
+```
+"mmm",
+"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+"11111111111111111",
+"aaa",
+```
+
+</td>
+<td>
+
+```
+// keep-sorted start
+"aaa",
+"mmm",
+"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+"11111111111111111",
+// keep-sorted end
 ```
 
 </td>
