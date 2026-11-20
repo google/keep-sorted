@@ -318,7 +318,6 @@ func (b block) sorted() (sorted []string, alreadySorted bool) {
 				log.Print(lg.DebugString())
 			}
 		}
-		trimTrailingComma(groups)
 		return lines, true
 	}
 

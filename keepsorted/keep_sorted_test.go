@@ -144,6 +144,24 @@ func TestFix(t *testing.T) {
 			wantWarnings: []string{errorUnordered, errorMissingDirective("keep-sorted-test", "start")},
 		},
 		{
+			name: "UnmatchedStart_TrailingComma",
+
+			in: `
+// keep-sorted-test start
+b,
+a
+// keep-sorted-test end
+// keep-sorted-test start`,
+
+			want: `
+// keep-sorted-test start
+b,
+a
+// keep-sorted-test end
+// keep-sorted-test start`,
+			wantWarnings: []string{errorUnordered, errorMissingDirective("keep-sorted-test", "end")},
+		},
+		{
 			name: "MultipleFixes",
 
 			in: `

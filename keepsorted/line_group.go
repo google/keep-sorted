@@ -17,6 +17,7 @@ package keepsorted
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"unicode"
@@ -410,8 +411,7 @@ func isEscaped(s string, i int) bool {
 }
 
 func (lg *lineGroup) append(s string) {
-	lg.access = accessRecorder{}
-	lg.lines[len(lg.lines)-1] = lg.lines[len(lg.lines)-1] + s
+	lg.setLine(len(lg.lines)-1, lg.lines[len(lg.lines)-1]+s)
 }
 
 func (lg *lineGroup) hasSuffix(s string) bool {
@@ -419,8 +419,17 @@ func (lg *lineGroup) hasSuffix(s string) bool {
 }
 
 func (lg *lineGroup) trimSuffix(s string) {
+	lg.setLine(len(lg.lines)-1, strings.TrimSuffix(lg.lines[len(lg.lines)-1], s))
+}
+
+// setLine replaces lg.lines[i] with s.
+//
+// lg.lines might share its backing array with block.lines, which must not be
+// modified, so this modifies a copy.
+func (lg *lineGroup) setLine(i int, s string) {
 	lg.access = accessRecorder{}
-	lg.lines[len(lg.lines)-1] = strings.TrimSuffix(lg.lines[len(lg.lines)-1], s)
+	lg.lines = slices.Clone(lg.lines)
+	lg.lines[i] = s
 }
 
 func (lg *lineGroup) commentOnly() bool {
