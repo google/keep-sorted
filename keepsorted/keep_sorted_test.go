@@ -41,9 +41,12 @@ func defaultMetadataWith(opts blockOptions) blockMetadata {
 }
 
 func defaultMetadataWithCommentMarker(marker string) blockMetadata {
-	var opts blockOptions
+	return defaultMetadataWith(withCommentMarker(blockOptions{}, marker))
+}
+
+func withCommentMarker(opts blockOptions, marker string) blockOptions {
 	opts.setCommentMarker(marker)
-	return defaultMetadataWith(opts)
+	return opts
 }
 
 func TestFix(t *testing.T) {
@@ -1142,6 +1145,26 @@ func TestLineSorting(t *testing.T) {
 				"bar,",
 				"baz,",
 				"foo",
+			},
+		},
+		{
+			name: "BlankLineBeforeTrailingComment",
+
+			opts: withCommentMarker(blockOptions{StickyComments: true}, "#"),
+			in: []string{
+				"c",
+				"a",
+				"b",
+				"",
+				"# Insert new elements above.",
+			},
+
+			want: []string{
+				"a",
+				"b",
+				"c",
+				"",
+				"# Insert new elements above.",
 			},
 		},
 		{

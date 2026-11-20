@@ -1046,9 +1046,41 @@ keep-sorted start
 keep-sorted end
 ```
 
+Blank lines after the last element also stay in place when only comments follow
+them, so a trailing comment like "Insert new elements above" keeps its spacing:
+
+<table border="0">
+<tr>
+<td>
+
+```
+c
+a
+b
+
+# Insert new elements above.
+```
+
+</td>
+<td>
+
+```
+# keep-sorted start
+a
+b
+c
+
+# Insert new elements above.
+# keep-sorted end
+```
+
+</td>
+</tr>
+</table>
+
 Additionally, keep-sorted does not preserve other linebreaks like a person
-might. All non-trailing linebreaks will be moved to the beginning of the content
-(and deduplicated if `remove_duplicates=yes`):
+might. All other linebreaks will be moved to the beginning of the content (and
+deduplicated if `remove_duplicates=yes`):
 
 <table border="0">
 <tr>
